@@ -1,118 +1,112 @@
-This module is meant to be used with the AssemblyAI API which can be found here: https://docs.assemblyai.com/api/
+## Installing the module:
 
-# Installing the module:
   `npm i assemblyai`
 
-# Setup of the module:
+## Authenticating with the API
 
-  ## Using Environment Variables
-    If you have the `ASSEMBLYAI_API_KEY` environment variable set, then the application
-    will automatically attempt to read it and use this value as the set key.
+### Using Environment Variables
 
-  ## Setting the value manually
-  Here is what the code would look like if you were to set the value manually.
-  ```javascript
-  const assemblyai = require('assemblyai')
-  assemblyai.setAPIKey("ENTER YOUR KEY HERE") // or dont...
-  ```
+If you have the `ASSEMBLYAI_API_KEY` environment variable set, then the application
+will attempt to read it and use this value to authenticate with the API.
 
-# Usage
+### Setting the value manually
 
-  This code is used for all examples below:
-  ```javascript
-  const assemblyai = require('assemblyai')
-  assemblyai.setAPIKey() // Note that the value is loaded from an environment variable.
-  ```
-  The API Key is only required to be set once throughout the whole process. If the environment variable is set, this function invocation can be skipped.
+Here is what the code would look like if you were to set the API token manually.
 
-  ## Transcript
-    The class can be access like so:
-    ```javascript
-    const transcript = new assemblyai.Transcript()
-    ```
+```javascript
+const assemblyai = require('assemblyai')
+assemblyai.setAPIKey("ENTER YOUR KEY HERE")
+```
 
-  ### Creating a job
-  When creating a job, you are required to pass in the audio source.
-  If you have a model already, then you are able to pass that parameter in the object
-  as well.
+## Usage
 
-  An example with all of the options available is below, but the only one required
-  would be `audio_src_url`.
-  ```javascript
-  const response = await transcript.create({
-    audio_src_url: "SOME HOSTED URL",
-    model_id: 123,
-    options: {
-      format_text: true || false
-    }
-  })
-  ```
+```javascript
+const assemblyai = require('assemblyai')
+assemblyai.setAPIKey() // Note that the value is loaded from an environment variable.
+```
+
+### Transcript
+
+Transcribing audio from a URL
+
+```javascript
+const transcript = new assemblyai.Transcript()
+```
+
+#### Creating a job
+
+When creating a job, you are required to pass in the audio source.
+
+An example with all of the options available is below, but the only required param would be `audio_src_url`.
+
+```javascript
+const response = await transcript.create({
+  audio_src_url: "https://example.com/example.wav",
+  model_id: 123,
+  options: {
+    format_text: true || false
+  }
+})
+```
     
-  ### Polling until job is complete
-  Now that we have created a job, we can start polling for it. Below an example of how you would use this alongside the code which is above.
-  ```javascript
-    const { id } = response.get()
-    const complete await transcript.poll(id)
-  ```
+#### Polling until job is complete
 
-  which will wait until the job is complete or errors out until returning.
-  If the job were to error out during this stage, an exception will be thrown.
+Now that we have created a job, we can start polling for it.
 
-  ## Models
-  The class can be access like so:
-  ```javascript
-  const model = new assemblyai.Model()
-  ```
+```javascript
+const { id } = response.get()
+const complete await transcript.poll(id)
+```
+
+This ^ will wait until the job is complete or errors out until returning.
+If the job were to error out, an exception would be thrown.
+
+### Models
+
+Create a custom model to boost accuracy for phrases/keywords, or to add custom vocabulary.
+
+```javascript
+const model = new assemblyai.Model()
+```
   
-  ### Creating A Model
-  Creating a model is very simple and is almost identical to creating a job.
+#### Creating A Model
+
+Creating a model is very simple and is almost identical to creating a job.
   
-  Here is some sample code:
-  ```javascript
-  const response = await model.create({
-    name: "foobar",
-    phrases: ["foo", "bar"]
-  })
-  ```
+```javascript
+const response = await model.create({
+  name: "foobar",
+  phrases: ["foo", "bar"]
+})
+```
   
-  ### Polling until the model has finished training
-  This API is identical to the Transcript method which is used like so:
+#### Polling until the model has finished training
 
-  ```javascript
-  const { id } = response.get()
-  await model.poll(id)
-  ```
+This API is identical to the Transcript method which is used like so:
 
-  ## Uploading
-  If you just want to get right to speach to text, then here is a very simple way to do so.
-  A local mp3 file has to be present on your machine in order for this to work...
+```javascript
+const { id } = response.get()
+await model.poll(id)
+```
 
-  The base class for this subsection will be:
+### Uploading audio files for transcription
 
-  ```javascript
-  const upload = new assemblyai.Upload(***LocalFilePath***)
-  ```
-  The required parameter for the constructor would be a local file path which can be generated like so using the path module built into Node.JS:
-  ```javascript
-  path.resolve(__dirname, *relativePath*)
-  ```
+```javascript
+const upload = new assemblyai.Upload('/path/to/some/file.wav')
+```
 
-  ### Creating a Transcript job from a local file
-  So, now that the initializing of the module is complete, you need to start the process.
-  To do this, you just have to call the `create` function on the upload object like so:
-  ```javascript
-  const response = await upload.create()
-  const { text } = response.get()
-  console.log(text)
-  ```
-  This method will then upload your file to the cloud and make it available for the system to process. This is extremely easily if you would like to quickstart your usage of the API. The create method has a couple of flaws such as it likes to throw some errors, so be sure to catch them.
-
+```javascript
+const response = await upload.create()
+const { text } = response.get()
+console.log(text)
+```
     
-  ## The Response Object
+## The Response Object
 
-  ### What is the purpose?
-  The Response Object is used throughout the code to determine what the proper response would be. When using the `Response` object, you will find a couple of methods:
-    `get()`
-    `toString()`
-    `stringify()`
-  The method that you will most likely want to use will be `get()` which returns the full object one level down.
+When using the `Response` object, you will find a couple of methods:
+
+- `get()`
+- `toString()`
+- `stringify()`
+
+The method that you will most likely want to use will be `get()` which returns the full JSON object from the API, one level down.
