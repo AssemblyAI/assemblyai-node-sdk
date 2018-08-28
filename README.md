@@ -110,3 +110,62 @@ When using the `Response` object, you will find a couple of methods:
 - `stringify()`
 
 The method that you will most likely want to use will be `get()` which returns the full JSON object from the API, one level down.
+
+# Full working examples
+
+The initialization of the module of course has to be at the beginning of your project. I chose to use environment variables during initialization.
+```javascript
+const assemblyai = require('assemblyai')
+assemblyai.setAPIKey()
+```
+
+Now, let's use the methods: 
+## Upload
+```javascript
+async function upload () {
+  try {
+    const instance = new assemblyai.Upload(***FilePath***)
+    const response = await instance.create()
+    const data = response.get()
+    // do something with the data
+  } catch (e) {
+    // Do some error handling here
+  }
+}
+```
+
+## Transcript
+```javascript
+async function transcript () {
+  try {
+    const instance = new assemblyai.Transcript()
+    const response = await instance.create()
+    const { id } = response.get()
+    const data = await instance.poll(id)
+    // do something with the data
+  } catch (e) {
+    // Do some error handling here
+  }
+}
+```
+
+## Model
+```javascript
+async function model() {
+  try {
+    const instance = new assemblyai.Model()
+    const response = await instance.create({
+      name: 'test',
+      phrases: ['foo', 'bar']
+    })
+    const { id } = response.get()
+    const data = await instance.poll(id)
+    // do something with the data
+  } catch (e) {
+    // Do some error handling
+  }
+}
+
+
+
+
