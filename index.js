@@ -1,7 +1,15 @@
-const Transcribe = require('./src/Requests/Transcript')
-const Model = require('./src/Requests/Model')
+const Transcript = require('./src/api/Transcript')
+const Model = require('./src/api/Model')
+const Upload = require('./src/api/Upload')
+const Client = require('./src/Client')
 
 module.exports = {
-  Transcribe,
-  Model
+  Transcript,
+  Model,
+  Upload,
+  setAPIKey (key) {
+    Client.API_KEY = key
+  }
 }
+
+

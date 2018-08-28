@@ -1,7 +1,10 @@
 class Response {
   constructor (responseJSON) {
     this.json = responseJSON
-    this.type = responseJSON.transcipt ? 'transcript' : 'model'
+    if (responseJSON.error) {
+      throw new Error(responseJSON.error)
+    }
+    this.type = responseJSON.transcript ? 'transcript' : 'model'
   }
 
   toString () {
