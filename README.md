@@ -55,7 +55,7 @@ Now that we have created a job, we can start polling for it.
 
 ```javascript
 const { id } = response.get()
-const complete await transcript.poll(id)
+const complete = await transcript.poll(id)
 ```
 
 This ^ will wait until the job is complete or errors out until returning.
