@@ -76,12 +76,12 @@ This module is meant to be used with the AssemblyAI API which can be found here:
   ```
   
   ### Polling until the model has finished training
-    This API is identical to the Transcript method which is used like so:
+  This API is identical to the Transcript method which is used like so:
 
-    ```javascript
-    const { id } = response.get()
-    await model.poll(id)
-    ```
+  ```javascript
+  const { id } = response.get()
+  await model.poll(id)
+  ```
 
   ## Uploading
   If you just want to get right to speach to text, then here is a very simple way to do so.
