@@ -20,112 +20,22 @@ assemblyai.setAPIKey("ENTER YOUR KEY HERE")
 
 ## Usage
 
+### Initialization
+
+The initialization of the module of course has to be at the beginning of your project. 
+
 ```javascript
 const assemblyai = require('assemblyai')
-assemblyai.setAPIKey() // Note that the value is loaded from an environment variable.
+assemblyai.setAPIKey("ENTER YOUR KEY HERE")
 ```
 
-### Transcript
+### Upload an audio file for transcription
 
-Transcribing audio from a URL
-
-```javascript
-const transcript = new assemblyai.Transcript()
-```
-
-#### Creating a job
-
-When creating a job, you are required to pass in the audio source.
-
-An example with all of the options available is below, but the only required param would be `audio_src_url`.
-
-```javascript
-const response = await transcript.create({
-  audio_src_url: "https://example.com/example.wav",
-  model_id: 123,
-  options: {
-    format_text: true || false
-  }
-})
-```
-    
-#### Polling until job is complete
-
-Now that we have created a job, we can start polling for it.
-
-```javascript
-const { id } = response.get()
-const complete = await transcript.poll(id)
-```
-
-This ^ will wait until the job is complete or errors out until returning.
-If the job were to error out, an exception would be thrown.
-
-### Models
-
-Create a custom model to boost accuracy for phrases/keywords, or to add custom vocabulary.
-
-```javascript
-const model = new assemblyai.Model()
-```
-  
-#### Creating A Model
-
-Creating a model is very simple and is almost identical to creating a job.
-  
-```javascript
-const response = await model.create({
-  name: "foobar",
-  phrases: ["foo", "bar"]
-})
-```
-  
-#### Polling until the model has finished training
-
-This API is identical to the Transcript method which is used like so:
-
-```javascript
-const { id } = response.get()
-await model.poll(id)
-```
-
-### Uploading audio files for transcription
-
-```javascript
-const upload = new assemblyai.Upload('/path/to/some/file.wav')
-```
-
-```javascript
-const response = await upload.create()
-const { text } = response.get()
-console.log(text)
-```
-    
-## The Response Object
-
-When using the `Response` object, you will find a couple of methods:
-
-- `get()`
-- `toString()`
-- `stringify()`
-
-The method that you will most likely want to use will be `get()` which returns the full JSON object from the API, one level down.
-
-# Full working examples
-
-The initialization of the module of course has to be at the beginning of your project. I chose to use environment variables during initialization.
-```javascript
-const assemblyai = require('assemblyai')
-assemblyai.setAPIKey()
-```
-
-Now, let's use the methods: 
-## Upload
 ```javascript
 async function upload () {
   try {
-    const instance = new assemblyai.Upload(***FilePath***)
-    const response = await instance.create()
+    const transcript = new assemblyai.Upload('/path/to/audiofile.wav')
+    const response = await transcript.create()
     const data = response.get()
     // do something with the data
   } catch (e) {
@@ -134,14 +44,23 @@ async function upload () {
 }
 ```
 
-## Transcript
+### Transcribe audio from a URL
+
+The only required parameter is the `audio_src_url` parameter. For more information about transcribing audio, please see the full API documentation [here](https://docs.assemblyai.com/api/#posttranscript).
+
 ```javascript
-async function transcript () {
+async function transcribe () {
   try {
-    const instance = new assemblyai.Transcript()
-    const response = await instance.create()
+    const transcript = new assemblyai.Transcript()
+    const response = await transcript.create({
+      audio_src_url: "https://example.com/example.wav",
+      model_id: 123,
+      options: {
+        format_text: true || false
+      }
+    })
     const { id } = response.get()
-    const data = await instance.poll(id)
+    const data = await transcript.poll(id)
     // do something with the data
   } catch (e) {
     // Do some error handling here
@@ -149,7 +68,10 @@ async function transcript () {
 }
 ```
 
-## Model
+### Create a custom model
+
+Boost accuracy for keywords/phrases, and add custom terms to the vocabulary with a custom model. For more information, please see the full API documentation [here](https://docs.assemblyai.com/guides/custom_models_101/).
+
 ```javascript
 async function model() {
   try {
@@ -165,7 +87,14 @@ async function model() {
     // Do some error handling
   }
 }
+```
+    
+### The Response Object
 
+When using the `Response` object, you will find a couple of methods:
 
+- `get()`
+- `toString()`
+- `stringify()`
 
-
+The method that you will most likely want to use will be `get()` which returns the full JSON object from the API, one level down.
