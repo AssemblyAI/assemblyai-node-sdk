@@ -38,12 +38,8 @@ async function upload () {
     const response = await transcript.create()
     const data = response.get()
     
-    // do something with the response data.
-    // `data` is a wrapper of the API's JSON
-    // response. `data.get()` returns the JSON
-    // response of the API
-    var responseJson = data.get();
-    console.log(responseJson);
+    // do something with the JSON response
+    console.log(data);
     
   } catch (e) {
     // Do some error handling here
@@ -91,7 +87,6 @@ async function model() {
   try {
     const instance = new assemblyai.Model()
     const response = await instance.create({
-      name: 'test',
       phrases: ['foo', 'bar']
     })
     const { id } = response.get()
