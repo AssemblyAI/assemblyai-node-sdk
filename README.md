@@ -37,7 +37,14 @@ async function upload () {
     const transcript = new assemblyai.Upload('/path/to/audiofile.wav')
     const response = await transcript.create()
     const data = response.get()
-    // do something with the data
+    
+    // do something with the response data.
+    // `data` is a wrapper of the API's JSON
+    // response. `data.get()` returns the JSON
+    // response of the API
+    var responseJson = data.get();
+    console.log(responseJson);
+    
   } catch (e) {
     // Do some error handling here
   }
@@ -61,7 +68,14 @@ async function transcribe () {
     })
     const { id } = response.get()
     const data = await transcript.poll(id)
-    // do something with the data
+    
+    // do something with the response data.
+    // `data` is a wrapper of the API's JSON
+    // response. `data.get()` returns the JSON
+    // response of the API
+    var responseJson = data.get();
+    console.log(responseJson);
+    
   } catch (e) {
     // Do some error handling here
   }
@@ -82,7 +96,14 @@ async function model() {
     })
     const { id } = response.get()
     const data = await instance.poll(id)
-    // do something with the data
+    
+    // do something with the response data.
+    // `data` is a wrapper of the API's JSON
+    // response. `data.get()` returns the JSON
+    // response of the API
+    var responseJson = data.get();
+    console.log(responseJson);
+    
   } catch (e) {
     // Do some error handling
   }
