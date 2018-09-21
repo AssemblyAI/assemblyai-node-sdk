@@ -18,6 +18,10 @@ module.exports = {
             clearInterval(interval)
             resolve(response)
           }
+          if (json.status === 'trained') {
+            clearInterval(interval)
+            resolve(response)
+          }
           if (json.status === 'error') {
             clearInterval(interval)
             reject(json.error)
