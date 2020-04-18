@@ -1,1 +1,4 @@
 .git
+.env
+.eslintrc.json  
+src/example-usage.js
