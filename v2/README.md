@@ -24,3 +24,9 @@ examples assumes there is a `.env` file, but you can also handle your credential
 ```env
 ASSEMBLYAI_API_KEY=YOUR_ASSEMBLYAI_CREDENTIAL
 ```
+
+## TODO
+- [x] ~Initialization~
+- [x] Upload an audio file for transcription
+- [ ] Transcribe audio from a URL
+- [ ] Create a custom model

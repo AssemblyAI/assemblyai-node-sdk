@@ -98,6 +98,7 @@ class Request {
 
 module.exports = Request
 
+// V1
 // curl --request POST \
 //     --url https://api.assemblyai.com/transcript \
 //     --header 'authorization: 6f33815060fa4eb29e96356a3ec536c8' \

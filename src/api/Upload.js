@@ -15,22 +15,29 @@ class Upload {
       method: 'POST',
       url: this.url
     })
-    const uploadUrl = await req.send(false)
+    const uploadUrl = await req.send(false);
+    console.log('uploadUrl',uploadUrl)
+    const url = JSON.parse(uploadUrl).upload_url;
 
+    console.log('uploadUrl url',url)
     await new Promise((resolve, reject) => {
       fs.readFile(this.filePath, (err, data) => {
         if (err) return reject(err)
-        request.put(uploadUrl, { body: data }, (err, response, body) => {
+        request.post(url, { body: data }, (err, response, body) => {
           if (err) return reject(err)
           resolve(body)
         })
       })
     })
 
-    const url = uploadUrl.split('?')[0]
+
+    // const url = uploadUrl.split('?')[0]
+   
     const transcribe = new Transcribe()
     const response = await transcribe.create({
-      audio_src_url: url
+      url: url,
+      upload_url: url
+      // audio_src_url: url
     })
     const { id } = response.get()
 
