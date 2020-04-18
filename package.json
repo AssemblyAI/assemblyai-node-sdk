@@ -18,6 +18,7 @@
   },
   "homepage": "https://github.com/AssemblyAI/assemblyai-node-sdk#readme",
   "dependencies": {
+    "dotenv": "^8.2.0",
     "request": "^2.88.0"
   },
   "devDependencies": {

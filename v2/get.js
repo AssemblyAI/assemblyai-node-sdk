@@ -14,7 +14,7 @@ const get = async ({ApiKey, trancriptId}) => {
             if (error) {
                 reject(error)
             }
-            if (!error && response.statusCode == 200) { // console.log(body);
+            if (!error && response.statusCode == 200) { 
                 resolve(JSON.parse(response.body.toString()))
             }
         });
