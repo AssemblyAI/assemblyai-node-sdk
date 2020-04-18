@@ -22,7 +22,7 @@ upload();
 
 examples assumes there is a `.env` file, but you can also handle your credentials in the parent app how you see fit.
 ```env
-ASSEMBLYAI_API_KEY=YOUR_ASSEMBLYAI_CREDENTIAL
+ASSEMBLYAI_API_KEY=YOUR_ASSEMBLYAI_CREDENTIALS
 ```
 
 ## TODO
