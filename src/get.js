@@ -24,7 +24,7 @@ const get = async ({ApiKey, trancriptId}) => {
 const retry = ({ApiKey, trancriptId}) => {
     return new Promise(async (resolve, reject) => {
         const interval = setInterval(async () => {
-            console.log('inside interval')
+            console.log('inside assemblyai get retry interval')
             try {
                 const resp = await get({ApiKey, trancriptId});
                 if (resp.status === 'completed') {
