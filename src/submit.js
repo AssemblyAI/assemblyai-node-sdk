@@ -1,5 +1,5 @@
 const request = require('request');
-const submit = ({ApiKey, upload_url}) =>{
+const submit = ({ApiKey, upload_url,languageModel,  acousticModel}) =>{
     return new Promise((resolve, reject) => {
         request({
             url: 'https://api.assemblyai.com/v2/transcript',
@@ -10,8 +10,9 @@ const submit = ({ApiKey, upload_url}) =>{
             },
             body: JSON.stringify({
                 "audio_url": upload_url,
-                "acoustic_model":"assemblyai_default",
-                "language_model": "assemblyai_media"
+                "acoustic_model": acousticModel,
+                // `language_model` can be assemblyai_default or assemblyai_media
+                "language_model":  languageModel
             })
         }, (error, response, body) =>{
             if(error){

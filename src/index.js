@@ -1,10 +1,11 @@
 const upload = require('./upload.js');
 const submit = require('./submit.js');
 const get = require('./get.js');
-const assemblyai = async ({ApiKey, filePath}) =>{
+const assemblyai = async ({ApiKey, filePath, languageModel='assemblyai_default' }) =>{
+    console.log('languageModel',languageModel)
     try{
         const { upload_url } = await upload({ApiKey, filePath});
-        const { id, status, words } = await submit({ApiKey, upload_url});
+        const { id, status, words } = await submit({ApiKey, upload_url, languageModel});
         if(status === "completed"){
             return words;
         }
