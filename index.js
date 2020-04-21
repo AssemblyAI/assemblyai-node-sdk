@@ -1,5 +1,3 @@
-const assemblyai = require('./index.js');
+const assemblyai = require('./src/index.js');
 
-module.exports = {
-  assemblyai
-}
+module.exports = assemblyai;

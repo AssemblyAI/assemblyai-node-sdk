@@ -2,5 +2,5 @@
 .env
 .eslintrc.json  
 src/example-usage.js
-
+example-usage.js
 *.mp3

@@ -1,6 +1,6 @@
 {
   "name": "@pietrop/assemblyai",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Unofficial, and unsupported Node SDK for AssemblyAI v2 of the API",
   "main": "index.js",
   "scripts": {
