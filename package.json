@@ -1,7 +1,7 @@
 {
-  "name": "assemblyai",
+  "name": "@pietrop/assemblyai",
   "version": "2.0.0",
-  "description": "",
+  "description": "Unofficial, and unsupported Node SDK for AssemblyAI v2 of the API",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -10,15 +10,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/AssemblyAI/assemblyai-node-sdk.git"
+    "url": "git+https://github.com/pietrop/assemblyai-node-sdk.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/AssemblyAI/assemblyai-node-sdk/issues"
+    "url": "https://github.com/pietrop/assemblyai-node-sdk/issues"
   },
-  "homepage": "https://github.com/AssemblyAI/assemblyai-node-sdk#readme",
+  "homepage": "https://github.com/pietrop/assemblyai-node-sdk#readme",
   "dependencies": {
     "dotenv": "^8.2.0",
     "request": "^2.88.0"
