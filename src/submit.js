@@ -1,5 +1,12 @@
 const request = require('request');
-const submit = ({ ApiKey, upload_url, languageModel = 'assemblyai_default', acousticModel = 'assemblyai_default' }) => {
+const submit = ({
+  ApiKey,
+  upload_url,
+  languageModel = 'assemblyai_default',
+  acousticModel = 'assemblyai_default',
+  autoHighlights = false,
+  iabCategories = false,
+}) => {
   return new Promise((resolve, reject) => {
     request(
       {
@@ -18,6 +25,11 @@ const submit = ({ ApiKey, upload_url, languageModel = 'assemblyai_default', acou
           language_model: languageModel,
           // https://docs.assemblyai.com/guides/getting-speaker-labels-speaker-diarization
           speaker_labels: true,
+          // https://docs.assemblyai.com/all-guides/auto-detecting-key-phrases-words-in-the-transcription-text
+          auto_highlights: autoHighlights,
+          // IAB categories enterprise account only
+          // https://docs.assemblyai.com/enterprise/iab-categorization
+          iab_categories: iabCategories,
         }),
       },
       (error, response, body) => {

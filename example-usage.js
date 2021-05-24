@@ -12,6 +12,8 @@ async function upload() {
       filePath,
       languageModel: 'assemblyai_media',
       acousticModel: 'assemblyai_default',
+      autoHighlights: false,
+      iabCategories: false,
     });
     console.log('response', response);
     fs.writeFileSync(__dirname + '/example-speakers.json', JSON.stringify(response, null, 2));
