@@ -1,4 +1,3 @@
-
 # Created by https://www.gitignore.io/api/node
 
 ### Node ###
@@ -78,3 +77,6 @@ typings/
 
 
 # End of https://www.gitignore.io/api/node
+
+# IDE files
+.idea
