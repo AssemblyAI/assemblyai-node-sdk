@@ -1,3 +1,5 @@
+[@phillipchaffee/assemblyai-v2-node-sdk](../README.md) / [Exports](../modules.md) / Word
+
 # Class: Word
 
 An individual word transcribed.
@@ -6,16 +8,16 @@ An individual word transcribed.
 
 ### Constructors
 
-- [constructor](../wiki/Word#constructor)
+- [constructor](Word.md#constructor)
 
 ### Properties
 
-- [channel](../wiki/Word#channel)
-- [confidence](../wiki/Word#confidence)
-- [end](../wiki/Word#end)
-- [speaker](../wiki/Word#speaker)
-- [start](../wiki/Word#start)
-- [text](../wiki/Word#text)
+- [channel](Word.md#channel)
+- [confidence](Word.md#confidence)
+- [end](Word.md#end)
+- [speaker](Word.md#speaker)
+- [start](Word.md#start)
+- [text](Word.md#text)
 
 ## Constructors
 
@@ -33,7 +35,7 @@ An individual word transcribed.
 
 #### Defined in
 
-[types/word.ts:29](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/types/word.ts#L29)
+[types/word.ts:29](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/ccb7e39/src/types/word.ts#L29)
 
 ___
 
@@ -45,7 +47,7 @@ The confidence in the transcribed text, between 0.0 and 1.0.
 
 #### Defined in
 
-[types/word.ts:20](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/types/word.ts#L20)
+[types/word.ts:20](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/ccb7e39/src/types/word.ts#L20)
 
 ___
 
@@ -57,7 +59,7 @@ Ending timestamp (in milliseconds) of the text in the transcript.
 
 #### Defined in
 
-[types/word.ts:16](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/types/word.ts#L16)
+[types/word.ts:16](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/ccb7e39/src/types/word.ts#L16)
 
 ___
 
@@ -70,7 +72,7 @@ ___
 
 #### Defined in
 
-[types/word.ts:25](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/types/word.ts#L25)
+[types/word.ts:25](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/ccb7e39/src/types/word.ts#L25)
 
 ___
 
@@ -82,7 +84,7 @@ Starting timestamp (in milliseconds) of the text in the transcript.
 
 #### Defined in
 
-[types/word.ts:12](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/types/word.ts#L12)
+[types/word.ts:12](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/ccb7e39/src/types/word.ts#L12)
 
 ___
 
@@ -94,4 +96,4 @@ The text of the word.
 
 #### Defined in
 
-[types/word.ts:8](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/types/word.ts#L8)
+[types/word.ts:8](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/ccb7e39/src/types/word.ts#L8)

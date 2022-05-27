@@ -1,3 +1,5 @@
+[@phillipchaffee/assemblyai-v2-node-sdk](../README.md) / [Exports](../modules.md) / CustomSpelling
+
 # Class: CustomSpelling
 
 The **Custom Spelling** feature gives you the ability to specify how words are spelled or formatted in the transcript text. For example, Custom Spelling could be used to change the spelling of all instances of the word `"Ariana"` to `"Arianna"`. It could also be used to change the formatting of `"CS 50"` to `"CS50"`.
@@ -34,12 +36,12 @@ You can reference the code examples on the right to see how the `custom_spelling
 
 ### Constructors
 
-- [constructor](../wiki/CustomSpelling#constructor)
+- [constructor](CustomSpelling.md#constructor)
 
 ### Properties
 
-- [from](../wiki/CustomSpelling#from)
-- [to](../wiki/CustomSpelling#to)
+- [from](CustomSpelling.md#from)
+- [to](CustomSpelling.md#to)
 
 ## Constructors
 
@@ -57,7 +59,7 @@ A list of non-case-sensitive strings to convert from.
 
 #### Defined in
 
-[types/custom-spelling.ts:36](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/types/custom-spelling.ts#L36)
+[types/custom-spelling.ts:36](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/ccb7e39/src/types/custom-spelling.ts#L36)
 
 ___
 
@@ -69,4 +71,4 @@ The case-sensitive string to convert to.
 
 #### Defined in
 
-[types/custom-spelling.ts:40](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/types/custom-spelling.ts#L40)
+[types/custom-spelling.ts:40](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/ccb7e39/src/types/custom-spelling.ts#L40)

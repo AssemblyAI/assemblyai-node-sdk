@@ -1,3 +1,5 @@
+[@phillipchaffee/assemblyai-v2-node-sdk](../README.md) / [Exports](../modules.md) / ContentSafetyLabels
+
 # Class: ContentSafetyLabels
 
 With **Content Safety Detection**, AssemblyAI can detect if any of the following sensitive content is spoken in your audio/video files, and pinpoint exactly when and what was spoken:
@@ -71,14 +73,14 @@ By default, the content safety model will return any label with a confidence of 
 
 ### Constructors
 
-- [constructor](../wiki/ContentSafetyLabels#constructor)
+- [constructor](ContentSafetyLabels.md#constructor)
 
 ### Properties
 
-- [results](../wiki/ContentSafetyLabels#results)
-- [severity\_score\_summary](../wiki/ContentSafetyLabels#severity_score_summary)
-- [status](../wiki/ContentSafetyLabels#status)
-- [summary](../wiki/ContentSafetyLabels#summary)
+- [results](ContentSafetyLabels.md#results)
+- [severity\_score\_summary](ContentSafetyLabels.md#severity_score_summary)
+- [status](ContentSafetyLabels.md#status)
+- [summary](ContentSafetyLabels.md#summary)
 
 ## Constructors
 
@@ -90,25 +92,25 @@ By default, the content safety model will return any label with a confidence of 
 
 ### results
 
-• `Optional` **results**: [`ContentSafetyResult`](../wiki/ContentSafetyResult)[]
+• `Optional` **results**: [`ContentSafetyResult`](ContentSafetyResult.md)[]
 
 A list of all the spoken audio the Content Safety Detection model flagged.
 
 #### Defined in
 
-[types/content-safety/content-safety-labels.ts:81](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/types/content-safety/content-safety-labels.ts#L81)
+[types/content-safety/content-safety-labels.ts:81](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/ccb7e39/src/types/content-safety/content-safety-labels.ts#L81)
 
 ___
 
 ### severity\_score\_summary
 
-• `Optional` **severity\_score\_summary**: [`SeverityScoreSummary`](../wiki/Exports#severityscoresummary)
+• `Optional` **severity\_score\_summary**: [`SeverityScoreSummary`](../modules.md#severityscoresummary)
 
 For each label that was predicted in the `results` set, the `severity_score_summary` key provides the overall severity of each label in relation to the entire audio file.
 
 #### Defined in
 
-[types/content-safety/content-safety-labels.ts:89](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/types/content-safety/content-safety-labels.ts#L89)
+[types/content-safety/content-safety-labels.ts:89](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/ccb7e39/src/types/content-safety/content-safety-labels.ts#L89)
 
 ___
 
@@ -120,16 +122,16 @@ Will be either `"success"`, or `"unavailable"` in the rare case that the Content
 
 #### Defined in
 
-[types/content-safety/content-safety-labels.ts:77](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/types/content-safety/content-safety-labels.ts#L77)
+[types/content-safety/content-safety-labels.ts:77](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/ccb7e39/src/types/content-safety/content-safety-labels.ts#L77)
 
 ___
 
 ### summary
 
-• `Optional` **summary**: [`ContentSafetySummary`](../wiki/Exports#contentsafetysummary)
+• `Optional` **summary**: [`ContentSafetySummary`](../modules.md#contentsafetysummary)
 
 For each label that was predicted in the `results` set, the `summary` key provides the confidence of each label in relation to the entire audio file. For example, there could be a single result of `disasters` with `0.99` confidence, but if this was a single result in a 3 hour audio file, the `summary` would show a low confidence for `disasters` - indicating that `disasters` is not spoken of widely throughout the entire audio file.
 
 #### Defined in
 
-[types/content-safety/content-safety-labels.ts:85](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/types/content-safety/content-safety-labels.ts#L85)
+[types/content-safety/content-safety-labels.ts:85](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/ccb7e39/src/types/content-safety/content-safety-labels.ts#L85)

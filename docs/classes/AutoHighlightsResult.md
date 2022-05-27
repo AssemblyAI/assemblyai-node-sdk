@@ -1,3 +1,5 @@
+[@phillipchaffee/assemblyai-v2-node-sdk](../README.md) / [Exports](../modules.md) / AutoHighlightsResult
+
 # Class: AutoHighlightsResult
 
 With **Automatic Transcript Highlights**, the AssemblyAI API can automatically detect important phrases and words in your transcription text.
@@ -34,12 +36,12 @@ The `auto_highlights_result` key in the JSON response will contain the key phras
 
 ### Constructors
 
-- [constructor](../wiki/AutoHighlightsResult#constructor)
+- [constructor](AutoHighlightsResult.md#constructor)
 
 ### Properties
 
-- [results](../wiki/AutoHighlightsResult#results)
-- [status](../wiki/AutoHighlightsResult#status)
+- [results](AutoHighlightsResult.md#results)
+- [status](AutoHighlightsResult.md#status)
 
 ## Constructors
 
@@ -51,13 +53,13 @@ The `auto_highlights_result` key in the JSON response will contain the key phras
 
 ### results
 
-• `Optional` **results**: [`AutoHighlight`](../wiki/AutoHighlight)[]
+• `Optional` **results**: [`AutoHighlight`](AutoHighlight.md)[]
 
 A list of all the highlights found in your transcription text.
 
 #### Defined in
 
-[types/auto-highlights/auto-highlights-result.ts:42](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/types/auto-highlights/auto-highlights-result.ts#L42)
+[types/auto-highlights/auto-highlights-result.ts:42](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/ccb7e39/src/types/auto-highlights/auto-highlights-result.ts#L42)
 
 ___
 
@@ -69,4 +71,4 @@ Will be either `"success"`, or `"unavailable"` in the rare case that the Automat
 
 #### Defined in
 
-[types/auto-highlights/auto-highlights-result.ts:38](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/types/auto-highlights/auto-highlights-result.ts#L38)
+[types/auto-highlights/auto-highlights-result.ts:38](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/ccb7e39/src/types/auto-highlights/auto-highlights-result.ts#L38)

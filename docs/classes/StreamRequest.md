@@ -1,18 +1,20 @@
+[@phillipchaffee/assemblyai-v2-node-sdk](../README.md) / [Exports](../modules.md) / StreamRequest
+
 # Class: StreamRequest
 
-The request used with the [AssemblyClient.stream](../wiki/AssemblyClient#stream) function.
+The request used with the [AssemblyClient.stream](AssemblyClient.md#stream) function.
 
 ## Table of contents
 
 ### Constructors
 
-- [constructor](../wiki/StreamRequest#constructor)
+- [constructor](StreamRequest.md#constructor)
 
 ### Properties
 
-- [audio\_data](../wiki/StreamRequest#audio_data)
-- [format\_text](../wiki/StreamRequest#format_text)
-- [punctuate](../wiki/StreamRequest#punctuate)
+- [audio\_data](StreamRequest.md#audio_data)
+- [format\_text](StreamRequest.md#format_text)
+- [punctuate](StreamRequest.md#punctuate)
 
 ## Constructors
 
@@ -32,7 +34,7 @@ Raw audio data, base64 encoded. This can be the raw data recorded directly from 
 
 #### Defined in
 
-[types/requests/stream-request.ts:9](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/types/requests/stream-request.ts#L9)
+[types/requests/stream-request.ts:9](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/ccb7e39/src/types/requests/stream-request.ts#L9)
 
 ___
 
@@ -46,7 +48,7 @@ This is set to `false` by default; however, a developer can add auto formatting 
 
 #### Defined in
 
-[types/requests/stream-request.ts:14](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/types/requests/stream-request.ts#L14)
+[types/requests/stream-request.ts:14](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/ccb7e39/src/types/requests/stream-request.ts#L14)
 
 ___
 
@@ -60,4 +62,4 @@ This is set to `false` by default; however, a developer can add auto punctuation
 
 #### Defined in
 
-[types/requests/stream-request.ts:19](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/types/requests/stream-request.ts#L19)
+[types/requests/stream-request.ts:19](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/ccb7e39/src/types/requests/stream-request.ts#L19)

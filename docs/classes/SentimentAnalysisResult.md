@@ -1,3 +1,5 @@
+[@phillipchaffee/assemblyai-v2-node-sdk](../README.md) / [Exports](../modules.md) / SentimentAnalysisResult
+
 # Class: SentimentAnalysisResult
 
 With Sentiment Analysis, AssemblyAI can detect the sentiment of each sentence of speech spoken in your audio files.
@@ -18,16 +20,16 @@ array can be found in the below table.
 
 ### Constructors
 
-- [constructor](../wiki/SentimentAnalysisResult#constructor)
+- [constructor](SentimentAnalysisResult.md#constructor)
 
 ### Properties
 
-- [confidence](../wiki/SentimentAnalysisResult#confidence)
-- [end](../wiki/SentimentAnalysisResult#end)
-- [sentiment](../wiki/SentimentAnalysisResult#sentiment)
-- [speaker](../wiki/SentimentAnalysisResult#speaker)
-- [start](../wiki/SentimentAnalysisResult#start)
-- [text](../wiki/SentimentAnalysisResult#text)
+- [confidence](SentimentAnalysisResult.md#confidence)
+- [end](SentimentAnalysisResult.md#end)
+- [sentiment](SentimentAnalysisResult.md#sentiment)
+- [speaker](SentimentAnalysisResult.md#speaker)
+- [start](SentimentAnalysisResult.md#start)
+- [text](SentimentAnalysisResult.md#text)
 
 ## Constructors
 
@@ -45,7 +47,7 @@ Confidence score for the detected sentiment, between 0.0 and 1.0.
 
 #### Defined in
 
-[types/sentiment-analysis-result.ts:36](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/types/sentiment-analysis-result.ts#L36)
+[types/sentiment-analysis-result.ts:36](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/ccb7e39/src/types/sentiment-analysis-result.ts#L36)
 
 ___
 
@@ -57,7 +59,7 @@ Ending timestamp (in milliseconds) of the text in the transcript.
 
 #### Defined in
 
-[types/sentiment-analysis-result.ts:28](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/types/sentiment-analysis-result.ts#L28)
+[types/sentiment-analysis-result.ts:28](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/ccb7e39/src/types/sentiment-analysis-result.ts#L28)
 
 ___
 
@@ -69,7 +71,7 @@ The detected sentiment POSITIVE, NEGATIVE, or NEUTRAL.
 
 #### Defined in
 
-[types/sentiment-analysis-result.ts:32](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/types/sentiment-analysis-result.ts#L32)
+[types/sentiment-analysis-result.ts:32](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/ccb7e39/src/types/sentiment-analysis-result.ts#L32)
 
 ___
 
@@ -82,7 +84,7 @@ ___
 
 #### Defined in
 
-[types/sentiment-analysis-result.ts:41](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/types/sentiment-analysis-result.ts#L41)
+[types/sentiment-analysis-result.ts:41](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/ccb7e39/src/types/sentiment-analysis-result.ts#L41)
 
 ___
 
@@ -94,7 +96,7 @@ Starting timestamp (in milliseconds) of the text in the transcript.
 
 #### Defined in
 
-[types/sentiment-analysis-result.ts:24](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/types/sentiment-analysis-result.ts#L24)
+[types/sentiment-analysis-result.ts:24](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/ccb7e39/src/types/sentiment-analysis-result.ts#L24)
 
 ___
 
@@ -106,4 +108,4 @@ The transcription text of the sentence being analyzed
 
 #### Defined in
 
-[types/sentiment-analysis-result.ts:20](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/types/sentiment-analysis-result.ts#L20)
+[types/sentiment-analysis-result.ts:20](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/ccb7e39/src/types/sentiment-analysis-result.ts#L20)

@@ -1,3 +1,5 @@
+[@phillipchaffee/assemblyai-v2-node-sdk](../README.md) / [Exports](../modules.md) / IabCategory
+
 # Class: IabCategory
 
 A topic that was predicted for the audio file, including the text that influenced the topic label prediction, and other metadata about relevancy and timestamps.
@@ -6,13 +8,13 @@ A topic that was predicted for the audio file, including the text that influence
 
 ### Constructors
 
-- [constructor](../wiki/IabCategory#constructor)
+- [constructor](IabCategory.md#constructor)
 
 ### Properties
 
-- [labels](../wiki/IabCategory#labels)
-- [text](../wiki/IabCategory#text)
-- [timestamp](../wiki/IabCategory#timestamp)
+- [labels](IabCategory.md#labels)
+- [text](IabCategory.md#text)
+- [timestamp](IabCategory.md#timestamp)
 
 ## Constructors
 
@@ -24,13 +26,13 @@ A topic that was predicted for the audio file, including the text that influence
 
 ### labels
 
-• `Optional` **labels**: [`IabCategoryLabel`](../wiki/IabCategoryLabel)[]
+• `Optional` **labels**: [`IabCategoryLabel`](IabCategoryLabel.md)[]
 
 The list of labels that were predicted for this portion of text. The `relevance` key gives a score between `0` and `1.0` for how relevant each label is for the portion of text.
 
 #### Defined in
 
-[types/iab-categories/iab-category.ts:15](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/types/iab-categories/iab-category.ts#L15)
+[types/iab-categories/iab-category.ts:15](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/ccb7e39/src/types/iab-categories/iab-category.ts#L15)
 
 ___
 
@@ -42,16 +44,16 @@ The transcription text for the portion of audio that was classified with topic l
 
 #### Defined in
 
-[types/iab-categories/iab-category.ts:11](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/types/iab-categories/iab-category.ts#L11)
+[types/iab-categories/iab-category.ts:11](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/ccb7e39/src/types/iab-categories/iab-category.ts#L11)
 
 ___
 
 ### timestamp
 
-• `Optional` **timestamp**: [`Timestamp`](../wiki/Timestamp)
+• `Optional` **timestamp**: [`Timestamp`](Timestamp.md)
 
 The start and end time, in milliseconds, for where the portion of text in `results.text` was spoken in the audio file.
 
 #### Defined in
 
-[types/iab-categories/iab-category.ts:19](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/types/iab-categories/iab-category.ts#L19)
+[types/iab-categories/iab-category.ts:19](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/ccb7e39/src/types/iab-categories/iab-category.ts#L19)

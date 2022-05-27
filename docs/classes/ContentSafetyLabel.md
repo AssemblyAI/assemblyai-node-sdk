@@ -1,3 +1,5 @@
+[@phillipchaffee/assemblyai-v2-node-sdk](../README.md) / [Exports](../modules.md) / ContentSafetyLabel
+
 # Class: ContentSafetyLabel
 
 Each label will be returned with a `confidence` score and a `severity` score. It is important to note that these two keys measure two very different things. The `severity` key will produce a score that shows how severe the flagged content is on a scale of `0–1`. For example, a natural disaster with mass casualties would be a `1`, whereas a wind storm that broke a lamppost would be a `0.1`.
@@ -20,13 +22,13 @@ In the above example, the Content Safety model is indicating it is `82.25%` conf
 
 ### Constructors
 
-- [constructor](../wiki/ContentSafetyLabel#constructor)
+- [constructor](ContentSafetyLabel.md#constructor)
 
 ### Properties
 
-- [confidence](../wiki/ContentSafetyLabel#confidence)
-- [label](../wiki/ContentSafetyLabel#label)
-- [severity](../wiki/ContentSafetyLabel#severity)
+- [confidence](ContentSafetyLabel.md#confidence)
+- [label](ContentSafetyLabel.md#label)
+- [severity](ContentSafetyLabel.md#severity)
 
 ## Constructors
 
@@ -44,7 +46,7 @@ How confident the model was in predicting the label it predicted on a scale of 0
 
 #### Defined in
 
-[types/content-safety/content-safety-label.ts:26](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/types/content-safety/content-safety-label.ts#L26)
+[types/content-safety/content-safety-label.ts:26](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/ccb7e39/src/types/content-safety/content-safety-label.ts#L26)
 
 ___
 
@@ -56,7 +58,7 @@ The text description of the safety issue.
 
 #### Defined in
 
-[types/content-safety/content-safety-label.ts:22](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/types/content-safety/content-safety-label.ts#L22)
+[types/content-safety/content-safety-label.ts:22](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/ccb7e39/src/types/content-safety/content-safety-label.ts#L22)
 
 ___
 
@@ -68,4 +70,4 @@ A score that shows how severe the flagged content is on a scale of 0–1. For ex
 
 #### Defined in
 
-[types/content-safety/content-safety-label.ts:30](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/types/content-safety/content-safety-label.ts#L30)
+[types/content-safety/content-safety-label.ts:30](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/ccb7e39/src/types/content-safety/content-safety-label.ts#L30)

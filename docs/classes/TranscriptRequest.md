@@ -1,44 +1,46 @@
+[@phillipchaffee/assemblyai-v2-node-sdk](../README.md) / [Exports](../modules.md) / TranscriptRequest
+
 # Class: TranscriptRequest
 
-The request object to create a Transcript used in the [AssemblyClient.createTranscript](../wiki/AssemblyClient#createtranscript) function.
+The request object to create a Transcript used in the [AssemblyClient.createTranscript](AssemblyClient.md#createtranscript) function.
 
 ## Hierarchy
 
 - **`TranscriptRequest`**
 
-  ↳ [`TranscriptResponse`](../wiki/TranscriptResponse)
+  ↳ [`TranscriptResponse`](TranscriptResponse.md)
 
 ## Table of contents
 
 ### Constructors
 
-- [constructor](../wiki/TranscriptRequest#constructor)
+- [constructor](TranscriptRequest.md#constructor)
 
 ### Properties
 
-- [audio\_end\_at](../wiki/TranscriptRequest#audio_end_at)
-- [audio\_start\_from](../wiki/TranscriptRequest#audio_start_from)
-- [audio\_url](../wiki/TranscriptRequest#audio_url)
-- [auto\_chapters](../wiki/TranscriptRequest#auto_chapters)
-- [boost\_param](../wiki/TranscriptRequest#boost_param)
-- [content\_safety](../wiki/TranscriptRequest#content_safety)
-- [custom\_spelling](../wiki/TranscriptRequest#custom_spelling)
-- [disfluencies](../wiki/TranscriptRequest#disfluencies)
-- [dual\_channel](../wiki/TranscriptRequest#dual_channel)
-- [entity\_detection](../wiki/TranscriptRequest#entity_detection)
-- [filter\_profanity](../wiki/TranscriptRequest#filter_profanity)
-- [format\_text](../wiki/TranscriptRequest#format_text)
-- [iab\_categories](../wiki/TranscriptRequest#iab_categories)
-- [language\_code](../wiki/TranscriptRequest#language_code)
-- [punctuate](../wiki/TranscriptRequest#punctuate)
-- [redact\_pii](../wiki/TranscriptRequest#redact_pii)
-- [redact\_pii\_audio](../wiki/TranscriptRequest#redact_pii_audio)
-- [redact\_pii\_policies](../wiki/TranscriptRequest#redact_pii_policies)
-- [redact\_pii\_sub](../wiki/TranscriptRequest#redact_pii_sub)
-- [sentiment\_analysis](../wiki/TranscriptRequest#sentiment_analysis)
-- [speaker\_labels](../wiki/TranscriptRequest#speaker_labels)
-- [webhook\_url](../wiki/TranscriptRequest#webhook_url)
-- [word\_boost](../wiki/TranscriptRequest#word_boost)
+- [audio\_end\_at](TranscriptRequest.md#audio_end_at)
+- [audio\_start\_from](TranscriptRequest.md#audio_start_from)
+- [audio\_url](TranscriptRequest.md#audio_url)
+- [auto\_chapters](TranscriptRequest.md#auto_chapters)
+- [boost\_param](TranscriptRequest.md#boost_param)
+- [content\_safety](TranscriptRequest.md#content_safety)
+- [custom\_spelling](TranscriptRequest.md#custom_spelling)
+- [disfluencies](TranscriptRequest.md#disfluencies)
+- [dual\_channel](TranscriptRequest.md#dual_channel)
+- [entity\_detection](TranscriptRequest.md#entity_detection)
+- [filter\_profanity](TranscriptRequest.md#filter_profanity)
+- [format\_text](TranscriptRequest.md#format_text)
+- [iab\_categories](TranscriptRequest.md#iab_categories)
+- [language\_code](TranscriptRequest.md#language_code)
+- [punctuate](TranscriptRequest.md#punctuate)
+- [redact\_pii](TranscriptRequest.md#redact_pii)
+- [redact\_pii\_audio](TranscriptRequest.md#redact_pii_audio)
+- [redact\_pii\_policies](TranscriptRequest.md#redact_pii_policies)
+- [redact\_pii\_sub](TranscriptRequest.md#redact_pii_sub)
+- [sentiment\_analysis](TranscriptRequest.md#sentiment_analysis)
+- [speaker\_labels](TranscriptRequest.md#speaker_labels)
+- [webhook\_url](TranscriptRequest.md#webhook_url)
+- [word\_boost](TranscriptRequest.md#word_boost)
 
 ## Constructors
 
@@ -56,7 +58,7 @@ Creates an instance of TranscriptRequest.
 
 #### Defined in
 
-[types/requests/transcript-request.ts:12](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/types/requests/transcript-request.ts#L12)
+[types/requests/transcript-request.ts:12](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/ccb7e39/src/types/requests/transcript-request.ts#L12)
 
 ## Properties
 
@@ -68,7 +70,7 @@ The point in time, in milliseconds, to stop transcribing in your media file.
 
 #### Defined in
 
-[types/requests/transcript-request.ts:47](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/types/requests/transcript-request.ts#L47)
+[types/requests/transcript-request.ts:47](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/ccb7e39/src/types/requests/transcript-request.ts#L47)
 
 ___
 
@@ -80,7 +82,7 @@ The point in time, in milliseconds, to begin transcription from in your media fi
 
 #### Defined in
 
-[types/requests/transcript-request.ts:43](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/types/requests/transcript-request.ts#L43)
+[types/requests/transcript-request.ts:43](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/ccb7e39/src/types/requests/transcript-request.ts#L43)
 
 ___
 
@@ -92,7 +94,7 @@ The URL of your media file to transcribe.
 
 #### Defined in
 
-[types/requests/transcript-request.ts:19](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/types/requests/transcript-request.ts#L19)
+[types/requests/transcript-request.ts:19](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/ccb7e39/src/types/requests/transcript-request.ts#L19)
 
 ___
 
@@ -104,7 +106,7 @@ Enable Auto Chapters, can be `true` or `false`.
 
 #### Defined in
 
-[types/requests/transcript-request.ts:139](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/types/requests/transcript-request.ts#L139)
+[types/requests/transcript-request.ts:139](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/ccb7e39/src/types/requests/transcript-request.ts#L139)
 
 ___
 
@@ -116,7 +118,7 @@ The weight to apply to words/phrases in the `word_boost` array; can be `"low"`, 
 
 #### Defined in
 
-[types/requests/transcript-request.ts:55](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/types/requests/transcript-request.ts#L55)
+[types/requests/transcript-request.ts:55](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/ccb7e39/src/types/requests/transcript-request.ts#L55)
 
 ___
 
@@ -128,19 +130,19 @@ Enable Content Safety Detection, can be `true` or `false`.
 
 #### Defined in
 
-[types/requests/transcript-request.ts:119](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/types/requests/transcript-request.ts#L119)
+[types/requests/transcript-request.ts:119](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/ccb7e39/src/types/requests/transcript-request.ts#L119)
 
 ___
 
 ### custom\_spelling
 
-• `Optional` **custom\_spelling**: [`CustomSpelling`](../wiki/CustomSpelling)[]
+• `Optional` **custom\_spelling**: [`CustomSpelling`](CustomSpelling.md)[]
 
 Customize how words are spelled and formatted using `to` and `from` values.
 
 #### Defined in
 
-[types/requests/transcript-request.ts:127](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/types/requests/transcript-request.ts#L127)
+[types/requests/transcript-request.ts:127](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/ccb7e39/src/types/requests/transcript-request.ts#L127)
 
 ___
 
@@ -152,7 +154,7 @@ Transcribe Filler Words, like "umm", in your media file; can be `true` or `false
 
 #### Defined in
 
-[types/requests/transcript-request.ts:131](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/types/requests/transcript-request.ts#L131)
+[types/requests/transcript-request.ts:131](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/ccb7e39/src/types/requests/transcript-request.ts#L131)
 
 ___
 
@@ -164,7 +166,7 @@ Enable Dual Channel transcription, can be `true` or `false`.
 
 #### Defined in
 
-[types/requests/transcript-request.ts:35](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/types/requests/transcript-request.ts#L35)
+[types/requests/transcript-request.ts:35](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/ccb7e39/src/types/requests/transcript-request.ts#L35)
 
 ___
 
@@ -176,7 +178,7 @@ Enable Entity Detection, can be `true` or `false`.
 
 #### Defined in
 
-[types/requests/transcript-request.ts:143](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/types/requests/transcript-request.ts#L143)
+[types/requests/transcript-request.ts:143](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/ccb7e39/src/types/requests/transcript-request.ts#L143)
 
 ___
 
@@ -188,7 +190,7 @@ Filter profanity from the transcribed text, can be `true` or `false`.
 
 #### Defined in
 
-[types/requests/transcript-request.ts:59](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/types/requests/transcript-request.ts#L59)
+[types/requests/transcript-request.ts:59](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/ccb7e39/src/types/requests/transcript-request.ts#L59)
 
 ___
 
@@ -200,7 +202,7 @@ Enable Text Formatting, can be `true` or `false`.
 
 #### Defined in
 
-[types/requests/transcript-request.ts:31](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/types/requests/transcript-request.ts#L31)
+[types/requests/transcript-request.ts:31](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/ccb7e39/src/types/requests/transcript-request.ts#L31)
 
 ___
 
@@ -212,7 +214,7 @@ Enable Topic Detection, can be `true` or `false`.
 
 #### Defined in
 
-[types/requests/transcript-request.ts:123](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/types/requests/transcript-request.ts#L123)
+[types/requests/transcript-request.ts:123](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/ccb7e39/src/types/requests/transcript-request.ts#L123)
 
 ___
 
@@ -224,7 +226,7 @@ The language of your audio file. Possible values are found in [Supported Languag
 
 #### Defined in
 
-[types/requests/transcript-request.ts:23](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/types/requests/transcript-request.ts#L23)
+[types/requests/transcript-request.ts:23](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/ccb7e39/src/types/requests/transcript-request.ts#L23)
 
 ___
 
@@ -236,7 +238,7 @@ Enable Automatic Punctuation, can be `true` or `false`.
 
 #### Defined in
 
-[types/requests/transcript-request.ts:27](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/types/requests/transcript-request.ts#L27)
+[types/requests/transcript-request.ts:27](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/ccb7e39/src/types/requests/transcript-request.ts#L27)
 
 ___
 
@@ -252,7 +254,7 @@ All redacted text will be replaced with `#` characters. For example, if the phon
 
 #### Defined in
 
-[types/requests/transcript-request.ts:67](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/types/requests/transcript-request.ts#L67)
+[types/requests/transcript-request.ts:67](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/ccb7e39/src/types/requests/transcript-request.ts#L67)
 
 ___
 
@@ -264,7 +266,7 @@ Generate a copy of the original media file with spoken PII "beeped" out, can be 
 
 #### Defined in
 
-[types/requests/transcript-request.ts:71](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/types/requests/transcript-request.ts#L71)
+[types/requests/transcript-request.ts:71](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/ccb7e39/src/types/requests/transcript-request.ts#L71)
 
 ___
 
@@ -308,7 +310,7 @@ To best-fit PII Redaction to your use case and data, you can select from a set o
 
 #### Defined in
 
-[types/requests/transcript-request.ts:107](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/types/requests/transcript-request.ts#L107)
+[types/requests/transcript-request.ts:107](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/ccb7e39/src/types/requests/transcript-request.ts#L107)
 
 ___
 
@@ -320,7 +322,7 @@ The replacement logic for detected PII, can be `"entity_type"` or `"hash"`.
 
 #### Defined in
 
-[types/requests/transcript-request.ts:111](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/types/requests/transcript-request.ts#L111)
+[types/requests/transcript-request.ts:111](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/ccb7e39/src/types/requests/transcript-request.ts#L111)
 
 ___
 
@@ -332,7 +334,7 @@ Enable Sentiment Analysis, can be `true` or `false`.
 
 #### Defined in
 
-[types/requests/transcript-request.ts:135](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/types/requests/transcript-request.ts#L135)
+[types/requests/transcript-request.ts:135](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/ccb7e39/src/types/requests/transcript-request.ts#L135)
 
 ___
 
@@ -344,7 +346,7 @@ Enable Speaker Diarization, can be `true` or `false`.
 
 #### Defined in
 
-[types/requests/transcript-request.ts:115](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/types/requests/transcript-request.ts#L115)
+[types/requests/transcript-request.ts:115](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/ccb7e39/src/types/requests/transcript-request.ts#L115)
 
 ___
 
@@ -356,7 +358,7 @@ The URL we should send webhooks to when your transcript is complete.
 
 #### Defined in
 
-[types/requests/transcript-request.ts:39](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/types/requests/transcript-request.ts#L39)
+[types/requests/transcript-request.ts:39](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/ccb7e39/src/types/requests/transcript-request.ts#L39)
 
 ___
 
@@ -368,4 +370,4 @@ A list of custom vocabulary to boost accuracy for.
 
 #### Defined in
 
-[types/requests/transcript-request.ts:51](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/types/requests/transcript-request.ts#L51)
+[types/requests/transcript-request.ts:51](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/ccb7e39/src/types/requests/transcript-request.ts#L51)

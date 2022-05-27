@@ -1,3 +1,5 @@
+[@phillipchaffee/assemblyai-v2-node-sdk](../README.md) / [Exports](../modules.md) / Entity
+
 # Class: Entity
 
 # Entity Detection
@@ -50,14 +52,14 @@ They will be listed individually in the order that they appear in the transcript
 
 ### Constructors
 
-- [constructor](../wiki/Entity#constructor)
+- [constructor](Entity.md#constructor)
 
 ### Properties
 
-- [end](../wiki/Entity#end)
-- [entity\_type](../wiki/Entity#entity_type)
-- [start](../wiki/Entity#start)
-- [text](../wiki/Entity#text)
+- [end](Entity.md#end)
+- [entity\_type](Entity.md#entity_type)
+- [start](Entity.md#start)
+- [text](Entity.md#text)
 
 ## Constructors
 
@@ -75,7 +77,7 @@ Ending timestamp, in milliseconds, of the entity in the transcript.
 
 #### Defined in
 
-[types/entity.ts:56](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/types/entity.ts#L56)
+[types/entity.ts:56](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/ccb7e39/src/types/entity.ts#L56)
 
 ___
 
@@ -87,7 +89,7 @@ The entity type detected.
 
 #### Defined in
 
-[types/entity.ts:64](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/types/entity.ts#L64)
+[types/entity.ts:64](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/ccb7e39/src/types/entity.ts#L64)
 
 ___
 
@@ -99,7 +101,7 @@ Starting timestamp, in milliseconds, of the entity in the transcript.
 
 #### Defined in
 
-[types/entity.ts:52](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/types/entity.ts#L52)
+[types/entity.ts:52](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/ccb7e39/src/types/entity.ts#L52)
 
 ___
 
@@ -111,4 +113,4 @@ The text containing the entity.
 
 #### Defined in
 
-[types/entity.ts:60](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/types/entity.ts#L60)
+[types/entity.ts:60](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/ccb7e39/src/types/entity.ts#L60)

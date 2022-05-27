@@ -1,3 +1,5 @@
+[@phillipchaffee/assemblyai-v2-node-sdk](../README.md) / [Exports](../modules.md) / Timestamp
+
 # Class: Timestamp
 
 A representation of the ms start and end of a piece of text.
@@ -6,12 +8,12 @@ A representation of the ms start and end of a piece of text.
 
 ### Constructors
 
-- [constructor](../wiki/Timestamp#constructor)
+- [constructor](Timestamp.md#constructor)
 
 ### Properties
 
-- [end](../wiki/Timestamp#end)
-- [start](../wiki/Timestamp#start)
+- [end](Timestamp.md#end)
+- [start](Timestamp.md#start)
 
 ## Constructors
 
@@ -29,7 +31,7 @@ Ending timestamp (in milliseconds) of the text in the transcript.
 
 #### Defined in
 
-[types/timestamp.ts:12](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/types/timestamp.ts#L12)
+[types/timestamp.ts:12](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/ccb7e39/src/types/timestamp.ts#L12)
 
 ___
 
@@ -41,4 +43,4 @@ Starting timestamp (in milliseconds) of the text in the transcript.
 
 #### Defined in
 
-[types/timestamp.ts:8](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/types/timestamp.ts#L8)
+[types/timestamp.ts:8](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/ccb7e39/src/types/timestamp.ts#L8)

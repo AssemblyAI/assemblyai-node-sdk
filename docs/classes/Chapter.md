@@ -1,3 +1,5 @@
+[@phillipchaffee/assemblyai-v2-node-sdk](../README.md) / [Exports](../modules.md) / Chapter
+
 # Class: Chapter
 
 **Auto Chapters** provides a "summary over time" for audio files transcribed with AssemblyAI.
@@ -14,15 +16,15 @@ When your [transcription is completed](/walkthroughs#getting-the-transcription-r
 
 ### Constructors
 
-- [constructor](../wiki/Chapter#constructor)
+- [constructor](Chapter.md#constructor)
 
 ### Properties
 
-- [end](../wiki/Chapter#end)
-- [gist](../wiki/Chapter#gist)
-- [headline](../wiki/Chapter#headline)
-- [start](../wiki/Chapter#start)
-- [summary](../wiki/Chapter#summary)
+- [end](Chapter.md#end)
+- [gist](Chapter.md#gist)
+- [headline](Chapter.md#headline)
+- [start](Chapter.md#start)
+- [summary](Chapter.md#summary)
 
 ## Constructors
 
@@ -40,7 +42,7 @@ Ending timestamp (in milliseconds) of the portion of audio being summarized.
 
 #### Defined in
 
-[types/chapter.ts:20](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/types/chapter.ts#L20)
+[types/chapter.ts:20](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/ccb7e39/src/types/chapter.ts#L20)
 
 ___
 
@@ -52,7 +54,7 @@ An ultra-short summary, just a few words, of the content spoken during this time
 
 #### Defined in
 
-[types/chapter.ts:24](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/types/chapter.ts#L24)
+[types/chapter.ts:24](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/ccb7e39/src/types/chapter.ts#L24)
 
 ___
 
@@ -64,7 +66,7 @@ A single sentence summary of the content spoken during this timeframe.
 
 #### Defined in
 
-[types/chapter.ts:28](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/types/chapter.ts#L28)
+[types/chapter.ts:28](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/ccb7e39/src/types/chapter.ts#L28)
 
 ___
 
@@ -76,7 +78,7 @@ Starting timestamp (in milliseconds) of the portion of audio being summarized.
 
 #### Defined in
 
-[types/chapter.ts:16](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/types/chapter.ts#L16)
+[types/chapter.ts:16](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/ccb7e39/src/types/chapter.ts#L16)
 
 ___
 
@@ -88,4 +90,4 @@ An ultra-short summary, just a few words, of the content spoken during this time
 
 #### Defined in
 
-[types/chapter.ts:32](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/types/chapter.ts#L32)
+[types/chapter.ts:32](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/ccb7e39/src/types/chapter.ts#L32)

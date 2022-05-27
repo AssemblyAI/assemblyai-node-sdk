@@ -1,18 +1,49 @@
-# Class: AssemblyClient
+@phillipchaffee/assemblyai-v2-node-sdk / [Exports](modules.md)
+
+# @phillipchaffee/assemblyai-v2-node-sdk
+
+## Getting started
+
+### Installing the module
+
+`npm i @phillipchaffee/assemblyai-v2-node-sdk`
+
+### Initialization
+
+To start using the client, just instantiate a new instance with your AssemblyAI API key.
+
+```javascript
+const assemblyai = require('@phillipchaffee/assemblyai-v2-node-sdk');
+const client = new assemblyai.AssemblyClient('ENTER YOUR ASSEMBLY KEY HERE');
+```
+
+### Upload an audio file for transcription
+
+```javascript
+const transcript = await client.createTranscript({
+  audio_url: 'my-public-audio-url.wav',
+});
+
+client.pollForTranscript(transcript.id).then(result => {
+  console.log(result);
+});
+```
+
+## AssemblyClient
 
 The AssemblyAI client that allows you to call the AssemblyAI V2 endpoints via various functions.
 
-## Table of contents
+### Table of contents
 
-### Constructors
+#### Constructors
 
 - [constructor](../wiki/AssemblyClient#constructor)
 
-### Properties
+#### Properties
 
 - [httpClient](../wiki/AssemblyClient#httpclient)
 
-### Methods
+#### Methods
 
 - [createTranscript](../wiki/AssemblyClient#createtranscript)
 - [deleteTranscript](../wiki/AssemblyClient#deletetranscript)
@@ -24,92 +55,76 @@ The AssemblyAI client that allows you to call the AssemblyAI V2 endpoints via va
 - [stream](../wiki/AssemblyClient#stream)
 - [upload](../wiki/AssemblyClient#upload)
 
-## Constructors
+### Constructors
 
-### constructor
+#### constructor
 
 • **new AssemblyClient**(`apiKey`)
 
 Creates an instance of AssemblyClient.
 
-#### Parameters
+##### Parameters
 
 | Name | Type | Description |
 | :------ | :------ | :------ |
 | `apiKey` | `string` | Your API key to authenticate to AssemblyAI. |
 
-#### Defined in
+### Properties
 
-[assembly-client.ts:24](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/assembly-client.ts#L24)
-
-## Properties
-
-### httpClient
+#### httpClient
 
 • `Private` `Readonly` **httpClient**: `Axios`
 
 The Axios http client used to make requests to the AssemblyAI API.
 
-#### Defined in
+### Methods
 
-[assembly-client.ts:37](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/assembly-client.ts#L37)
-
-## Methods
-
-### createTranscript
+#### createTranscript
 
 ▸ **createTranscript**(`request`): `Promise`<[`TranscriptResponse`](../wiki/TranscriptResponse)\>
 
 Create a transcript.
 The transcript can then be downloaded via [getTranscript](../wiki/AssemblyClient#gettranscript), [pollForTranscript](../wiki/AssemblyClient#pollfortranscript), [getTranscriptSentences](../wiki/AssemblyClient#gettranscriptsentences), [getTranscriptParagraphs](../wiki/AssemblyClient#gettranscriptparagraphs), and [getAllTranscripts](../wiki/AssemblyClient#getalltranscripts).
 
-#### Parameters
+##### Parameters
 
 | Name | Type | Description |
 | :------ | :------ | :------ |
 | `request` | [`TranscriptRequest`](../wiki/TranscriptRequest) | A [TranscriptRequest](../wiki/TranscriptRequest) with your transcription options. |
 
-#### Returns
+##### Returns
 
 `Promise`<[`TranscriptResponse`](../wiki/TranscriptResponse)\>
 
 A [TranscriptResponse](../wiki/TranscriptResponse) of an incomplete transcript.
 
-#### Defined in
-
-[assembly-client.ts:69](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/assembly-client.ts#L69)
-
 ___
 
-### deleteTranscript
+#### deleteTranscript
 
 ▸ **deleteTranscript**(`transcriptId`): `Promise`<[`TranscriptResponse`](../wiki/TranscriptResponse)\>
 
 Permanently delete a transcript by id. The record of the transcript will exist and remain queryable, however, all fields containing sensitive data (like text transcriptions) will be permanently deleted.
 
-#### Parameters
+##### Parameters
 
 | Name | Type | Description |
 | :------ | :------ | :------ |
 | `transcriptId` | `string` | The unique identifier of your transcription. |
 
-#### Returns
+##### Returns
 
 `Promise`<[`TranscriptResponse`](../wiki/TranscriptResponse)\>
 
-#### Defined in
-
-[assembly-client.ts:202](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/assembly-client.ts#L202)
-
 ___
 
-### getAllTranscripts
+#### getAllTranscripts
 
 ▸ **getAllTranscripts**(`limit?`, `status?`, `createdOn?`, `beforeId?`, `afterId?`, `throttledOnly?`): `Promise`<[`AllTranscriptsResponse`](../wiki/AllTranscriptsResponse)\>
 
 List all your transcripts.
 
-#### Parameters
+##### Parameters
 
 | Name | Type | Default value | Description |
 | :------ | :------ | :------ | :------ |
@@ -120,97 +135,81 @@ List all your transcripts.
 | `afterId` | `string` | `''` | Return transcripts that were created after this transcript id. |
 | `throttledOnly` | `boolean` | `false` | Only return throttled transcripts, overrides status filter. |
 
-#### Returns
+##### Returns
 
 `Promise`<[`AllTranscriptsResponse`](../wiki/AllTranscriptsResponse)\>
 
 A paginated [AllTranscriptsResponse](../wiki/AllTranscriptsResponse) with {@link limit} transcript results.
 
-#### Defined in
-
-[assembly-client.ts:164](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/assembly-client.ts#L164)
-
 ___
 
-### getTranscript
+#### getTranscript
 
 ▸ **getTranscript**(`transcriptId`): `Promise`<[`TranscriptResponse`](../wiki/TranscriptResponse)\>
 
 Get the detailed information of a specific transcript by id.
 
-#### Parameters
+##### Parameters
 
 | Name | Type | Description |
 | :------ | :------ | :------ |
 | `transcriptId` | `string` | The unique identifier of your transcription. |
 
-#### Returns
+##### Returns
 
 `Promise`<[`TranscriptResponse`](../wiki/TranscriptResponse)\>
 
 A [TranscriptResponse](../wiki/TranscriptResponse) of the full transcript object no matter it's status.
 
-#### Defined in
-
-[assembly-client.ts:86](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/assembly-client.ts#L86)
-
 ___
 
-### getTranscriptParagraphs
+#### getTranscriptParagraphs
 
 ▸ **getTranscriptParagraphs**(`transcriptId`): `Promise`<[`PartialTranscriptResponse`](../wiki/PartialTranscriptResponse)\>
 
 Query for just the paragraphs of a transcript.
 
-#### Parameters
+##### Parameters
 
 | Name | Type | Description |
 | :------ | :------ | :------ |
 | `transcriptId` | `string` | The unique identifier of your transcription. |
 
-#### Returns
+##### Returns
 
 `Promise`<[`PartialTranscriptResponse`](../wiki/PartialTranscriptResponse)\>
 
 A [PartialTranscriptResponse](../wiki/PartialTranscriptResponse) with the paragraphs of the transcript as a list of [utterances](../wiki/Utterance).
 
-#### Defined in
-
-[assembly-client.ts:143](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/assembly-client.ts#L143)
-
 ___
 
-### getTranscriptSentences
+#### getTranscriptSentences
 
 ▸ **getTranscriptSentences**(`transcriptId`): `Promise`<[`PartialTranscriptResponse`](../wiki/PartialTranscriptResponse)\>
 
 Query for just the sentences of a transcript.
 
-#### Parameters
+##### Parameters
 
 | Name | Type | Description |
 | :------ | :------ | :------ |
 | `transcriptId` | `string` | The unique identifier of your transcription. |
 
-#### Returns
+##### Returns
 
 `Promise`<[`PartialTranscriptResponse`](../wiki/PartialTranscriptResponse)\>
 
 A [PartialTranscriptResponse](../wiki/PartialTranscriptResponse) with the sentences of the transcript as a list of [utterances](../wiki/Utterance).
 
-#### Defined in
-
-[assembly-client.ts:127](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/assembly-client.ts#L127)
-
 ___
 
-### pollForTranscript
+#### pollForTranscript
 
 ▸ **pollForTranscript**(`transcriptId`, `pollTimeout?`, `pollInterval?`): `Promise`<[`TranscriptResponse`](../wiki/TranscriptResponse)\>
 
 Poll for a transcript.
 
-#### Parameters
+##### Parameters
 
 | Name | Type | Description |
 | :------ | :------ | :------ |
@@ -218,25 +217,21 @@ Poll for a transcript.
 | `pollTimeout` | `number` | The amount of time to poll for before timing out. |
 | `pollInterval` | `number` | The amount of time in ms to wait between each call to see if the transcript is complete. |
 
-#### Returns
+##### Returns
 
 `Promise`<[`TranscriptResponse`](../wiki/TranscriptResponse)\>
 
 A [TranscriptResponse](../wiki/TranscriptResponse) when the transcript [TranscriptResponse.status](../wiki/TranscriptResponse#status) === `completed`.
 
-#### Defined in
-
-[assembly-client.ts:102](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/assembly-client.ts#L102)
-
 ___
 
-### stream
+#### stream
 
 ▸ **stream**(`request`): `Promise`<[`StreamResponse`](../wiki/StreamResponse)\>
 
 If you're working with short bursts of audio, less than 15 seconds, you can send the audio data directly to the `/v2/stream` endpoint which will return a transcript to you within a few hundred milliseconds, directly in the request-response loop.
 
-## Audio Requirements
+##### Audio Requirements
 
 The audio data you send to this endpoint has to comply with a strict format. This is because we don't do any transcoding to your data, we send it directly to the model for transcription. You can send the content of a `.wav` file to this endpoint, or raw data read directly from a microphone. Either way, you must record your audio in the following format to use this endpoint:
 
@@ -248,43 +243,41 @@ The audio data you send to this endpoint has to comply with a strict format. Thi
 *   Headless (ie, strip any headers from wav files)
 *   15 seconds or less of audio per request
 
-#### Parameters
+##### Parameters
 
 | Name | Type | Description |
 | :------ | :------ | :------ |
 | `request` | [`StreamRequest`](../wiki/StreamRequest) | A [StreamRequest](../wiki/StreamRequest) |
 
-#### Returns
+##### Returns
 
 `Promise`<[`StreamResponse`](../wiki/StreamResponse)\>
 
 A [StreamResponse](../wiki/StreamResponse). Depending on how much audio data you send, the API will respond within 100-750 milliseconds.
 
-#### Defined in
-
-[assembly-client.ts:230](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/assembly-client.ts#L230)
-
 ___
 
-### upload
+#### upload
 
 ▸ **upload**(`audioUrl`): `Promise`<[`UploadRequestResponse`](../wiki/UploadRequestResponse)\>
 
 Upload an audio file to AssemblyAI for transcription.
 The transcript can then be downloaded via [getTranscript](../wiki/AssemblyClient#gettranscript), [pollForTranscript](../wiki/AssemblyClient#pollfortranscript), [getTranscriptSentences](../wiki/AssemblyClient#gettranscriptsentences), [getTranscriptParagraphs](../wiki/AssemblyClient#gettranscriptparagraphs), and [getAllTranscripts](../wiki/AssemblyClient#getalltranscripts).
 
-#### Parameters
+##### Parameters
 
 | Name | Type | Description |
 | :------ | :------ | :------ |
 | `audioUrl` | `string` | A URL that points to your audio file, accessible only by AssemblyAI's servers. |
 
-#### Returns
+##### Returns
 
 `Promise`<[`UploadRequestResponse`](../wiki/UploadRequestResponse)\>
 
 An [UploadRequestResponse](../wiki/UploadRequestResponse) with the audio_url used.
 
-#### Defined in
+## Full Documentation
 
-[assembly-client.ts:47](https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/a493ce0/src/assembly-client.ts#L47)
+For more detailed information on the functionality available read the [docs](https://phillipchaffee.github.io/assemblyai-node-sdk/index.html).
+
+You may also want to reference the [AssemblyAI API documentation](https://docs.assemblyai.com/).
