@@ -1,13 +1,8 @@
 ## Installing the module:
 
-  `npm i assemblyai`
+  `npm i @phillipchaffee/assemblyai-v2-node-sdk`
 
 ## Authenticating with the API
-
-### Using Environment Variables
-
-If you have the `ASSEMBLYAI_API_KEY` environment variable set, then the application
-will attempt to read it and use this value to authenticate with the API.
 
 ### Setting the value manually
 
@@ -54,7 +49,7 @@ The only required parameter is the `audio_src_url` parameter. For more informati
 ```javascript
 async function transcribe () {
   try {
-    const transcript = new assemblyai.Transcript()
+    const transcript = new assemblyai.TranscriptResponse()
     const response = await transcript.create({
       audio_src_url: "https://example.com/example.wav",
       model_id: 123,
