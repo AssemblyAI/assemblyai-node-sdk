@@ -1,0 +1,15 @@
+{
+  "extends": "@tsconfig/strictest/tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": "src",
+    "declaration": true,
+    "declarationMap": true,
+    "declarationDir": "dist",
+    "module": "CommonJS",
+    "rootDir": "src",
+    "outDir": "dist",
+    "target": "ES2015"
+  },
+  "include": ["src"],
+  "exclude": ["node_modules", "dist"]
+}
