@@ -1,6 +1,6 @@
 {
-  "name": "@phillipchaffee/assemblyai-v2-node-sdk",
-  "version": "1.0.0",
+  "name": "assemblyai",
+  "version": "2.0.0",
   "description": "An SDK to interact with the AssemblyAI v2 API in typescript/javascript.",
   "author": "phillipdensmorechaffee@gmail.com",
   "license": "ISC",

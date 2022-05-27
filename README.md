@@ -1,17 +1,17 @@
-# @phillipchaffee/assemblyai-v2-node-sdk
+# assemblyai
 
 ## Getting started
 
 ### Installing the module
 
-`npm i @phillipchaffee/assemblyai-v2-node-sdk`
+`npm i assemblyai`
 
 ### Initialization
 
 To start using the client, just instantiate a new instance with your AssemblyAI API key.
 
 ```javascript
-const assemblyai = require('@phillipchaffee/assemblyai-v2-node-sdk');
+const assemblyai = require('assemblyai');
 const client = new assemblyai.AssemblyClient('ENTER YOUR ASSEMBLY KEY HERE');
 ```
 
