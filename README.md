@@ -1,6 +1,6 @@
 # @phillipchaffee/assemblyai-v2-node-sdk
 
-## Installing the module:
+## Installing the module
 
 `npm i @phillipchaffee/assemblyai-v2-node-sdk`
 
