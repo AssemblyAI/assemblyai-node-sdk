@@ -6,6 +6,14 @@
   "license": "ISC",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AssemblyAI/assemblyai-node-sdk.git"
+  },
+  "bugs": {
+    "url": "https://github.com/AssemblyAI/assemblyai-node-sdk/issues"
+  },
+  "homepage": "https://github.com/AssemblyAI/assemblyai-node-sdk",
   "keywords": [
     "AssemblyAI",
     "Transcription",
