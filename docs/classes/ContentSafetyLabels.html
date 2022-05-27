@@ -1,0 +1,164 @@
+<!DOCTYPE html><html class="default"><head><meta charSet="utf-8"/><meta http-equiv="x-ua-compatible" content="IE=edge"/><title>ContentSafetyLabels | @phillipchaffee/assemblyai-v2-node-sdk</title><meta name="description" content="Documentation for @phillipchaffee/assemblyai-v2-node-sdk"/><meta name="viewport" content="width=device-width, initial-scale=1"/><link rel="stylesheet" href="../assets/style.css"/><link rel="stylesheet" href="../assets/highlight.css"/><script async src="../assets/search.js" id="search-script"></script></head><body><script>document.body.classList.add(localStorage.getItem("tsd-theme") || "os")</script><header><div class="tsd-page-toolbar"><div class="container"><div class="table-wrap"><div class="table-cell" id="tsd-search" data-base=".."><div class="field"><label for="tsd-search-field" class="tsd-widget search no-caption">Search</label><input type="text" id="tsd-search-field"/></div><ul class="results"><li class="state loading">Preparing search index...</li><li class="state failure">The search index is not available</li></ul><a href="../index.html" class="title">@phillipchaffee/assemblyai-v2-node-sdk</a></div><div class="table-cell" id="tsd-widgets"><div id="tsd-filter"><a href="#" class="tsd-widget options no-caption" data-toggle="options">Options</a><div class="tsd-filter-group"><div class="tsd-select" id="tsd-filter-visibility"><span class="tsd-select-label">All</span><ul class="tsd-select-list"><li data-value="public">Public</li><li data-value="protected">Public/Protected</li><li data-value="private" class="selected">All</li></ul></div> <input type="checkbox" id="tsd-filter-inherited" checked/><label class="tsd-widget" for="tsd-filter-inherited">Inherited</label><input type="checkbox" id="tsd-filter-externals" checked/><label class="tsd-widget" for="tsd-filter-externals">Externals</label></div></div><a href="#" class="tsd-widget menu no-caption" data-toggle="menu">Menu</a></div></div></div></div><div class="tsd-page-title"><div class="container"><ul class="tsd-breadcrumb"><li><a href="../modules.html">@phillipchaffee/assemblyai-v2-node-sdk</a></li><li><a href="ContentSafetyLabels.html">ContentSafetyLabels</a></li></ul><h1>Class ContentSafetyLabels </h1></div></div></header><div class="container container-main"><div class="row"><div class="col-8 col-content"><section class="tsd-panel tsd-comment"><div class="tsd-comment tsd-typography"><div class="lead">
+<p>With <strong>Content Safety Detection</strong>, AssemblyAI can detect if any of the following sensitive content is spoken in your audio/video files, and pinpoint exactly when and what was spoken:</p>
+</div><div><table>
+<thead>
+<tr>
+<th>Label</th>
+<th>Description</th>
+<th>Model Output</th>
+<th>Supported by Severity Scores</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Accidents</td>
+<td>Any man-made incident that happens unexpectedly and results in damage, injury, or death.</td>
+<td>accidents</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Alcohol</td>
+<td>Content that discusses any alcoholic beverage or its consumption.</td>
+<td>alcohol</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Company Financials</td>
+<td>Content that discusses any sensitive company financial information.</td>
+<td>financials</td>
+<td>No</td>
+</tr>
+<tr>
+<td>Crime Violence</td>
+<td>Content that discusses any type of criminal activity or extreme violence that is criminal in nature.</td>
+<td>crime_violence</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Drugs</td>
+<td>Content that discusses illegal drugs or their usage.</td>
+<td>drugs</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Gambling</td>
+<td>Includes gambling on casino-based games such as poker, slots, etc. as well as sports betting.</td>
+<td>gambling</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Hate Speech</td>
+<td>Content that is a direct attack against people or groups based on their sexual orientation, gender identity, race, religion, ethnicity, national origin, disability, etc.</td>
+<td>hate_speech</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Health Issues</td>
+<td>Content that discusses any medical or health-related problems.</td>
+<td>health_issues</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Manga</td>
+<td>Mangas are comics or graphic novels originating from Japan with some of the more popular series being &quot;Pokemon&quot;, &quot;Naruto&quot;, &quot;Dragon Ball Z&quot;, &quot;One Punch Man&quot;, and &quot;Sailor Moon&quot;.</td>
+<td>manga</td>
+<td>No</td>
+</tr>
+<tr>
+<td>Marijuana</td>
+<td>This category includes content that discusses marijuana or its usage.</td>
+<td>marijuana</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Natural Disasters</td>
+<td>Phenomena that happens infrequently and results in damage, injury, or death. Such as hurricanes, tornadoes, earthquakes, volcano eruptions, and firestorms.</td>
+<td>disasters</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Negative News</td>
+<td>News content with a negative sentiment which typically will occur in the third person as an unbiased recapping of events.</td>
+<td>negative_news</td>
+<td>No</td>
+</tr>
+<tr>
+<td>NSFW (Adult Content)</td>
+<td>Content considered &quot;Not Safe for Work&quot; and consists of content that a viewer would not want to be heard/seen in a public environment.</td>
+<td>nsfw</td>
+<td>No</td>
+</tr>
+<tr>
+<td>Pornography</td>
+<td>Content that discusses any sexual content or material.</td>
+<td>pornography</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Profanity</td>
+<td>Any profanity or cursing.</td>
+<td>profanity</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Sensitive Social Issues</td>
+<td>This category includes content that may be considered insensitive, irresponsible, or harmful to certain groups based on their beliefs, political affiliation, sexual orientation, or gender identity.</td>
+<td>sensitive_social_issues</td>
+<td>No</td>
+</tr>
+<tr>
+<td>Terrorism</td>
+<td>Includes terrorist acts as well as terrorist groups. Examples include bombings, mass shootings, and ISIS. Note that many texts corresponding to this topic may also be classified into the crime violence topic.</td>
+<td>terrorism</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Tobacco</td>
+<td>Text that discusses tobacco and tobacco usage, including e-cigarettes, nicotine, vaping, and general discussions about smoking.</td>
+<td>tobacco</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Weapons</td>
+<td>Text that discusses any type of weapon including guns, ammunition, shooting, knives, missiles, torpedoes, etc.</td>
+<td>weapons</td>
+<td>Yes</td>
+</tr>
+</tbody></table>
+<p>Simply include the <code>content_safety</code> parameter in your <code>POST</code> request when submitting audio files for transcription, and set this parameter to <code>true</code>.</p>
+
+<a href="#interpreting-content-safety-detection-results" id="interpreting-content-safety-detection-results" style="color: inherit; text-decoration: none;">
+  <h2>Interpreting Content Safety Detection Results</h2>
+</a>
+<p>Once the transcription is complete, and you <a href="/walkthroughs#getting-the-transcription-result" title="null">get the result</a>, there will be an additional key <code>content_safety_labels</code> in the JSON response. Below, we&#39;ll drill into the data that is returned in the <code>content_safety_labels</code> key.</p>
+
+<a href="#understanding-severity-scores-and-confidence-scores" id="understanding-severity-scores-and-confidence-scores" style="color: inherit; text-decoration: none;">
+  <h2>Understanding Severity Scores and Confidence Scores</h2>
+</a>
+<p>Each label will be returned with a <code>confidence</code> score and a <code>severity</code> score. It is important to note that these two keys measure two very different things. The <code>severity</code> key will produce a score that shows how severe the flagged content is on a scale of <code>0–1</code>. For example, a natural disaster with mass casualties would be a <code>1</code>, whereas a wind storm that broke a lamppost would be a <code>0.1</code>.</p>
+<p>In comparison, <code>confidence</code> displays how confident the model was in predicting the label it predicted, also on a scale of <code>0-1</code>.</p>
+<p>We can break this down further by reviewing the following label:</p>
+<pre><code><span class="hl-0">    </span><span class="hl-1">&quot;labels&quot;</span><span class="hl-0">: [</span><br/><span class="hl-0">        {</span><br/><span class="hl-0">            </span><span class="hl-1">&quot;label&quot;</span><span class="hl-2">:</span><span class="hl-0"> </span><span class="hl-1">&quot;health_issues&quot;</span><span class="hl-0">,</span><br/><span class="hl-0">            </span><span class="hl-1">&quot;confidence&quot;</span><span class="hl-2">:</span><span class="hl-0"> </span><span class="hl-3">0.8225132822990417</span><span class="hl-0">,</span><br/><span class="hl-0">            </span><span class="hl-1">&quot;severity&quot;</span><span class="hl-2">:</span><span class="hl-0"> </span><span class="hl-3">0.15090347826480865</span><br/><span class="hl-0">        }</span><br/><span class="hl-0">    ],</span>
+</code></pre>
+<p>In the above example, the Content Safety model is indicating it is <code>82.25%</code> confident that the spoken content is about Health Issues; however, it is measured at a low severity of <code>0.1509</code>. This means the model is very confident the content is about health issues, but the content was not severe in nature (ie, was likely about a minor health issue).</p>
+
+<a href="#understanding-the-severity-score-summary" id="understanding-the-severity-score-summary" style="color: inherit; text-decoration: none;">
+  <h2>Understanding the Severity Score Summary</h2>
+</a>
+<p>The <code>severity_score_summary</code> key lists each label that was detected along with <code>low</code>, <code>medium</code>, and <code>high</code> keys.</p>
+<pre><code><span class="hl-0">    </span><span class="hl-1">&quot;severity_score_summary&quot;</span><span class="hl-0">: {</span><br/><span class="hl-0">        </span><span class="hl-1">&quot;health_issues&quot;</span><span class="hl-2">:</span><span class="hl-0"> {</span><br/><span class="hl-0">            </span><span class="hl-1">&quot;low&quot;</span><span class="hl-2">:</span><span class="hl-0"> </span><span class="hl-3">0.7210625030587972</span><span class="hl-0">,</span><br/><span class="hl-0">            </span><span class="hl-1">&quot;medium&quot;</span><span class="hl-2">:</span><span class="hl-0"> </span><span class="hl-3">0.2789374969412028</span><span class="hl-0">,</span><br/><span class="hl-0">            </span><span class="hl-1">&quot;high&quot;</span><span class="hl-2">:</span><span class="hl-0"> </span><span class="hl-3">0.0</span><br/><span class="hl-0">        }</span><br/><span class="hl-0">    }</span>
+</code></pre>
+<p>The value of the <code>low</code>, <code>medium</code>, and <code>high</code> keys reflect the API&#39;s confidence that the label is &quot;low,&quot; &quot;medium,&quot; or &quot;high&quot; in severity throughout the entire audio file. This score is based on the intersection of the length of the audio file, the frequency of <code>low</code>/<code>medium</code>/<code>high</code> severity tags through the file, and the <code>confidence</code> score for each of those occurrences.</p>
+
+<a href="#controlling-the-threshold-of-surfaced-results" id="controlling-the-threshold-of-surfaced-results" style="color: inherit; text-decoration: none;">
+  <h2>Controlling the Threshold of Surfaced Results</h2>
+</a>
+<p>By default, the content safety model will return any label with a confidence of 50% or greater. If you wish to set a higher or lower threshold, simply add the <code>content_safety_confidence: {number}</code> parameter to your <code>POST</code> request. This parameter will accept an integer value between <code>25</code> and <code>100</code>, inclusive.</p>
+</div></div></section><section class="tsd-panel tsd-hierarchy"><h3>Hierarchy</h3><ul class="tsd-hierarchy"><li><span class="target">ContentSafetyLabels</span></li></ul></section><section class="tsd-panel-group tsd-index-group"><h2>Index</h2><section class="tsd-panel tsd-index-panel"><div class="tsd-index-content"><section class="tsd-index-section "><h3>Constructors</h3><ul class="tsd-index-list"><li class="tsd-kind-constructor tsd-parent-kind-class"><a href="ContentSafetyLabels.html#constructor" class="tsd-kind-icon">constructor</a></li></ul></section><section class="tsd-index-section "><h3>Properties</h3><ul class="tsd-index-list"><li class="tsd-kind-property tsd-parent-kind-class"><a href="ContentSafetyLabels.html#results" class="tsd-kind-icon">results</a></li><li class="tsd-kind-property tsd-parent-kind-class"><a href="ContentSafetyLabels.html#severity_score_summary" class="tsd-kind-icon">severity_<wbr/>score_<wbr/>summary</a></li><li class="tsd-kind-property tsd-parent-kind-class"><a href="ContentSafetyLabels.html#status" class="tsd-kind-icon">status</a></li><li class="tsd-kind-property tsd-parent-kind-class"><a href="ContentSafetyLabels.html#summary" class="tsd-kind-icon">summary</a></li></ul></section></div></section></section><section class="tsd-panel-group tsd-member-group "><h2>Constructors</h2><section class="tsd-panel tsd-member tsd-kind-constructor tsd-parent-kind-class"><a id="constructor" class="tsd-anchor"></a><h3 class="tsd-anchor-link">constructor<a href="#constructor" aria-label="Permalink" class="tsd-anchor-icon"><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M10 14a3.5 3.5 0 0 0 5 0l4 -4a3.5 3.5 0 0 0 -5 -5l-.5 .5"></path><path d="M14 10a3.5 3.5 0 0 0 -5 0l-4 4a3.5 3.5 0 0 0 5 5l.5 -.5"></path></svg></a></h3><ul class="tsd-signatures tsd-kind-constructor tsd-parent-kind-class"><li class="tsd-signature tsd-kind-icon">new <wbr/>Content<wbr/>Safety<wbr/>Labels<span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><a href="ContentSafetyLabels.html" class="tsd-signature-type" data-tsd-kind="Class">ContentSafetyLabels</a></li></ul><ul class="tsd-descriptions"><li class="tsd-description"><h4 class="tsd-returns-title">Returns <a href="ContentSafetyLabels.html" class="tsd-signature-type" data-tsd-kind="Class">ContentSafetyLabels</a></h4></li></ul></section></section><section class="tsd-panel-group tsd-member-group "><h2>Properties</h2><section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class"><a id="results" class="tsd-anchor"></a><h3 class="tsd-anchor-link"><span class="tsd-flag ts-flagOptional">Optional</span> results<a href="#results" aria-label="Permalink" class="tsd-anchor-icon"><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M10 14a3.5 3.5 0 0 0 5 0l4 -4a3.5 3.5 0 0 0 -5 -5l-.5 .5"></path><path d="M14 10a3.5 3.5 0 0 0 -5 0l-4 4a3.5 3.5 0 0 0 5 5l.5 -.5"></path></svg></a></h3><div class="tsd-signature tsd-kind-icon">results<span class="tsd-signature-symbol">?:</span> <a href="ContentSafetyResult.html" class="tsd-signature-type" data-tsd-kind="Class">ContentSafetyResult</a><span class="tsd-signature-symbol">[]</span></div><aside class="tsd-sources"><ul><li>Defined in <a href="https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/45d6c5e/src/types/content-safety/content-safety-labels.ts#L81">types/content-safety/content-safety-labels.ts:81</a></li></ul></aside><div class="tsd-comment tsd-typography"><div class="lead">
+<p>A list of all the spoken audio the Content Safety Detection model flagged.</p>
+</div></div></section><section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class"><a id="severity_score_summary" class="tsd-anchor"></a><h3 class="tsd-anchor-link"><span class="tsd-flag ts-flagOptional">Optional</span> severity_<wbr/>score_<wbr/>summary<a href="#severity_score_summary" aria-label="Permalink" class="tsd-anchor-icon"><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M10 14a3.5 3.5 0 0 0 5 0l4 -4a3.5 3.5 0 0 0 -5 -5l-.5 .5"></path><path d="M14 10a3.5 3.5 0 0 0 -5 0l-4 4a3.5 3.5 0 0 0 5 5l.5 -.5"></path></svg></a></h3><div class="tsd-signature tsd-kind-icon">severity_<wbr/>score_<wbr/>summary<span class="tsd-signature-symbol">?:</span> <a href="../modules.html#SeverityScoreSummary" class="tsd-signature-type" data-tsd-kind="Type alias">SeverityScoreSummary</a></div><aside class="tsd-sources"><ul><li>Defined in <a href="https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/45d6c5e/src/types/content-safety/content-safety-labels.ts#L89">types/content-safety/content-safety-labels.ts:89</a></li></ul></aside><div class="tsd-comment tsd-typography"><div class="lead">
+<p>For each label that was predicted in the <code>results</code> set, the <code>severity_score_summary</code> key provides the overall severity of each label in relation to the entire audio file.</p>
+</div></div></section><section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class"><a id="status" class="tsd-anchor"></a><h3 class="tsd-anchor-link"><span class="tsd-flag ts-flagOptional">Optional</span> status<a href="#status" aria-label="Permalink" class="tsd-anchor-icon"><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M10 14a3.5 3.5 0 0 0 5 0l4 -4a3.5 3.5 0 0 0 -5 -5l-.5 .5"></path><path d="M14 10a3.5 3.5 0 0 0 -5 0l-4 4a3.5 3.5 0 0 0 5 5l.5 -.5"></path></svg></a></h3><div class="tsd-signature tsd-kind-icon">status<span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span></div><aside class="tsd-sources"><ul><li>Defined in <a href="https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/45d6c5e/src/types/content-safety/content-safety-labels.ts#L77">types/content-safety/content-safety-labels.ts:77</a></li></ul></aside><div class="tsd-comment tsd-typography"><div class="lead">
+<p>Will be either <code>&quot;success&quot;</code>, or <code>&quot;unavailable&quot;</code> in the rare case that the Content Safety Detection model failed.</p>
+</div></div></section><section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class"><a id="summary" class="tsd-anchor"></a><h3 class="tsd-anchor-link"><span class="tsd-flag ts-flagOptional">Optional</span> summary<a href="#summary" aria-label="Permalink" class="tsd-anchor-icon"><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M10 14a3.5 3.5 0 0 0 5 0l4 -4a3.5 3.5 0 0 0 -5 -5l-.5 .5"></path><path d="M14 10a3.5 3.5 0 0 0 -5 0l-4 4a3.5 3.5 0 0 0 5 5l.5 -.5"></path></svg></a></h3><div class="tsd-signature tsd-kind-icon">summary<span class="tsd-signature-symbol">?:</span> <a href="../modules.html#ContentSafetySummary" class="tsd-signature-type" data-tsd-kind="Type alias">ContentSafetySummary</a></div><aside class="tsd-sources"><ul><li>Defined in <a href="https://github.com/PhillipChaffee/assemblyai-node-sdk/blob/45d6c5e/src/types/content-safety/content-safety-labels.ts#L85">types/content-safety/content-safety-labels.ts:85</a></li></ul></aside><div class="tsd-comment tsd-typography"><div class="lead">
+<p>For each label that was predicted in the <code>results</code> set, the <code>summary</code> key provides the confidence of each label in relation to the entire audio file. For example, there could be a single result of <code>disasters</code> with <code>0.99</code> confidence, but if this was a single result in a 3 hour audio file, the <code>summary</code> would show a low confidence for <code>disasters</code> - indicating that <code>disasters</code> is not spoken of widely throughout the entire audio file.</p>
+</div></div></section></section></div><div class="col-4 col-menu menu-sticky-wrap menu-highlight"><nav class="tsd-navigation primary"><ul><li class=""><a href="../modules.html">Exports</a></li></ul></nav><nav class="tsd-navigation secondary menu-sticky"><ul><li class="current tsd-kind-class"><a href="ContentSafetyLabels.html" class="tsd-kind-icon">Content<wbr/>Safety<wbr/>Labels</a><ul><li class="tsd-kind-constructor tsd-parent-kind-class"><a href="ContentSafetyLabels.html#constructor" class="tsd-kind-icon">constructor</a></li><li class="tsd-kind-property tsd-parent-kind-class"><a href="ContentSafetyLabels.html#results" class="tsd-kind-icon">results</a></li><li class="tsd-kind-property tsd-parent-kind-class"><a href="ContentSafetyLabels.html#severity_score_summary" class="tsd-kind-icon">severity_<wbr/>score_<wbr/>summary</a></li><li class="tsd-kind-property tsd-parent-kind-class"><a href="ContentSafetyLabels.html#status" class="tsd-kind-icon">status</a></li><li class="tsd-kind-property tsd-parent-kind-class"><a href="ContentSafetyLabels.html#summary" class="tsd-kind-icon">summary</a></li></ul></li></ul></nav></div></div></div><footer class="with-border-bottom"><div class="container"><h2>Legend</h2><div class="tsd-legend-group"><ul class="tsd-legend"><li class="tsd-kind-constructor tsd-parent-kind-class"><span class="tsd-kind-icon">Constructor</span></li><li class="tsd-kind-property tsd-parent-kind-class"><span class="tsd-kind-icon">Property</span></li><li class="tsd-kind-method tsd-parent-kind-class"><span class="tsd-kind-icon">Method</span></li></ul><ul class="tsd-legend"><li class="tsd-kind-constructor tsd-parent-kind-class tsd-is-inherited"><span class="tsd-kind-icon">Inherited constructor</span></li><li class="tsd-kind-property tsd-parent-kind-class tsd-is-inherited"><span class="tsd-kind-icon">Inherited property</span></li></ul><ul class="tsd-legend"><li class="tsd-kind-property tsd-parent-kind-class tsd-is-private"><span class="tsd-kind-icon">Private property</span></li></ul></div><h2>Settings</h2><p>Theme <select id="theme"><option value="os">OS</option><option value="light">Light</option><option value="dark">Dark</option></select></p></div></footer><div class="container tsd-generator"><p>Generated using <a href="https://typedoc.org/" target="_blank">TypeDoc</a></p></div><div class="overlay"></div><script src="../assets/main.js"></script></body></html>
