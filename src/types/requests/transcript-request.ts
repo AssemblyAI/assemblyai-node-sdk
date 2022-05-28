@@ -141,4 +141,8 @@ export class TranscriptRequest {
    * Enable Entity Detection, can be `true` or `false`.
    */
   entity_detection?: boolean;
+  /**
+   * Enable Automatic Transcript Highlights, can be `true` or `false`.
+   */
+  auto_highlights?: boolean;
 }
