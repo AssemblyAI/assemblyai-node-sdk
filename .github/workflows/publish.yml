@@ -1,0 +1,45 @@
+name: Publish to npmjs.com
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build-and-publish:
+    name: Build and publish to npmjs.com
+    runs-on: ubuntu-latest
+    steps:
+    - name: Setup Node.js 20
+      uses: actions/setup-node@v3
+      with:
+        node-version: 20
+    - name: Checkout source code
+      uses: actions/checkout@v3
+    - name: Install pnpm
+      run: npm install -g pnpm@8.7.4
+    # doesn't work with Node 20
+    # - name: Install pnpm
+    #   uses: pnpm/action-setup@v2
+    #   with:
+    #     version: 8.7.4
+    #     run_install: false
+    - name: Get pnpm store directory
+      shell: bash
+      run: |
+        echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+    - uses: actions/cache@v3
+      name: Setup pnpm cache
+      with:
+        path: ${{ env.STORE_PATH }}
+        key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+        restore-keys: |
+          ${{ runner.os }}-pnpm-store-
+    - name: Install dependencies
+      run: pnpm install --frozen-lockfile false
+    - name: Build code
+      run: npm run build
+    - run: |
+        npm config set //registry.npmjs.org/:_authToken=$NPM_AUTH_TOKEN
+        npm publish
+      env:
+        NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
