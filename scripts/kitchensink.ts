@@ -10,8 +10,8 @@ const client = new AssemblyAI({
 (async function transcribeUsingRealtime() {
   const useToken = false;
   const serviceParams: any = {
-    sample_rate: 16_000,
-    word_boost: ['gore', 'climate']
+    sampleRate: 16_000,
+    wordBoost: ['gore', 'climate']
   };
   if (useToken) {
     serviceParams.token = await client.realtime.createTemporaryToken({ expires_in: 480 });
