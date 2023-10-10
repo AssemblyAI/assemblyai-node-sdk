@@ -8,7 +8,7 @@
   "typings": "dist/index.d.ts",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/AssemblyAI/assemblyai-typescript-sdk.git"
+    "url": "git+https://github.com/AssemblyAI/assemblyai-node-sdk.git"
   },
   "publishConfig": {
     "tag": "beta",
