@@ -173,7 +173,7 @@ const service = client.realtime.createService({
 You can also generate a temporary auth token for real-time.
 
 ```typescript
-const token = await client.realtime.createTemporaryToken({expires_in = 60});
+const token = await client.realtime.createTemporaryToken({ expires_in = 60 });
 const rt = client.realtime.createService({
   token: token
 });
@@ -212,7 +212,7 @@ getAudio((chunk) => {
 Close the connection when you're finished.
 
 ```typescript
-rt.close();
+await rt.close();
 ```
 
 # Tests
