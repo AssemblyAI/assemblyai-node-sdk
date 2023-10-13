@@ -1,7 +1,7 @@
 import { createReadStream } from 'fs'
 import 'dotenv/config'
 import AssemblyAI, { Transcript, CreateTranscriptParameters } from '../src/index';
-import { FinalTranscript, PartialTranscript, RealtimeTranscript } from '../src/types'
+import { FinalTranscript, LemurBaseResponse, PartialTranscript, RealtimeTranscript } from '../src/types'
 
 const client = new AssemblyAI({
   apiKey: process.env.ASSEMBLYAI_API_KEY || '',
@@ -52,7 +52,7 @@ const client = new AssemblyAI({
 })();
 
 const audioUrl = 'https://storage.googleapis.com/aai-docs-samples/espn.m4a';
-const createTranscriptParams: CreateTranscriptParameters  = {
+const createTranscriptParams: CreateTranscriptParameters = {
   audio_url: audioUrl,
   boost_param: 'high',
   word_boost: ['Chicago', 'draft'],
@@ -79,10 +79,10 @@ const createTranscriptParams: CreateTranscriptParameters  = {
 
 (async function runLemurModels() {
   const transcript = await client.transcripts.create(createTranscriptParams);
-  await lemurSummary(transcript);
-  await lemurQuestionAnswer(transcript);
-  await lemurActionPoints(transcript);
-  await lemurCustomTask(transcript);
+  await lemurSummary(transcript).then(purgeLemurRequestData);
+  await lemurQuestionAnswer(transcript).then(purgeLemurRequestData);
+  await lemurActionPoints(transcript).then(purgeLemurRequestData);
+  await lemurCustomTask(transcript).then(purgeLemurRequestData);
   await deleteTranscript(transcript);
 })();
 
@@ -255,11 +255,8 @@ const createTranscriptParams: CreateTranscriptParameters  = {
 })();
 
 async function searchTranscript(transcript: Transcript) {
-  console.error('Search is not yet implemented');
-  // const result = await client.transcripts.search(transcript.id, {
-  //   words: ['draft', 'football']
-  // });
-  // console.log(result);
+  const result = await client.transcripts.wordSearch(transcript.id, ['draft', 'football']);
+  console.log(result);
 }
 
 async function exportAsSubtitles(transcript: Transcript) {
@@ -294,6 +291,7 @@ async function lemurSummary(transcript: Transcript) {
     answer_format: 'bullet points'
   })
   console.log(response.response);
+  return response;
 }
 
 async function lemurQuestionAnswer(transcript: Transcript) {
@@ -316,6 +314,7 @@ async function lemurQuestionAnswer(transcript: Transcript) {
     max_output_size: 3000
   })
   console.log(response.response);
+  return response;
 }
 
 async function lemurActionPoints(transcript: Transcript) {
@@ -326,6 +325,7 @@ async function lemurActionPoints(transcript: Transcript) {
     max_output_size: 3000
   })
   console.log(response.response);
+  return response;
 }
 
 async function lemurCustomTask(transcript: Transcript) {
@@ -337,4 +337,10 @@ async function lemurCustomTask(transcript: Transcript) {
     max_output_size: 3000
   })
   console.log(response.response);
+  return response;
 }
+
+async function purgeLemurRequestData(lemurResponse: LemurBaseResponse) {
+  const { response } = await client.lemur.purgeRequestData(lemurResponse.request_id);
+  console.log(response);
+};

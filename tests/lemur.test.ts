@@ -1,4 +1,4 @@
-import { knownTranscriptIds } from './__mocks__/api'
+import { knownTranscriptIds, knownLemurRequestId, purgeRequestId } from './__mocks__/api'
 import AssemblyAI from '../src'
 
 const assembly = new AssemblyAI({
@@ -14,7 +14,7 @@ describe('lemur', () => {
     })
 
     expect(response).toBeTruthy()
-  }, 15_000)
+  })
 
   it('should generate an answer', async () => {
     const { response } = await assembly.lemur.questionAnswer({
@@ -30,7 +30,7 @@ describe('lemur', () => {
 
     expect(response).toBeTruthy()
     expect(response).toHaveLength(1)
-  }, 15_000)
+  })
 
   it('should generate action items', async () => {
     const { response } = await assembly.lemur.actionItems({
@@ -39,7 +39,7 @@ describe('lemur', () => {
     })
 
     expect(response).toBeTruthy()
-  }, 15_000)
+  })
 
   it('should generate a task', async () => {
     const { response } = await assembly.lemur.task({
@@ -49,7 +49,7 @@ describe('lemur', () => {
     })
 
     expect(response).toBeTruthy()
-  }, 15_000)
+  })
 
   it('should fail to generate a summary', async () => {
     const promise = assembly.lemur.summary({
@@ -61,5 +61,12 @@ describe('lemur', () => {
     await expect(promise).rejects.toBe(
       'each transcript source id must be valid',
     )
+  })
+
+  it('should purge request data', async () => {
+    const deletionRequest = await assembly.lemur.purgeRequestData(knownLemurRequestId)
+    expect(deletionRequest.deleted).toBeTruthy();
+    expect(deletionRequest.request_id_to_purge).toBe(knownLemurRequestId);
+    expect(deletionRequest.request_id).toBe(purgeRequestId);
   })
 })

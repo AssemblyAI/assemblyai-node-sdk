@@ -1,4 +1,4 @@
-import BaseService from "@/services/base";
+import { BaseService } from "@/services/base";
 import {
   ParagraphsResponse,
   SentencesResponse,
@@ -12,11 +12,12 @@ import {
   Retrieveable,
   SubtitleFormat,
   RedactedAudioResponse,
+  WordSearchResponse,
 } from "@/types";
 import { AxiosInstance } from "axios";
-import FileService from "../files";
+import { FileService } from "../files";
 
-export default class TranscriptService
+export class TranscriptService
   extends BaseService
   implements
     Createable<Transcript, CreateTranscriptParameters, CreateTranscriptOptions>,
@@ -58,6 +59,7 @@ export default class TranscriptService
     options?: CreateTranscriptOptions
   ): Promise<Transcript> {
     const startTime = Date.now();
+    // eslint-disable-next-line no-constant-condition
     while (true) {
       const transcript = await this.get(transcriptId);
       if (transcript.status === "completed" || transcript.status === "error") {
@@ -113,6 +115,25 @@ export default class TranscriptService
   async delete(id: string): Promise<Transcript> {
     const res = await this.client.delete<Transcript>(`/v2/transcript/${id}`);
     return res.data;
+  }
+
+  /**
+   * Search through the transcript for a specific set of keywords.
+   * You can search for individual words, numbers, or phrases containing up to five words or numbers.
+   * @param id The identifier of the transcript.
+   * @param id Keywords to search for.
+   * @return A promise that resolves to the sentences.
+   */
+  async wordSearch(id: string, words: string[]): Promise<WordSearchResponse> {
+    const { data } = await this.client.get<WordSearchResponse>(
+      `/v2/transcript/${id}/word-search`,
+      {
+        params: {
+          words: JSON.stringify(words),
+        },
+      }
+    );
+    return data;
   }
 
   /**

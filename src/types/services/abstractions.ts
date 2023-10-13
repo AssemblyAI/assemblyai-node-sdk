@@ -3,7 +3,7 @@
  * @template T The type of the resource.
  * @template Parameters The type of the parameters required to create the resource.
  */
-interface Createable<T, Parameters, Options = Record<string, any>> {
+interface Createable<T, Parameters, Options = Record<string, unknown>> {
   /**
    * Create a new resource.
    * @param params The parameters of the new resource.

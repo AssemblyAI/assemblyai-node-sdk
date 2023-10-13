@@ -5,9 +5,11 @@
 import type { LemurBaseParameters } from '../../src/'
 
 export const knownTranscriptIds = ['123']
+export const knownLemurRequestId = 'request_id'
+export const purgeRequestId = 'deletion_request_id'
 const lemurResponse = {
   response: 'some response',
-  requestId: 'request_id',
+  requestId: knownLemurRequestId,
 }
 
 const withTranscriptId = (
@@ -102,4 +104,23 @@ export const get = () => ({
       },
     ]),
   ),
+  // word search
+  ...Object.fromEntries(
+    knownTranscriptIds.map((id) => [
+      [`/v2/transcript/${id}/word-search`],
+      {
+        id: id,
+        total_count: 1,
+        matches: [{}]
+      },
+    ]),
+  ),
 })
+
+export const deleteMethod = () => ({
+  '/lemur/v3/request_id': {
+    deleted: true,
+    request_id: purgeRequestId,
+    request_id_to_purge: knownLemurRequestId
+  }
+});
