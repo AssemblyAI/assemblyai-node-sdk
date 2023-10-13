@@ -14,6 +14,7 @@ import {
   RealtimeErrorMessages,
   RealtimeErrorType,
 } from "@/utils/errors";
+import { Writable } from "stream";
 
 const defaultRealtimeUrl = "wss://api.assemblyai.com/v2/realtime/ws";
 
@@ -75,12 +76,13 @@ export class RealtimeService {
   ): void;
   on(event: "error", listener: (error: Error) => void): void;
   on(event: "close", listener: (code: number, reason: string) => void): void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   on(event: RealtimeEvents, listener: (...args: any[]) => void) {
     this.listeners[event] = listener;
   }
 
   connect() {
-    return new Promise<SessionBeginsEventData>((resolve, _) => {
+    return new Promise<SessionBeginsEventData>((resolve) => {
       if (this.socket) {
         throw new Error("Already connected");
       }
@@ -160,12 +162,22 @@ export class RealtimeService {
     this.socket.send(JSON.stringify(payload));
   }
 
+  stream(): Writable {
+    const stream = new Writable({
+      write: (chunk: Buffer, encoding, next) => {
+        this.sendAudio(chunk);
+        next();
+      },
+    });
+    return stream;
+  }
+
   async close(waitForSessionTermination = true) {
     if (this.socket) {
       if (this.socket.readyState === WebSocket.OPEN) {
         const terminateSessionMessage = `{"terminate_session": true}`;
         if (waitForSessionTermination) {
-          const sessionTerminatedPromise = new Promise<void>((resolve, _) => {
+          const sessionTerminatedPromise = new Promise<void>((resolve) => {
             this.sessionTerminatedResolve = resolve;
           });
           this.socket.send(terminateSessionMessage);

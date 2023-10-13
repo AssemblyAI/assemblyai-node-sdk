@@ -1,8 +1,8 @@
 import { readFile } from "fs/promises";
-import BaseService from "@/services/base";
+import { BaseService } from "@/services/base";
 import { UploadedFile } from "@/types";
 
-export default class FileService extends BaseService {
+export class FileService extends BaseService {
   /**
    * Upload a local file to AssemblyAI.
    * @param path The local file to upload.

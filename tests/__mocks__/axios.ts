@@ -1,7 +1,6 @@
 import * as axiosImport from 'axios'
 import type { LemurBaseParameters } from '../../src'
-import { get, post } from './api'
-import { type } from 'os';
+import { get, post, deleteMethod } from './api'
 
 const axios = jest.createMockFromModule('axios') as jest.Mocked<
   typeof axiosImport.default
@@ -26,6 +25,7 @@ const useKnownEndpoints =
 
 axios.post.mockImplementation(useKnownEndpoints(post))
 axios.get.mockImplementation(useKnownEndpoints(get))
+axios.delete.mockImplementation(useKnownEndpoints(deleteMethod))
 
 export const withData = (data: unknown) => ({ data })
 export const isAxiosError = axiosImport.isAxiosError

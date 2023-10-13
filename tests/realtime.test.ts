@@ -1,9 +1,11 @@
 import WS from "jest-websocket-mock";
 import AssemblyAI, { RealtimeService } from '../src'
-import RealtimeError, {
+import {
+  RealtimeError,
   RealtimeErrorType,
   RealtimeErrorMessages
 } from '../src/utils/errors/realtime'
+import stream from "stream";
 
 const apiKey = '123';
 const token = '123';
@@ -127,6 +129,14 @@ describe('realtime', () => {
     rt.sendAudio(data)
     await expect(server)
       .toReceiveMessage(JSON.stringify({ audio_data: Buffer.from(data).toString('base64') }));
+  })
+
+  it('can send audio using stream', async () => {
+    const writeStream = new stream.PassThrough()
+    writeStream.pipe(rt.stream())
+    writeStream.write(Buffer.alloc(5_000))
+    await expect(server)
+      .toReceiveMessage(JSON.stringify({ audio_data: Buffer.alloc(5_000).toString('base64') }));
   })
 
   it('can receive transcript', () => {

@@ -7,10 +7,11 @@ import {
   LemurQuestionAnswerResponse,
   LemurActionItemsResponse,
   LemurTaskResponse,
+  PurgeLemurRequestDataResponse,
 } from "@/types";
-import BaseService from "@/services/base";
+import { BaseService } from "@/services/base";
 
-export default class LemurService extends BaseService {
+export class LemurService extends BaseService {
   async summary(params: LemurSummaryParameters): Promise<LemurSummaryResponse> {
     const { data } = await this.client.post<LemurSummaryResponse>(
       "/lemur/v3/generate/summary",
@@ -43,6 +44,17 @@ export default class LemurService extends BaseService {
     const { data } = await this.client.post<LemurTaskResponse>(
       "/lemur/v3/generate/task",
       params
+    );
+    return data;
+  }
+
+  /**
+   * Delete the data for a previously submitted LeMUR request.
+   * @param id ID of the LeMUR request
+   */
+  async purgeRequestData(id: string): Promise<PurgeLemurRequestDataResponse> {
+    const { data } = await this.client.delete<PurgeLemurRequestDataResponse>(
+      `/lemur/v3/${id}`
     );
     return data;
   }

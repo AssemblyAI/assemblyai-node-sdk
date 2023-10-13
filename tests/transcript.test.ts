@@ -116,9 +116,7 @@ describe('failures', () => {
 
     await expect(promise).rejects.toThrow('Polling timeout')
   })
-})
 
-describe('segments', () => {
   it('should get paragraphs', async () => {
     const segment = await assembly.transcripts.paragraphs(transcriptId)
 
@@ -132,9 +130,7 @@ describe('segments', () => {
     expect(segment.sentences).toBeInstanceOf(Array)
     expect(segment.sentences.length).toBeGreaterThan(0)
   })
-})
 
-describe('subtitles', () => {
   it('should get srt subtitles', async () => {
     const subtitle = await assembly.transcripts.subtitles(transcriptId, 'srt')
 
@@ -146,9 +142,7 @@ describe('subtitles', () => {
 
     expect(subtitle).toBeTruthy()
   })
-})
 
-describe('redactions', () => {
   it('should create a redactable transcript object', async () => {
     const transcript = await assembly.transcripts.create(
       {
@@ -172,5 +166,13 @@ describe('redactions', () => {
 
     expect(res.status).toBe('redacted_audio_ready')
     expect(res.redacted_audio_url).toBeTruthy()
+  })
+
+  it('should word search', async () => {
+    const res = await assembly.transcripts.wordSearch(transcriptId, ['bears'])
+
+    expect(res.id).toBe(transcriptId)
+    expect(res.total_count).toBe(1)
+    expect(res.matches).toBeInstanceOf(Array)
   })
 })

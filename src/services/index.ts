@@ -1,11 +1,11 @@
 import { createAxiosClient } from "@/utils/axios";
 import { BaseServiceParams } from "@/types";
-import LemurService from "./lemur";
+import { LemurService } from "./lemur";
 import { RealtimeService, RealtimeServiceFactory } from "./realtime";
-import TranscriptService from "./transcripts";
-import FileService from "./files";
+import { TranscriptService } from "./transcripts";
+import { FileService } from "./files";
 
-export default class AssemblyAI {
+class AssemblyAI {
   /**
    * The files service.
    */
@@ -41,6 +41,7 @@ export default class AssemblyAI {
 }
 
 export {
+  AssemblyAI,
   LemurService,
   RealtimeServiceFactory,
   RealtimeService,

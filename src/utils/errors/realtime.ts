@@ -41,5 +41,4 @@ const RealtimeErrorMessages: Record<RealtimeErrorType, string> = {
 
 class RealtimeError extends Error {}
 
-export { RealtimeErrorType, RealtimeErrorMessages };
-export default RealtimeError;
+export { RealtimeError, RealtimeErrorType, RealtimeErrorMessages };

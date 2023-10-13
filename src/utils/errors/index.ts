@@ -1,5 +1,5 @@
 export {
-  default as RealtimeError,
+  RealtimeError,
   RealtimeErrorType,
   RealtimeErrorMessages,
 } from "./realtime";

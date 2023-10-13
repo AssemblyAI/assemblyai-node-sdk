@@ -15,6 +15,6 @@ module.exports = [
       { file: pkg.module, format: 'es' }
     ],
     plugins,
-    external: ['axios', 'fs/promises', 'ws']
+    external: ['axios', 'fs/promises', 'stream', 'ws']
   },
 ]

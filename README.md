@@ -10,7 +10,6 @@
 [![Discord](https://img.shields.io/discord/875120158014853141?logo=discord&label=Discord&link=https%3A%2F%2Fdiscord.com%2Fchannels%2F875120158014853141&style=social)
 ](https://discord.gg/5aQNZyq3)
 
-
 # AssemblyAI Node.js SDK
 
 The AssemblyAI Node.js SDK provides an easy-to-use interface for interacting with the AssemblyAI API,
@@ -165,13 +164,13 @@ const { response } = await client.lemur.task({
 Create the real-time service.
 
 ```typescript
-const service = client.realtime.createService();
+const rt = client.realtime.createService();
 ```
 
 You can also pass in the following options.
 
 ```typescript
-const service = client.realtime.createService({
+const rt = client.realtime.createService({
   realtimeUrl: 'wss://localhost/override',
   apiKey: process.env.ASSEMBLYAI_API_KEY // The API key passed to `AssemblyAI` will be used by default,
   sampleRate: 16_000,
@@ -209,13 +208,18 @@ After configuring your events, connect to the server.
 await rt.connect();
 ```
 
-Send audio data.
+Send audio data via chunks.
 
 ```typescript
 // Pseudo code for getting audio
 getAudio((chunk) => {
   rt.sendAudio(chunk);
 });
+```
+Or send audio data via a stream by piping to the realtime stream.
+
+```typescript
+audioStream.pipe(rt.stream());
 ```
 
 Close the connection when you're finished.
