@@ -1,5 +1,5 @@
 import WS from "jest-websocket-mock";
-import AssemblyAI, { RealtimeService } from '../src'
+import { AssemblyAI, RealtimeService } from '../src'
 import {
   RealtimeError,
   RealtimeErrorType,

@@ -12,6 +12,7 @@ import {
   Retrieveable,
   SubtitleFormat,
   RedactedAudioResponse,
+  TranscriptListParameters,
   WordSearchResponse,
 } from "@/types";
 import { AxiosInstance } from "axios";
@@ -87,16 +88,23 @@ export class TranscriptService
     return res.data;
   }
 
-  // TODO: add options overload to support list querystring parameters
   /**
-   * Retrieves a paged list of transcript listings.
-   * @param nextUrl The URL to retrieve the transcript list from. If not provided, the first page will be retrieved.
-   * @returns
+   * Retrieves a page of transcript listings.
+   * @param parameters The parameters to filter the transcript list by, or the URL to retrieve the transcript list from.
    */
-  async list(nextUrl?: string | null): Promise<TranscriptList> {
-    const { data } = await this.client.get<TranscriptList>(
-      nextUrl ?? "/v2/transcript"
-    );
+  async list(
+    parameters?: TranscriptListParameters | string
+  ): Promise<TranscriptList> {
+    let url = "/v2/transcript";
+    let query: TranscriptListParameters | undefined;
+    if (typeof parameters === "string") {
+      url = parameters;
+    } else if (parameters) {
+      query = parameters;
+    }
+    const { data } = await this.client.get<TranscriptList>(url, {
+      params: query,
+    });
     for (const transcriptListItem of data.transcripts) {
       transcriptListItem.created = new Date(transcriptListItem.created);
       if (transcriptListItem.completed) {

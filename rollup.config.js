@@ -1,20 +1,20 @@
 const pkg = require('./package.json')
 const ts = require('rollup-plugin-typescript2')
 
-const plugins = [
-  ts({
-    tsconfigOverride: { exclude: ['**/*.test.ts'] },
-  }),
-]
-
 module.exports = [
   {
-    input: 'src/index.ts',
-    output: [
-      { file: pkg.main, format: 'cjs' },
-      { file: pkg.module, format: 'es' }
+    plugins: [
+      ts({
+        tsconfigOverride: { exclude: ['**/*.test.ts'] },
+      })
     ],
-    plugins,
-    external: ['axios', 'fs/promises', 'stream', 'ws']
-  },
+    external: ['axios', 'fs', 'stream', 'ws'],
+    input: 'src/index.ts',
+    output:
+      [{
+        file: pkg.main, format: 'cjs', exports: 'named'
+      }, {
+        file: pkg.module, format: 'es', exports: 'named'
+      }]
+  }
 ]

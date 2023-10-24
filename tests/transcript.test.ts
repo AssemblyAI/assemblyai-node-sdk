@@ -1,6 +1,6 @@
 import { knownTranscriptIds } from './__mocks__/api'
 import axios, { withData } from './__mocks__/axios'
-import AssemblyAI from '../src'
+import { AssemblyAI } from '../src'
 import path from "path"
 
 const testDir = process.env["TESTDATA_DIR"] ?? '.'
@@ -14,6 +14,10 @@ const remoteAudioURL =
   'https://storage.googleapis.com/aai-web-samples/espn-bears.m4a'
 const badRemoteAudioURL =
   'https://storage.googleapis.com/aai-web-samples/does-not-exist.m4a'
+
+beforeEach(() => {
+  jest.clearAllMocks();
+});
 
 describe('core', () => {
   it('should create the transcript object with a remote url', async () => {
@@ -67,7 +71,7 @@ describe('core', () => {
     expect(transcript.status).toBe('completed')
   }, 6000)
 
-  it('should list the transcript objects', async () => {
+  it('should retrieve a page of transcripts', async () => {
     const page = await assembly.transcripts.list()
     expect(page.transcripts).toBeInstanceOf(Array)
     expect(page.page_details).not.toBeNull()

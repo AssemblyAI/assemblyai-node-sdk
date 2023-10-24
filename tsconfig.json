@@ -2,7 +2,6 @@
   "compilerOptions": {
     "outDir": "./dist",
     "rootDir": "./src",
-
     "module": "esnext",
     "moduleResolution": "node",
     "target": "es6",
@@ -11,7 +10,6 @@
     "removeComments": false,
     "strict": true,
     "forceConsistentCasingInFileNames": true,
-
     "esModuleInterop": true,
     "paths": {
       "@/*": ["./src/*"]

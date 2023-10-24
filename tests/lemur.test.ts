@@ -1,5 +1,5 @@
 import { knownTranscriptIds, knownLemurRequestId, purgeRequestId } from './__mocks__/api'
-import AssemblyAI from '../src'
+import { AssemblyAI } from '../src'
 
 const assembly = new AssemblyAI({
   apiKey: '',

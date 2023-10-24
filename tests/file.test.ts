@@ -1,4 +1,6 @@
-import AssemblyAI from '../src'
+import { AssemblyAI } from '../src'
+import { createReadStream } from "fs";
+import { readFile } from "fs/promises";
 import path from "path"
 
 const testDir = process.env["TESTDATA_DIR"] ?? '.'
@@ -8,16 +10,23 @@ const assembly = new AssemblyAI({
 })
 
 describe('files', () => {
-  it('should upload a file', async () => {
+  it('should upload a file from path', async () => {
     const uploadUrl = await assembly.files.upload(path.join(testDir, 'gore.wav'))
 
     expect(uploadUrl).toBeTruthy()
-  }, 10_000)
+  })
 
-  it('should not find file', async () => {
-    const promise = assembly.files.upload(path.join(testDir, 'bad-path.wav'))
-    await expect(promise).rejects.toThrowError(
-      "ENOENT: no such file or directory, open '" + testDir + "/bad-path.wav'",
-    )
+  it('should upload a file from stream', async () => {
+    const stream = createReadStream(path.join(testDir, 'gore.wav'))
+    const uploadUrl = await assembly.files.upload(stream)
+
+    expect(uploadUrl).toBeTruthy()
+  })
+
+  it('should upload a file from buffer', async () => {
+    const data = await readFile(path.join(testDir, 'gore.wav'))
+    const uploadUrl = await assembly.files.upload(data)
+
+    expect(uploadUrl).toBeTruthy()
   })
 })

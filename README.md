@@ -40,7 +40,7 @@ bun add assemblyai
 Import the AssemblyAI package and create an AssemblyAI object with your API key:
 
 ```javascript
-import AssemblyAI from "assemblyai";
+import { AssemblyAI } from "assemblyai";
 
 const client = new AssemblyAI({
   apiKey: process.env.ASSEMBLYAI_API_KEY,
@@ -94,7 +94,7 @@ const transcript = await client.transcripts.get(transcript.id)
 
 ## List transcripts
 
-This will return a paged list of transcripts that you have transcript.
+This will return a page of transcripts that you have transcript.
 
 ```javascript
 const page = await client.transcripts.list()

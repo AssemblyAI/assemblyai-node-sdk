@@ -1,7 +1,16 @@
 import { createReadStream } from 'fs'
 import 'dotenv/config'
-import AssemblyAI, { Transcript, CreateTranscriptParameters } from '../src/index';
-import { FinalTranscript, LemurBaseResponse, PartialTranscript, RealtimeTranscript } from '../src/types'
+import
+{
+  AssemblyAI,
+  Transcript,
+  CreateTranscriptParameters,
+  FinalTranscript,
+  LemurBaseResponse,
+  PartialTranscript,
+  RealtimeTranscript
+} from '../src';
+
 
 const client = new AssemblyAI({
   apiKey: process.env.ASSEMBLYAI_API_KEY || '',
@@ -63,6 +72,11 @@ const createTranscriptParams: CreateTranscriptParameters = {
   punctuate: false,
   speech_threshold: 0.5,
 };
+
+(async function uploadFileFromPath() {
+  const uploadUrl = await client.files.upload('./tests/static/gore.wav');
+  console.log('Upload URL:', uploadUrl);
+})();
 
 (async function createStandardTranscript() {
   const transcript = await client.transcripts.create(createTranscriptParams);
