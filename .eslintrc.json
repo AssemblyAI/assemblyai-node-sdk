@@ -11,5 +11,5 @@
   ],
   "rules": {
   },
-  "ignorePatterns": ["test/**/*", "dist/**/*", "node_modules/**/*"]
+  "ignorePatterns": ["test/**/*", "dist/**/*", "node_modules/**/*", "scripts/**/*"]
 }

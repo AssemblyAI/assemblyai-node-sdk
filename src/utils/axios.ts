@@ -1,5 +1,5 @@
 import axios, { isAxiosError } from "axios";
-import { BaseServiceParams } from "../.";
+import { BaseServiceParams } from "@/types";
 
 export function createAxiosClient(params: BaseServiceParams) {
   const client = axios.create({

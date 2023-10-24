@@ -762,6 +762,28 @@ export type TranscriptListItem = {
   status: TranscriptStatus;
 };
 
+export type TranscriptListParameters = {
+  /** @description Get transcripts that were created after this transcript ID */
+  after_id?: string;
+  /** @description Get transcripts that were created before this transcript ID */
+  before_id?: string;
+  /**
+   * Format: date
+   * @description Only get transcripts created on this date
+   */
+  created_on?: string;
+  /**
+   * Format: int64
+   * @description Maximum amount of transcripts to retrieve
+   * @default 10
+   */
+  limit?: number;
+  /** @description Filter by transcript status */
+  status?: TranscriptStatus;
+  /** @description Only get throttled transcripts, overrides the status filter */
+  throttled_only?: boolean;
+};
+
 export type TranscriptParagraph = {
   /** Format: double */
   confidence: number;

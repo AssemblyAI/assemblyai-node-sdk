@@ -7,6 +7,7 @@ const jestConfig: JestConfigWithTsJest = {
   moduleNameMapper: {
     "^@/(.*)$": "<rootDir>/src/$1",
   },
+  modulePathIgnorePatterns: ['<rootDir>/dist'],
 };
 
 process.env.TESTDATA_DIR = "tests/static";

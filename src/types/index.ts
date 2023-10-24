@@ -1,3 +1,4 @@
+export type * from "./files";
 export type * from "./transcripts";
 export type * from "./realtime";
 export type * from "./services";
