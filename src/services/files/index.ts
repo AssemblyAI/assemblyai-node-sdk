@@ -1,8 +1,8 @@
 // import the fs module instead if specific named exports
 // to keep the assemblyai module more compatible. Some fs polyfills don't include `createReadStream`.
 import fs from "fs";
-import { BaseService } from "@/services/base";
-import { UploadedFile, FileUploadParameters, FileUploadData } from "@/types";
+import { BaseService } from "../base";
+import { UploadedFile, FileUploadParameters, FileUploadData } from "../..";
 
 export class FileService extends BaseService {
   /**
@@ -15,16 +15,14 @@ export class FileService extends BaseService {
     if (typeof input === "string") fileData = fs.createReadStream(input);
     else fileData = input;
 
-    const { data } = await this.client.post<UploadedFile>(
-      "/v2/upload",
-      fileData,
-      {
-        headers: {
-          "Content-Type": "application/octet-stream",
-        },
-      }
-    );
-
+    const data = await this.fetchJson<UploadedFile>("/v2/upload", {
+      method: "POST",
+      body: fileData as BodyInit,
+      headers: {
+        "Content-Type": "application/octet-stream",
+      },
+      duplex: "half",
+    } as RequestInit);
     return data.upload_url;
   }
 }

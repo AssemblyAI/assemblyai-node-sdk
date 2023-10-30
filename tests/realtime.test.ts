@@ -1,4 +1,5 @@
 import WS from "jest-websocket-mock";
+import fetchMock from "jest-fetch-mock";
 import { AssemblyAI, RealtimeService } from '../src'
 import {
   RealtimeError,
@@ -6,10 +7,12 @@ import {
   RealtimeErrorMessages
 } from '../src/utils/errors/realtime'
 import stream from "stream";
+import { createClient, defaultApiKey, requestMatches } from "./utils";
 
-const apiKey = '123';
+fetchMock.enableMocks();
+
+const apiKey = defaultApiKey;
 const token = '123';
-const baseUrl = 'https://localhost:1234'
 const realtimeUrl = 'wss://localhost:1234'
 const sessionBeginsMessage = {
   message_type: 'SessionBegins',
@@ -40,10 +43,7 @@ async function close(rt: RealtimeService, server: WS) {
 describe('realtime', () => {
   beforeEach(async () => {
     server = new WS(realtimeUrl)
-    aai = new AssemblyAI({
-      apiKey,
-      baseUrl,
-    })
+    aai = createClient()
     rt = aai.realtime.createService({ realtimeUrl })
     onOpen = jest.fn()
     rt.on('open', onOpen)
@@ -79,7 +79,7 @@ describe('realtime', () => {
     const baseUrlOverride = 'wss://localhost:1235'
     const server = new WS(baseUrlOverride)
     const aai = new AssemblyAI({ apiKey })
-    const rt = aai.realtime.createService({ realtimeUrl: baseUrlOverride, token: '123' })
+    const rt = aai.realtime.createService({ realtimeUrl: baseUrlOverride, token })
     await connect(rt, server);
     await server.connected
     await close(rt, server)
@@ -88,8 +88,8 @@ describe('realtime', () => {
   it('creates service with token', async () => {
     const realtimeUrl = 'wss://localhost:5678'
     const server = new WS(realtimeUrl)
-    const aai = new AssemblyAI({ apiKey, baseUrl })
-    const rt = aai.realtime.createService({ realtimeUrl, token: '123' })
+    const aai = createClient()
+    const rt = aai.realtime.createService({ realtimeUrl, token })
     await connect(rt, server)
     await close(rt, server)
   })
@@ -97,7 +97,7 @@ describe('realtime', () => {
   it('creates service with API key', async () => {
     const realtimeUrl = 'wss://localhost:5678'
     const server = new WS(realtimeUrl)
-    const aai = new AssemblyAI({ apiKey, baseUrl })
+    const aai = createClient()
     const rt = aai.realtime.createService({ realtimeUrl, apiKey: '123' })
     await connect(rt, server)
     await close(rt, server)
@@ -117,8 +117,8 @@ describe('realtime', () => {
   it('closes without SessionTerminated', async () => {
     const realtimeUrl = 'wss://localhost:5678'
     const server = new WS(realtimeUrl)
-    const assembly = new AssemblyAI({ apiKey, baseUrl })
-    const rt = assembly.realtime.createService({ realtimeUrl, apiKey: '123' })
+    const aai = createClient()
+    const rt = aai.realtime.createService({ realtimeUrl, apiKey: '123' })
     await connect(rt, server)
     await rt.close(false)
     await server.closed
@@ -178,8 +178,8 @@ describe('realtime', () => {
   it('can receive session begins', async () => {
     const realtimeUrl = 'wss://localhost:5678'
     const server = new WS(realtimeUrl)
-    const assembly = new AssemblyAI({ apiKey, baseUrl })
-    const rt = assembly.realtime.createService({ realtimeUrl, apiKey: '123' })
+    const aai = createClient()
+    const rt = aai.realtime.createService({ realtimeUrl, apiKey: '123' })
     const onOpen = jest.fn()
     rt.on('open', onOpen)
     await connect(rt, server)
@@ -225,7 +225,13 @@ describe('realtime', () => {
   })
 
   it('can create a token', async () => {
+    fetchMock.doMock()
+    fetchMock.doMockOnceIf(
+      requestMatches({url: '/v2/realtime/token', method: 'POST'}),
+      JSON.stringify({ token: '123' })
+    );
     const token = await aai.realtime.createTemporaryToken({ expires_in: 480 })
     expect(token).toEqual('123');
+    fetchMock.resetMocks()
   })
 })

@@ -1,34 +1,25 @@
-import {
-  createAxiosClient,
-  throwApiError,
-} from '../src/utils/axios';
-const apiKey = '1234';
-const baseUri = 'http://localhost:1234';
+import fetchMock from "jest-fetch-mock";
+import { AssemblyAI } from "../src";
+
+fetchMock.enableMocks();
+
+const assembly = new AssemblyAI({
+  apiKey: '',
+})
+
+beforeEach(() => {
+  fetchMock.doMock()
+});
 
 describe('utils', () => {
-  it('should create Axios client', () => {
-    const client = createAxiosClient({
-      apiKey: apiKey,
-      baseUrl: baseUri,
-    });
-    expect(client).toBeTruthy();
-  })
   it('should throw AssemblyAI API error', async () => {
-    const error = {
-      isAxiosError: true,
-      response: {
-        data: {
-          error: 'Error message'
-        }
-      }
-    }
-    await expect(throwApiError(error)).rejects.toThrow(error.response.data.error);
+    const error = {error: 'error'};
+    fetchMock.mockResponseOnce(JSON.stringify(error), {status: 500});
+    await expect(() => assembly.transcripts.get('123')).rejects.toThrow(error.error);
   })
   it('should throw HTTP error', async () => {
-    const error = {
-      isAxiosError: true,
-      response: null
-    }
-    await expect(throwApiError(error)).rejects.toBe(error);
+    const error = 'error';
+    fetchMock.mockResponseOnce(JSON.stringify(error), {status: 500});
+    await expect(() => assembly.transcripts.get('123')).rejects.toThrow(error);
   })
 })

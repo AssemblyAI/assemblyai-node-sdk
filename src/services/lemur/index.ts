@@ -8,54 +8,55 @@ import {
   LemurActionItemsResponse,
   LemurTaskResponse,
   PurgeLemurRequestDataResponse,
-} from "@/types";
-import { BaseService } from "@/services/base";
+} from "../..";
+import { BaseService } from "../base";
 
 export class LemurService extends BaseService {
-  async summary(params: LemurSummaryParameters): Promise<LemurSummaryResponse> {
-    const { data } = await this.client.post<LemurSummaryResponse>(
-      "/lemur/v3/generate/summary",
-      params
-    );
-    return data;
+  summary(params: LemurSummaryParameters): Promise<LemurSummaryResponse> {
+    return this.fetchJson<LemurSummaryResponse>("/lemur/v3/generate/summary", {
+      method: "POST",
+      body: JSON.stringify(params),
+    });
   }
 
-  async questionAnswer(
+  questionAnswer(
     params: LemurQuestionAnswerParameters
   ): Promise<LemurQuestionAnswerResponse> {
-    const { data } = await this.client.post<LemurQuestionAnswerResponse>(
+    return this.fetchJson<LemurQuestionAnswerResponse>(
       "/lemur/v3/generate/question-answer",
-      params
+      {
+        method: "POST",
+        body: JSON.stringify(params),
+      }
     );
-    return data;
   }
 
-  async actionItems(
+  actionItems(
     params: LemurActionItemsParameters
   ): Promise<LemurActionItemsResponse> {
-    const { data } = await this.client.post<LemurActionItemsResponse>(
+    return this.fetchJson<LemurActionItemsResponse>(
       "/lemur/v3/generate/action-items",
-      params
+      {
+        method: "POST",
+        body: JSON.stringify(params),
+      }
     );
-    return data;
   }
 
-  async task(params: LemurTaskParameters): Promise<LemurTaskResponse> {
-    const { data } = await this.client.post<LemurTaskResponse>(
-      "/lemur/v3/generate/task",
-      params
-    );
-    return data;
+  task(params: LemurTaskParameters): Promise<LemurTaskResponse> {
+    return this.fetchJson<LemurTaskResponse>("/lemur/v3/generate/task", {
+      method: "POST",
+      body: JSON.stringify(params),
+    });
   }
 
   /**
    * Delete the data for a previously submitted LeMUR request.
    * @param id ID of the LeMUR request
    */
-  async purgeRequestData(id: string): Promise<PurgeLemurRequestDataResponse> {
-    const { data } = await this.client.delete<PurgeLemurRequestDataResponse>(
-      `/lemur/v3/${id}`
-    );
-    return data;
+  purgeRequestData(id: string): Promise<PurgeLemurRequestDataResponse> {
+    return this.fetchJson<PurgeLemurRequestDataResponse>(`/lemur/v3/${id}`, {
+      method: "DELETE",
+    });
   }
 }
