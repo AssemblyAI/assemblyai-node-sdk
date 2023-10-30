@@ -2,7 +2,8 @@ type FileUploadParameters = string | FileUploadData;
 type FileUploadData =
   | NodeJS.ReadableStream
   | ReadableStream
-  | Buffer
+  | Blob
+  | BufferSource
   | ArrayBufferView
   | ArrayBufferLike
   | Uint8Array;

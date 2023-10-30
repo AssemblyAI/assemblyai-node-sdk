@@ -3,30 +3,35 @@ import {
   RealtimeTokenParams,
   CreateRealtimeServiceParams,
   RealtimeServiceParams,
-} from "@/types";
-import { AxiosInstance } from "axios";
+  RealtimeTemporaryTokenResponse,
+} from "../..";
 import { RealtimeService } from "./service";
+import { BaseService } from "../base";
 
-export class RealtimeServiceFactory {
-  constructor(
-    private client: AxiosInstance,
-    private params: BaseServiceParams
-  ) {}
+export class RealtimeServiceFactory extends BaseService {
+  private rtFactoryParams: BaseServiceParams;
+  constructor(params: BaseServiceParams) {
+    super(params);
+    this.rtFactoryParams = params;
+  }
 
   createService(params?: CreateRealtimeServiceParams): RealtimeService {
-    if (!params) params = { apiKey: this.params.apiKey };
+    if (!params) params = { apiKey: this.rtFactoryParams.apiKey };
     else if (!("token" in params) && !params.apiKey) {
-      params.apiKey = this.params.apiKey;
+      params.apiKey = this.rtFactoryParams.apiKey;
     }
 
     return new RealtimeService(params as RealtimeServiceParams);
   }
 
   async createTemporaryToken(params: RealtimeTokenParams) {
-    const response = await this.client.post<{ token: string }>(
+    const data = await this.fetchJson<RealtimeTemporaryTokenResponse>(
       "/v2/realtime/token",
-      params
+      {
+        method: "POST",
+        body: JSON.stringify(params),
+      }
     );
-    return response.data.token;
+    return data.token;
   }
 }

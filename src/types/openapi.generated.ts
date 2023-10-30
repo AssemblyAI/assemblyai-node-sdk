@@ -78,19 +78,25 @@ export type ContentSafetyLabelResult = {
   sentences_idx_end: number;
   /** @description The sentence index at which the section begins */
   sentences_idx_start: number;
-  /** @description A summary of the Content Moderation severity results for the entire audio file */
-  severity_score_summary: {
-    [key: string]: SeverityScoreSummary;
-  };
-  /** @description A summary of the Content Moderation confidence results for the entire audio file */
-  summary: {
-    [key: string]: number;
-  };
   /** @description The transcript of the section flagged by the Content Moderation model */
   text: string;
   /** @description Timestamp information for the section */
   timestamp: Timestamp;
 };
+
+export type ContentSafetyLabelsResult = {
+  results: ContentSafetyLabelResult[];
+  /** @description A summary of the Content Moderation severity results for the entire audio file */
+  severity_score_summary: {
+    [key: string]: SeverityScoreSummary;
+  };
+  /** @description Will be either success, or unavailable in the rare case that the Content Moderation model failed. */
+  status: AudioIntelligenceModelStatus;
+  /** @description A summary of the Content Moderation confidence results for the entire audio file */
+  summary: {
+    [key: string]: number;
+  };
+} | null;
 
 export type CreateRealtimeTemporaryTokenParameters = {
   /** @description The amount of time until the token expires in seconds. */
@@ -450,7 +456,7 @@ export type SentimentAnalysisResult = {
   end: number;
   /** @description The detected sentiment for the sentence, one of POSITIVE, NEUTRAL, NEGATIVE */
   sentiment: Sentiment;
-  /** @description The speaker of the sentence if Speaker Diarization is enabled, else null */
+  /** @description The speaker of the sentence if [Speaker Diarization](https://www.assemblyai.com/docs/models/speaker-diarization) is enabled, else null */
   speaker?: string | null;
   /** @description The starting time, in milliseconds, of the sentence */
   start: number;
@@ -506,7 +512,7 @@ export type Timestamp = {
   start: number;
 };
 
-/** @description THe result of the topic detection model. */
+/** @description The result of the topic detection model. */
 export type TopicDetectionResult = {
   labels?: {
     /** @description The IAB taxonomical label for the label of the detected topic, where > denotes supertopic/subtopic relationship */
@@ -564,11 +570,7 @@ export type Transcript = {
    * @description An array of results for the Content Moderation model, if it was enabled during the transcription request.
    * See [Content moderation](https://www.assemblyai.com/docs/Models/content_moderation) for more information.
    */
-  content_safety_labels?: {
-    results: ContentSafetyLabelResult[];
-    /** @description Will be either success, or unavailable in the rare case that the Content Safety Labels model failed. */
-    status: AudioIntelligenceModelStatus;
-  } | null;
+  content_safety_labels?: ContentSafetyLabelsResult;
   /** @description Customize how words are spelled and formatted using to and from values */
   custom_spelling?: TranscriptCustomSpelling[] | null;
   /** @description Whether custom topics was enabled in the transcription request, either true or false */
@@ -593,7 +595,7 @@ export type Transcript = {
   /** @description Enable [Topic Detection](https://www.assemblyai.com/docs/Models/iab_classification), can be true or false */
   iab_categories?: boolean | null;
   /**
-   * @description An array of results for the Topic Detection model, if it was enabled during the transcription request.
+   * @description The result of the Topic Detection model, if it was enabled during the transcription request.
    * See [Topic Detection](https://www.assemblyai.com/docs/Models/iab_classification) for more information.
    */
   iab_categories_result?: {
@@ -809,12 +811,20 @@ export type TranscriptSentence = {
 export type TranscriptStatus = "queued" | "processing" | "completed" | "error";
 
 export type TranscriptUtterance = {
-  channel: string;
-  /** Format: double */
+  /**
+   * Format: double
+   * @description The confidence score for the transcript of this utterance
+   */
   confidence: number;
+  /** @description The ending time, in milliseconds, of the utterance in the audio file */
   end: number;
+  /** @description The speaker of this utterance, where each speaker is assigned a sequential capital letter - e.g. "A" for Speaker A, "B" for Speaker B, etc. */
+  speaker: string;
+  /** @description The starting time, in milliseconds, of the utterance in the audio file */
   start: number;
+  /** @description The text for this utterance */
   text: string;
+  /** @description The words in the utterance. */
   words: TranscriptWord[];
 };
 

@@ -260,12 +260,12 @@ const createTranscriptParams: CreateTranscriptParameters = {
 })().then(deleteTranscript);
 
 (async function listTranscripts() {
-  let nextPageUrl: string | null = null;
+  let nextPageUrl: string | undefined | null;
   do {
-    const page = await client.transcripts.list(nextPageUrl)
+    const page = await client.transcripts.list(nextPageUrl as string | undefined)
     console.log(page);
     nextPageUrl = page.page_details.next_url;
-  } while (nextPageUrl !== null)
+  } while (!!nextPageUrl)
 })();
 
 async function searchTranscript(transcript: Transcript) {
@@ -355,6 +355,6 @@ async function lemurCustomTask(transcript: Transcript) {
 }
 
 async function purgeLemurRequestData(lemurResponse: LemurBaseResponse) {
-  const { response } = await client.lemur.purgeRequestData(lemurResponse.request_id);
+  const response = await client.lemur.purgeRequestData(lemurResponse.request_id);
   console.log(response);
 };

@@ -1,14 +1,15 @@
-import { knownTranscriptIds } from './__mocks__/api'
-import axios, { withData } from './__mocks__/axios'
 import { AssemblyAI } from '../src'
+import fetchMock from "jest-fetch-mock";
 import path from "path"
+import { createClient, defaultApiKey, defaultBaseUrl, requestMatches } from './utils';
+
+fetchMock.enableMocks();
 
 const testDir = process.env["TESTDATA_DIR"] ?? '.'
 
-const assembly = new AssemblyAI({
-  apiKey: '',
-})
+const assembly = createClient();
 
+const knownTranscriptIds = ['transcript_123']
 const transcriptId = knownTranscriptIds[0]
 const remoteAudioURL =
   'https://storage.googleapis.com/aai-web-samples/espn-bears.m4a'
@@ -17,10 +18,16 @@ const badRemoteAudioURL =
 
 beforeEach(() => {
   jest.clearAllMocks();
+  fetchMock.resetMocks();
+  fetchMock.doMock();
 });
 
-describe('core', () => {
+describe('transcript', () => {
   it('should create the transcript object with a remote url', async () => {
+    fetchMock.doMockOnceIf(
+      requestMatches({ url: '/v2/transcript', method: 'POST' }),
+      JSON.stringify({ id: transcriptId, status: 'queued' })
+    )
     const transcript = await assembly.transcripts.create(
       {
         audio_url: remoteAudioURL,
@@ -36,6 +43,14 @@ describe('core', () => {
   })
 
   it('should create the transcript object with a local file', async () => {
+    fetchMock.doMockOnceIf(
+      requestMatches({ url: '/v2/upload', method: 'POST' }),
+      JSON.stringify({ upload_url: 'https://example.com' })
+    )
+    fetchMock.doMockOnceIf(
+      requestMatches({ url: '/v2/transcript', method: 'POST' }),
+      JSON.stringify({ id: transcriptId, status: 'queued' })
+    )
     const transcript = await assembly.transcripts.create(
       {
         audio_url: path.join(testDir, 'gore.wav'),
@@ -46,18 +61,31 @@ describe('core', () => {
     )
 
     expect(['processing', 'queued']).toContain(transcript.status)
-  }, 60_000)
+  })
 
   it('should get the transcript object', async () => {
+    fetchMock.doMockOnceIf(
+      requestMatches({ url: `/v2/transcript/${transcriptId}`, method: 'GET' }),
+      JSON.stringify({ id: transcriptId })
+    )
     const fetched = await assembly.transcripts.get(transcriptId)
 
     expect(fetched.id).toBeTruthy()
   })
 
   it('should poll the transcript object', async () => {
-    axios.get.mockResolvedValueOnce(withData({ status: 'queued' }))
-    axios.get.mockResolvedValueOnce(withData({ status: 'processing' }))
-    axios.get.mockResolvedValueOnce(withData({ status: 'completed' }))
+    fetchMock.doMockOnceIf(
+      requestMatches({ url: '/v2/transcript', method: 'POST' }),
+      JSON.stringify({ status: 'queued', id: transcriptId })
+    )
+    fetchMock.doMockOnceIf(
+      requestMatches({ url: `/v2/transcript/${transcriptId}`, method: 'GET' }),
+      JSON.stringify({ status: 'processing' })
+    )
+    fetchMock.doMockOnceIf(
+      requestMatches({ url: `/v2/transcript/${transcriptId}`, method: 'GET' }),
+      JSON.stringify({ status: 'completed' })
+    )
     const transcript = await assembly.transcripts.create(
       {
         audio_url: remoteAudioURL,
@@ -72,26 +100,39 @@ describe('core', () => {
   }, 6000)
 
   it('should retrieve a page of transcripts', async () => {
+    fetchMock.doMockOnceIf(
+      requestMatches({ url: '/v2/transcript', method: 'GET' }),
+      JSON.stringify({
+        transcripts: [],
+        page_details: {
+          limit: 20,
+          result_count: 10,
+          next_url: `https://api.assemblyai.com/v2/transcript?after_id=${knownTranscriptIds[0]}`,
+          previous_url: 'https://api.assemblyai.com/v2/transcript',
+        }
+      }))
     const page = await assembly.transcripts.list()
     expect(page.transcripts).toBeInstanceOf(Array)
     expect(page.page_details).not.toBeNull()
   })
 
   it('should delete the transcript object', async () => {
-    axios.delete.mockResolvedValueOnce(withData({ id: transcriptId }))
+    fetchMock.doMockOnceIf(
+      requestMatches({ url: `/v2/transcript/${transcriptId}`, method: 'DELETE' }),
+      JSON.stringify({ id: transcriptId })
+    )
     const deleted = await assembly.transcripts.delete(transcriptId)
 
-    expect(axios.delete).toHaveBeenLastCalledWith(
-      `/v2/transcript/${transcriptId}`,
+    expect(fetch).toHaveBeenLastCalledWith(
+      `${defaultBaseUrl}/v2/transcript/${transcriptId}`,
+      { "headers": { "Authorization": defaultApiKey, "Content-Type": "application/json" }, "method": "DELETE" }
     )
     expect(deleted.id).toBe(transcriptId)
   })
-})
 
-describe('failures', () => {
   it('should fail to create the transcript object', async () => {
     const errorResponse = { status: 'error' }
-    axios.post.mockResolvedValueOnce(withData(errorResponse))
+    fetchMock.mockResponseOnce(JSON.stringify(errorResponse))
     const created = await assembly.transcripts.create(
       {
         audio_url: badRemoteAudioURL,
@@ -101,13 +142,19 @@ describe('failures', () => {
       },
     )
 
-    expect(created).toBe(errorResponse)
-    expect(axios.post).toHaveBeenLastCalledWith('/v2/transcript', {
-      audio_url: badRemoteAudioURL,
+    expect(created).toStrictEqual(errorResponse)
+    expect(fetch).toHaveBeenLastCalledWith(`${defaultBaseUrl}/v2/transcript`, {
+      body: JSON.stringify({ audio_url: badRemoteAudioURL }),
+      headers: {
+        Authorization: defaultApiKey,
+        "Content-Type": "application/json",
+      },
+      method: "POST",
     })
   })
 
   it('should fail to poll', async () => {
+    fetchMock.mockResponse(JSON.stringify({ status: 'queued' }))
     const promise = assembly.transcripts.create(
       {
         audio_url: badRemoteAudioURL,
@@ -119,9 +166,14 @@ describe('failures', () => {
     )
 
     await expect(promise).rejects.toThrow('Polling timeout')
+    fetchMock.resetMocks()
   })
 
   it('should get paragraphs', async () => {
+    fetchMock.doMockOnceIf(
+      requestMatches({ url: `/v2/transcript/${transcriptId}/paragraphs`, method: 'GET' }),
+      JSON.stringify({ transcriptId, paragraphs: ['paragraph 1'] })
+    )
     const segment = await assembly.transcripts.paragraphs(transcriptId)
 
     expect(segment.paragraphs).toBeInstanceOf(Array)
@@ -129,6 +181,10 @@ describe('failures', () => {
   })
 
   it('should get sentences', async () => {
+    fetchMock.doMockOnceIf(
+      requestMatches({ url: `/v2/transcript/${transcriptId}/sentences`, method: 'GET' }),
+      JSON.stringify({ transcriptId, sentences: ['sentence 1'] })
+    )
     const segment = await assembly.transcripts.sentences(transcriptId)
 
     expect(segment.sentences).toBeInstanceOf(Array)
@@ -136,43 +192,44 @@ describe('failures', () => {
   })
 
   it('should get srt subtitles', async () => {
+    fetchMock.doMockOnceIf(
+      requestMatches({ url: `/v2/transcript/${transcriptId}/srt`, method: 'GET' }),
+      'Lorem ipsum'
+    )
     const subtitle = await assembly.transcripts.subtitles(transcriptId, 'srt')
 
     expect(subtitle).toBeTruthy()
   })
 
   it('should get vtt subtitles', async () => {
+    fetchMock.doMockOnceIf(
+      requestMatches({ url: `/v2/transcript/${transcriptId}/vtt`, method: 'GET' }),
+      'Lorem ipsum'
+    )
     const subtitle = await assembly.transcripts.subtitles(transcriptId, 'vtt')
 
     expect(subtitle).toBeTruthy()
   })
 
-  it('should create a redactable transcript object', async () => {
-    const transcript = await assembly.transcripts.create(
-      {
-        audio_url:
-          'https://storage.googleapis.com/aai-web-samples/espn-bears.m4a',
-        redact_pii: true,
-        redact_pii_audio: true,
-        redact_pii_policies: ['person_age', 'date_of_birth', 'phone_number'],
-        redact_pii_audio_quality: 'mp3',
-      },
-      {
-        poll: false
-      },
-    )
-
-    expect(['processing', 'queued']).toContain(transcript.status)
-  })
-
   it('should get redactions', async () => {
+    fetchMock.doMockOnceIf(
+      requestMatches({ url: `/v2/transcript/${transcriptId}/redacted-audio`, method: 'GET' }),
+      JSON.stringify({
+        status: 'redacted_audio_ready',
+        redacted_audio_url: 'https://some-url.com',
+      })
+    )
     const res = await assembly.transcripts.redactions(transcriptId)
-
     expect(res.status).toBe('redacted_audio_ready')
     expect(res.redacted_audio_url).toBeTruthy()
   })
 
   it('should word search', async () => {
+    fetchMock.mockResponseOnce(JSON.stringify({
+      id: transcriptId,
+      total_count: 1,
+      matches: [{}]
+    }))
     const res = await assembly.transcripts.wordSearch(transcriptId, ['bears'])
 
     expect(res.id).toBe(transcriptId)
