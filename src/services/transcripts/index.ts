@@ -1,4 +1,4 @@
-import { BaseService } from "@/services/base";
+import { BaseService } from "../base";
 import {
   ParagraphsResponse,
   SentencesResponse,
@@ -14,8 +14,8 @@ import {
   RedactedAudioResponse,
   TranscriptListParameters,
   WordSearchResponse,
-} from "@/types";
-import { AxiosInstance } from "axios";
+  BaseServiceParams,
+} from "../..";
 import { FileService } from "../files";
 
 export class TranscriptService
@@ -26,8 +26,8 @@ export class TranscriptService
     Deletable<Transcript>,
     Listable<TranscriptList>
 {
-  constructor(client: AxiosInstance, private files: FileService) {
-    super(client);
+  constructor(params: BaseServiceParams, private files: FileService) {
+    super(params);
   }
 
   /**
@@ -46,13 +46,16 @@ export class TranscriptService
       params.audio_url = uploadUrl;
     }
 
-    const res = await this.client.post<Transcript>("/v2/transcript", params);
+    const data = await this.fetchJson<Transcript>("/v2/transcript", {
+      method: "POST",
+      body: JSON.stringify(params),
+    });
 
     if (options?.poll ?? true) {
-      return await this.poll(res.data.id, options);
+      return await this.poll(data.id, options);
     }
 
-    return res.data;
+    return data;
   }
 
   private async poll(
@@ -83,9 +86,8 @@ export class TranscriptService
    * @param id The identifier of the transcript.
    * @returns A promise that resolves to the transcript.
    */
-  async get(id: string): Promise<Transcript> {
-    const res = await this.client.get<Transcript>(`/v2/transcript/${id}`);
-    return res.data;
+  get(id: string): Promise<Transcript> {
+    return this.fetchJson<Transcript>(`/v2/transcript/${id}`);
   }
 
   /**
@@ -96,15 +98,17 @@ export class TranscriptService
     parameters?: TranscriptListParameters | string
   ): Promise<TranscriptList> {
     let url = "/v2/transcript";
-    let query: TranscriptListParameters | undefined;
     if (typeof parameters === "string") {
       url = parameters;
     } else if (parameters) {
-      query = parameters;
+      url = `${url}?${new URLSearchParams(
+        Object.keys(parameters).map((key) => [
+          key,
+          parameters[key as keyof TranscriptListParameters]?.toString() || "",
+        ])
+      )}`;
     }
-    const { data } = await this.client.get<TranscriptList>(url, {
-      params: query,
-    });
+    const data = await this.fetchJson<TranscriptList>(url);
     for (const transcriptListItem of data.transcripts) {
       transcriptListItem.created = new Date(transcriptListItem.created);
       if (transcriptListItem.completed) {
@@ -112,7 +116,7 @@ export class TranscriptService
       }
     }
 
-    return data as unknown as TranscriptList;
+    return data;
   }
 
   /**
@@ -120,28 +124,21 @@ export class TranscriptService
    * @param id The identifier of the transcript.
    * @returns A promise that resolves to the transcript.
    */
-  async delete(id: string): Promise<Transcript> {
-    const res = await this.client.delete<Transcript>(`/v2/transcript/${id}`);
-    return res.data;
+  delete(id: string): Promise<Transcript> {
+    return this.fetchJson(`/v2/transcript/${id}`, { method: "DELETE" });
   }
 
   /**
    * Search through the transcript for a specific set of keywords.
    * You can search for individual words, numbers, or phrases containing up to five words or numbers.
    * @param id The identifier of the transcript.
-   * @param id Keywords to search for.
+   * @param words Keywords to search for.
    * @return A promise that resolves to the sentences.
    */
-  async wordSearch(id: string, words: string[]): Promise<WordSearchResponse> {
-    const { data } = await this.client.get<WordSearchResponse>(
-      `/v2/transcript/${id}/word-search`,
-      {
-        params: {
-          words: JSON.stringify(words),
-        },
-      }
+  wordSearch(id: string, words: string[]): Promise<WordSearchResponse> {
+    return this.fetchJson<WordSearchResponse>(
+      `/v2/transcript/${id}/word-search?words=${JSON.stringify(words)}`
     );
-    return data;
   }
 
   /**
@@ -149,11 +146,8 @@ export class TranscriptService
    * @param id The identifier of the transcript.
    * @return A promise that resolves to the sentences.
    */
-  async sentences(id: string): Promise<SentencesResponse> {
-    const { data } = await this.client.get<SentencesResponse>(
-      `/v2/transcript/${id}/sentences`
-    );
-    return data;
+  sentences(id: string): Promise<SentencesResponse> {
+    return this.fetchJson<SentencesResponse>(`/v2/transcript/${id}/sentences`);
   }
 
   /**
@@ -161,11 +155,10 @@ export class TranscriptService
    * @param id The identifier of the transcript.
    * @return A promise that resolves to the paragraphs.
    */
-  async paragraphs(id: string): Promise<ParagraphsResponse> {
-    const { data } = await this.client.get<ParagraphsResponse>(
+  paragraphs(id: string): Promise<ParagraphsResponse> {
+    return this.fetchJson<ParagraphsResponse>(
       `/v2/transcript/${id}/paragraphs`
     );
-    return data;
   }
 
   /**
@@ -175,11 +168,8 @@ export class TranscriptService
    * @return A promise that resolves to the subtitles text.
    */
   async subtitles(id: string, format: SubtitleFormat = "srt"): Promise<string> {
-    const { data } = await this.client.get<string>(
-      `/v2/transcript/${id}/${format}`
-    );
-
-    return data;
+    const response = await this.fetch(`/v2/transcript/${id}/${format}`);
+    return await response.text();
   }
 
   /**
@@ -187,11 +177,10 @@ export class TranscriptService
    * @param id The identifier of the transcript.
    * @return A promise that resolves to the subtitles text.
    */
-  async redactions(id: string): Promise<RedactedAudioResponse> {
-    const { data } = await this.client.get<RedactedAudioResponse>(
+  redactions(id: string): Promise<RedactedAudioResponse> {
+    return this.fetchJson<RedactedAudioResponse>(
       `/v2/transcript/${id}/redacted-audio`
     );
-    return data;
   }
 }
 

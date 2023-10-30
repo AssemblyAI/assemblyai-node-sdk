@@ -1,2 +1,2 @@
-export * from "@/services/realtime/factory";
-export * from "@/services/realtime/service";
+export * from "./factory";
+export * from "./service";

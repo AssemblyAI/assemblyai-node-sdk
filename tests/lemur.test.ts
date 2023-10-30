@@ -1,12 +1,31 @@
-import { knownTranscriptIds, knownLemurRequestId, purgeRequestId } from './__mocks__/api'
+import fetchMock from "jest-fetch-mock";
 import { AssemblyAI } from '../src'
+import { createClient, requestMatches } from "./utils";
 
-const assembly = new AssemblyAI({
-  apiKey: '',
+const knownTranscriptIds = ['transcript_123']
+const knownLemurRequestId = 'lemur_123'
+const purgeRequestId = 'purger_123'
+
+fetchMock.enableMocks();
+
+const assembly = createClient();
+
+const lemurResponse = {
+  response: 'some response',
+  requestId: knownLemurRequestId,
+}
+
+beforeEach(() => {
+  fetchMock.resetMocks();
+  fetchMock.doMock();
 })
 
 describe('lemur', () => {
   it('should generate a summary', async () => {
+    fetchMock.doMockOnceIf(
+      requestMatches({ method: 'POST', url: '/lemur/v3/generate/summary' }),
+      JSON.stringify(lemurResponse)
+    )
     const { response } = await assembly.lemur.summary({
       final_model: 'basic',
       transcript_ids: knownTranscriptIds,
@@ -17,6 +36,18 @@ describe('lemur', () => {
   })
 
   it('should generate an answer', async () => {
+    fetchMock.doMockOnceIf(
+      requestMatches({ method: 'POST', url: '/lemur/v3/generate/question-answer' }),
+      JSON.stringify({
+        ...lemurResponse,
+        response: [
+          {
+            question: 'question',
+            answer: 'answer',
+          },
+        ]
+      })
+    )
     const { response } = await assembly.lemur.questionAnswer({
       final_model: 'basic',
       transcript_ids: knownTranscriptIds,
@@ -33,6 +64,10 @@ describe('lemur', () => {
   })
 
   it('should generate action items', async () => {
+    fetchMock.doMockOnceIf(
+      requestMatches({ method: 'POST', url: '/lemur/v3/generate/action-items' }),
+      JSON.stringify(lemurResponse)
+    )
     const { response } = await assembly.lemur.actionItems({
       final_model: 'basic',
       transcript_ids: knownTranscriptIds,
@@ -42,6 +77,10 @@ describe('lemur', () => {
   })
 
   it('should generate a task', async () => {
+    fetchMock.doMockOnceIf(
+      requestMatches({ method: 'POST', url: '/lemur/v3/generate/task' }),
+      JSON.stringify(lemurResponse)
+    )
     const { response } = await assembly.lemur.task({
       final_model: 'basic',
       transcript_ids: knownTranscriptIds,
@@ -52,18 +91,32 @@ describe('lemur', () => {
   })
 
   it('should fail to generate a summary', async () => {
+    fetchMock.mockResponseOnce(
+      JSON.stringify({
+        error: 'each transcript source id must be valid'
+      }),
+      { status: 500 }
+    )
     const promise = assembly.lemur.summary({
       final_model: 'basic',
       transcript_ids: ['bad-id'],
       answer_format: 'one sentence',
     })
 
-    await expect(promise).rejects.toBe(
+    await expect(promise).rejects.toThrowError(
       'each transcript source id must be valid',
     )
   })
 
   it('should purge request data', async () => {
+    fetchMock.doMockOnceIf(
+      requestMatches({ method: 'DELETE', url: `/lemur/v3/${knownLemurRequestId}` }),
+      JSON.stringify({
+        deleted: true,
+        request_id: purgeRequestId,
+        request_id_to_purge: knownLemurRequestId
+      })
+    )
     const deletionRequest = await assembly.lemur.purgeRequestData(knownLemurRequestId)
     expect(deletionRequest.deleted).toBeTruthy();
     expect(deletionRequest.request_id_to_purge).toBe(knownLemurRequestId);

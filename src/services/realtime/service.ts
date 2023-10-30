@@ -8,13 +8,13 @@ import {
   PartialTranscript,
   FinalTranscript,
   SessionBeginsEventData,
-} from "@/types";
+} from "../..";
 import {
   RealtimeError,
   RealtimeErrorMessages,
   RealtimeErrorType,
-} from "@/utils/errors";
-import { Writable } from "stream";
+} from "../../utils/errors";
+import Stream from "stream";
 
 const defaultRealtimeUrl = "wss://api.assemblyai.com/v2/realtime/ws";
 
@@ -32,7 +32,6 @@ export class RealtimeService {
     this.realtimeUrl = params.realtimeUrl ?? defaultRealtimeUrl;
     this.sampleRate = params.sampleRate ?? 16_000;
     this.wordBoost = params.wordBoost;
-    this.realtimeUrl = params.realtimeUrl ?? defaultRealtimeUrl;
     if ("apiKey" in params) this.apiKey = params.apiKey;
     if ("token" in params) this.token = params.token;
 
@@ -162,8 +161,8 @@ export class RealtimeService {
     this.socket.send(JSON.stringify(payload));
   }
 
-  stream(): Writable {
-    const stream = new Writable({
+  stream(): NodeJS.WritableStream {
+    const stream = new Stream.Writable({
       write: (chunk: Buffer, encoding, next) => {
         this.sendAudio(chunk);
         next();
