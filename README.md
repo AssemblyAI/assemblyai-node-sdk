@@ -94,7 +94,7 @@ const transcript = await client.transcripts.get(transcript.id)
 
 ## List transcripts
 
-This will return a page of transcripts that you have transcript.
+This will return a page of transcripts that you have created.
 
 ```javascript
 const page = await client.transcripts.list()
