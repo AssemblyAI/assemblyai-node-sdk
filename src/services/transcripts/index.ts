@@ -15,6 +15,7 @@ import {
   TranscriptListParameters,
   WordSearchResponse,
   BaseServiceParams,
+  PollingOptions,
 } from "../..";
 import { FileService } from "../files";
 
@@ -52,16 +53,18 @@ export class TranscriptService
     });
 
     if (options?.poll ?? true) {
-      return await this.poll(data.id, options);
+      return await this.waitUntilReady(data.id, options);
     }
 
     return data;
   }
 
-  private async poll(
+  async waitUntilReady(
     transcriptId: string,
-    options?: CreateTranscriptOptions
+    options?: PollingOptions
   ): Promise<Transcript> {
+    const pollingInterval = options?.pollingInterval ?? 3_000;
+    const pollingTimeout = options?.pollingTimeout ?? -1;
     const startTime = Date.now();
     // eslint-disable-next-line no-constant-condition
     while (true) {
@@ -69,14 +72,12 @@ export class TranscriptService
       if (transcript.status === "completed" || transcript.status === "error") {
         return transcript;
       } else if (
-        Date.now() - startTime <
-        (options?.pollingTimeout ?? 180_000)
+        pollingTimeout > 0 &&
+        Date.now() - startTime > pollingTimeout
       ) {
-        await new Promise((resolve) =>
-          setTimeout(resolve, options?.pollingInterval ?? 3_000)
-        );
-      } else {
         throw new Error("Polling timeout");
+      } else {
+        await new Promise((resolve) => setTimeout(resolve, pollingInterval));
       }
     }
   }
@@ -136,8 +137,9 @@ export class TranscriptService
    * @return A promise that resolves to the sentences.
    */
   wordSearch(id: string, words: string[]): Promise<WordSearchResponse> {
+    const params = new URLSearchParams({ words: words.join(",") });
     return this.fetchJson<WordSearchResponse>(
-      `/v2/transcript/${id}/word-search?words=${JSON.stringify(words)}`
+      `/v2/transcript/${id}/word-search?${params.toString()}`
     );
   }
 
@@ -165,10 +167,21 @@ export class TranscriptService
    * Retrieve subtitles of a transcript.
    * @param id The identifier of the transcript.
    * @param format The format of the subtitles.
+   * @param chars_per_caption The maximum number of characters per caption.
    * @return A promise that resolves to the subtitles text.
    */
-  async subtitles(id: string, format: SubtitleFormat = "srt"): Promise<string> {
-    const response = await this.fetch(`/v2/transcript/${id}/${format}`);
+  async subtitles(
+    id: string,
+    format: SubtitleFormat = "srt",
+    chars_per_caption?: number
+  ): Promise<string> {
+    let url = `/v2/transcript/${id}/${format}`;
+    if (chars_per_caption) {
+      const params = new URLSearchParams();
+      params.set("chars_per_caption", chars_per_caption.toString());
+      url += `?${params.toString()}`;
+    }
+    const response = await this.fetch(url);
     return await response.text();
   }
 

@@ -14,7 +14,7 @@ type OneOf<T extends any[]> = T extends [infer Only]
   : never;
 
 /**
- * @description Will be either success, or unavailable in the rare case that the model failed.
+ * @description Either success, or unavailable in the rare case that the model failed
  * @enum {string}
  */
 export type AudioIntelligenceModelStatus = "success" | "unavailable";
@@ -34,13 +34,13 @@ export type AutoHighlightResult = {
 };
 
 /**
- * @description An array of results for the Key Phrases model, if it was enabled during the transcription request.
+ * @description An array of results for the Key Phrases model, if it is enabled.
  * See [Key phrases](https://www.assemblyai.com/docs/Models/key_phrases) for more information.
  */
 export type AutoHighlightsResult = {
   /** @description A temporally-sequential array of Key Phrases */
   results: AutoHighlightResult[];
-} | null;
+};
 
 /** @description Chapter of the audio file */
 export type Chapter = {
@@ -72,7 +72,7 @@ export type ContentSafetyLabel = {
 };
 
 export type ContentSafetyLabelResult = {
-  /** @description An array of objects, one per sensitive topic that was detected in the section */
+  /** @description An array of safety labels, one per sensitive topic that was detected in the section */
   labels: ContentSafetyLabel[];
   /** @description The sentence index at which the section ends */
   sentences_idx_end: number;
@@ -84,22 +84,26 @@ export type ContentSafetyLabelResult = {
   timestamp: Timestamp;
 };
 
+/**
+ * @description An array of results for the Content Moderation model, if it is enabled.
+ * See [Content moderation](https://www.assemblyai.com/docs/Models/content_moderation) for more information.
+ */
 export type ContentSafetyLabelsResult = {
   results: ContentSafetyLabelResult[];
   /** @description A summary of the Content Moderation severity results for the entire audio file */
   severity_score_summary: {
     [key: string]: SeverityScoreSummary;
   };
-  /** @description Will be either success, or unavailable in the rare case that the Content Moderation model failed. */
+  /** @description The status of the Content Moderation model. Either success, or unavailable in the rare case that the model failed. */
   status: AudioIntelligenceModelStatus;
   /** @description A summary of the Content Moderation confidence results for the entire audio file */
   summary: {
     [key: string]: number;
   };
-} | null;
+};
 
 export type CreateRealtimeTemporaryTokenParameters = {
-  /** @description The amount of time until the token expires in seconds. */
+  /** @description The amount of time until the token expires in seconds */
   expires_in: number;
 };
 
@@ -107,29 +111,29 @@ export type CreateRealtimeTemporaryTokenParameters = {
 export type CreateTranscriptOptionalParameters = {
   /** @description The point in time, in milliseconds, to stop transcribing in your media file */
   audio_end_at?: number;
-  /** @description The point in time, in milliseconds, to begin transcription from in your media file */
+  /** @description The point in time, in milliseconds, to begin transcribing in your media file */
   audio_start_from?: number;
   /** @description Enable [Auto Chapters](https://www.assemblyai.com/docs/Models/auto_chapters), can be true or false */
   auto_chapters?: boolean;
-  /** @description Whether Key Phrases was enabled in the transcription request, either true or false */
+  /** @description Whether Key Phrases is enabled, either true or false */
   auto_highlights?: boolean;
-  /** @description The word boost parameter value, if provided in the transcription request. */
+  /** @description The word boost parameter value */
   boost_param?: TranscriptBoostParam;
   /** @description Enable [Content Moderation](https://www.assemblyai.com/docs/Models/content_moderation), can be true or false */
   content_safety?: boolean;
   /** @description Customize how words are spelled and formatted using to and from values */
   custom_spelling?: TranscriptCustomSpelling[];
-  /** @description Whether custom topics was enabled in the transcription request, either true or false */
+  /** @description Whether custom topics is enabled, either true or false */
   custom_topics?: boolean;
-  /** @description Transcribe Filler Words, like "umm", in your media file; can be true or false. */
+  /** @description Transcribe Filler Words, like "umm", in your media file; can be true or false */
   disfluencies?: boolean;
-  /** @description Enable [Dual Channel](https://assemblyai.com/docs/Models/speech_recognition#dual-channel-transcription) transcription, can be true or false. */
+  /** @description Enable [Dual Channel](https://assemblyai.com/docs/Models/speech_recognition#dual-channel-transcription) transcription, can be true or false */
   dual_channel?: boolean;
   /** @description Enable [Entity Detection](https://www.assemblyai.com/docs/Models/entity_detection), can be true or false */
   entity_detection?: boolean;
-  /** @description Filter profanity from the transcribed text, can be true or false. */
+  /** @description Filter profanity from the transcribed text, can be true or false */
   filter_profanity?: boolean;
-  /** @description Enable Text Formatting, can be true or false. */
+  /** @description Enable Text Formatting, can be true or false */
   format_text?: boolean;
   /** @description Enable [Topic Detection](https://www.assemblyai.com/docs/Models/iab_classification), can be true or false */
   iab_categories?: boolean;
@@ -137,10 +141,10 @@ export type CreateTranscriptOptionalParameters = {
    * @description The language of your audio file. Possible values are found in [Supported Languages](https://www.assemblyai.com/docs/Concepts/supported_languages).
    * The default value is 'en_us'.
    */
-  language_code?: TranscriptLanguageCode;
-  /** @description Whether [Automatic language detection](https://www.assemblyai.com/docs/Models/speech_recognition#automatic-language-detection) was enabled in the transcription request, either true or false. */
+  language_code?: TranscriptLanguageCode | null;
+  /** @description Whether [Automatic language detection](https://www.assemblyai.com/docs/Models/speech_recognition#automatic-language-detection) is enabled, either true or false */
   language_detection?: boolean;
-  /** @description Enable Automatic Punctuation, can be true or false. */
+  /** @description Enable Automatic Punctuation, can be true or false */
   punctuate?: boolean;
   /** @description Redact PII from the transcribed text using the Redact PII model, can be true or false */
   redact_pii?: boolean;
@@ -154,13 +158,13 @@ export type CreateTranscriptOptionalParameters = {
   /** @description The list of PII Redaction policies to enable. See [PII redaction](https://www.assemblyai.com/docs/Models/pii_redaction) for more details. */
   redact_pii_policies?: PiiPolicy[];
   /** @description The replacement logic for detected PII, can be "entity_type" or "hash". See [PII redaction](https://www.assemblyai.com/docs/Models/pii_redaction) for more details. */
-  redact_pii_sub?: SubstitutionPolicy;
+  redact_pii_sub?: SubstitutionPolicy | null;
   /** @description Enable [Sentiment Analysis](https://www.assemblyai.com/docs/Models/sentiment_analysis), can be true or false */
   sentiment_analysis?: boolean;
   /** @description Enable [Speaker diarization](https://www.assemblyai.com/docs/Models/speaker_diarization), can be true or false */
   speaker_labels?: boolean;
   /**
-   * @description Tells the speaker label model how many speakers it should attempt to identify, up to 10. See [Speaker diarization](https://www.assemblyai.com/docs/Models/speaker_diarization) for more details.
+   * @description Tell the speaker label model how many speakers it should attempt to identify, up to 10. See [Speaker diarization](https://www.assemblyai.com/docs/Models/speaker_diarization) for more details.
    * @default null
    */
   speakers_expected?: number | null;
@@ -184,21 +188,21 @@ export type CreateTranscriptOptionalParameters = {
    * @default bullets
    */
   summary_type?: SummaryType;
-  /** @description The list of custom topics provided if custom topics was enabled in the transcription request */
+  /** @description The list of custom topics provided, if custom topics is enabled */
   topics?: string[];
   /**
-   * @description The header name which should be sent back with webhook calls, if provided in the transcription request.
+   * @description The header name which should be sent back with webhook calls
    * @default null
    */
   webhook_auth_header_name?: string | null;
   /**
-   * @description Defaults to null. Optionally allows a user to specify a header name and value to send back with a webhook call for added security.
+   * @description Specify a header name and value to send back with a webhook call for added security
    * @default null
    */
   webhook_auth_header_value?: string | null;
-  /** @description The URL to which we send webhooks upon trancription completion, if provided in the transcription request. */
+  /** @description The URL to which AssemblyAI send webhooks upon trancription completion */
   webhook_url?: string;
-  /** @description The list of custom vocabulary to boost transcription probability for, if provided in the transcription request. */
+  /** @description The list of custom vocabulary to boost transcription probability for */
   word_boost?: string[];
 };
 
@@ -265,7 +269,7 @@ export type Error = {
 export type LemurActionItemsParameters = LemurBaseParameters;
 
 export type LemurActionItemsResponse = LemurBaseResponse & {
-  /** @description The response generated by LeMUR. */
+  /** @description The response generated by LeMUR */
   response: string;
 };
 
@@ -280,7 +284,12 @@ export type LemurBaseParameters = {
     ]
   >;
   final_model?: LemurModel;
-  /** @description Max output size in tokens. Up to 4000 allowed. */
+  /**
+   * @description Custom formatted transcript data. Maximum size is the context limit of the selected model, which defaults to 100000.
+   * Use either transcript_ids or input_text as input into LeMUR.
+   */
+  input_text?: string;
+  /** @description Max output size in tokens, up to 4000 */
   max_output_size?: number;
   /**
    * Format: float
@@ -289,8 +298,11 @@ export type LemurBaseParameters = {
    * Can be any value between 0.0 and 1.0 inclusive.
    */
   temperature?: number;
-  /** @description A list of completed transcripts with text. Up to 100 files max, or 100 hours max. Whichever is lower. */
-  transcript_ids: string[];
+  /**
+   * @description A list of completed transcripts with text. Up to a maximum of 100 files or 100 hours, whichever is lower.
+   * Use either transcript_ids or input_text as input into LeMUR.
+   */
+  transcript_ids?: string[];
 };
 
 export type LemurBaseResponse = {
@@ -310,7 +322,7 @@ export type LemurQuestion = {
   answer_format?: string;
   /** @description What discrete options to return. Useful for precise responses. Can't be used with answer_format. Example: ["Yes", "No"] */
   answer_options?: string[];
-  /** @description Any context about the transcripts you wish to provide. This can be a string, or free-form JSON. */
+  /** @description Any context about the transcripts you wish to provide. This can be a string or any object. */
   context?: OneOf<
     [
       string,
@@ -323,21 +335,21 @@ export type LemurQuestion = {
   question: string;
 };
 
-/** @description An answer generated by LeMUR and its question. */
+/** @description An answer generated by LeMUR and its question */
 export type LemurQuestionAnswer = {
-  /** @description The answer generated by LeMUR. */
+  /** @description The answer generated by LeMUR */
   answer: string;
-  /** @description The question for LeMUR to answer. */
+  /** @description The question for LeMUR to answer */
   question: string;
 };
 
 export type LemurQuestionAnswerParameters = LemurBaseParameters & {
-  /** @description A list of questions to ask. */
+  /** @description A list of questions to ask */
   questions: LemurQuestion[];
 };
 
 export type LemurQuestionAnswerResponse = LemurBaseResponse & {
-  /** @description The answers generated by LeMUR and their questions. */
+  /** @description The answers generated by LeMUR and their questions */
   response: LemurQuestionAnswer[];
 };
 
@@ -347,7 +359,7 @@ export type LemurSummaryParameters = LemurBaseParameters & {
 };
 
 export type LemurSummaryResponse = LemurBaseResponse & {
-  /** @description The response generated by LeMUR. */
+  /** @description The response generated by LeMUR */
   response: string;
 };
 
@@ -357,7 +369,7 @@ export type LemurTaskParameters = LemurBaseParameters & {
 };
 
 export type LemurTaskResponse = LemurBaseResponse & {
-  /** @description The response generated by LeMUR. */
+  /** @description The response generated by LeMUR */
   response: string;
 };
 
@@ -408,11 +420,11 @@ export type PiiPolicy =
   | "banking_information";
 
 export type PurgeLemurRequestDataResponse = {
-  /** @description Whether the request data was deleted. */
+  /** @description Whether the request data was deleted */
   deleted: boolean;
-  /** @description The ID of the LeMUR request */
-  request_id: string;
   /** @description The ID of the deletion request of the LeMUR request */
+  request_id: string;
+  /** @description The ID of the LeMUR request to purge the data for */
   request_id_to_purge: string;
 };
 
@@ -445,7 +457,7 @@ export type SentencesResponse = {
 /** @enum {unknown} */
 export type Sentiment = "POSITIVE" | "NEUTRAL" | "NEGATIVE";
 
-/** @description The result of the sentiment analysis model. */
+/** @description The result of the sentiment analysis model */
 export type SentimentAnalysisResult = {
   /**
    * Format: double
@@ -475,7 +487,7 @@ export type SeverityScoreSummary = {
 
 /**
  * @description The replacement logic for detected PII, can be "entity_type" or "hash". See [PII redaction](https://www.assemblyai.com/docs/Models/pii_redaction) for more details.
- * @enum {string|null}
+ * @enum {string}
  */
 export type SubstitutionPolicy = "entity_type" | "hash";
 
@@ -504,7 +516,7 @@ export type SummaryType =
   | "headline"
   | "paragraph";
 
-/** @description Timestamp containing a start and end property in milliseconds. */
+/** @description Timestamp containing a start and end property in milliseconds */
 export type Timestamp = {
   /** @description The end time in milliseconds */
   end: number;
@@ -512,7 +524,22 @@ export type Timestamp = {
   start: number;
 };
 
-/** @description The result of the topic detection model. */
+/**
+ * @description The result of the Topic Detection model, if it is enabled.
+ * See [Topic Detection](https://www.assemblyai.com/docs/Models/iab_classification) for more information.
+ */
+export type TopicDetectionModelResult = {
+  /** @description An array of results for the Topic Detection model */
+  results: TopicDetectionResult[];
+  /** @description The status of the Topic Detection model. Either success, or unavailable in the rare case that the model failed. */
+  status: AudioIntelligenceModelStatus;
+  /** @description The overall relevance of topic to the entire audio file */
+  summary: {
+    [key: string]: number;
+  };
+};
+
+/** @description The result of the topic detection model */
 export type TopicDetectionResult = {
   labels?: {
     /** @description The IAB taxonomical label for the label of the detected topic, where > denotes supertopic/subtopic relationship */
@@ -532,7 +559,7 @@ export type TopicDetectionResult = {
 export type Transcript = {
   /**
    * @deprecated
-   * @description The acoustic model that was used for the transcription
+   * @description The acoustic model that was used for the transcript
    */
   acoustic_model: string;
   /**
@@ -540,22 +567,22 @@ export type Transcript = {
    * @description The duration of this transcript object's media file, in seconds
    */
   audio_duration?: number | null;
-  /** @description The point in time, in milliseconds, in the file at which the transcription was terminated, if provided in the transcription request */
+  /** @description The point in time, in milliseconds, in the file at which the transcription was terminated */
   audio_end_at?: number | null;
-  /** @description The point in time, in milliseconds, in the file at which the transcription was started, if provided in the transcription request */
+  /** @description The point in time, in milliseconds, in the file at which the transcription was started */
   audio_start_from?: number | null;
   /** @description The URL of the media that was transcribed */
   audio_url: string;
-  /** @description Enable [Auto Chapters](https://www.assemblyai.com/docs/Models/auto_chapters), can be true or false */
+  /** @description Whether [Auto Chapters](https://www.assemblyai.com/docs/Models/auto_chapters) is enabled, can be true or false */
   auto_chapters?: boolean | null;
-  /** @description Whether Key Phrases was enabled in the transcription request, either true or false */
+  /** @description Whether Key Phrases is enabled, either true or false */
   auto_highlights: boolean;
   /**
-   * @description An array of results for the Key Phrases model, if it was enabled during the transcription request.
+   * @description An array of results for the Key Phrases model, if it is enabled.
    * See [Key phrases](https://www.assemblyai.com/docs/Models/key_phrases) for more information.
    */
-  auto_highlights_result?: AutoHighlightsResult;
-  /** @description The word boost parameter value, if provided in the transcription request */
+  auto_highlights_result?: AutoHighlightsResult | null;
+  /** @description The word boost parameter value */
   boost_param?: string | null;
   /** @description An array of temporally sequential chapters for the audio file */
   chapters?: Chapter[] | null;
@@ -564,51 +591,42 @@ export type Transcript = {
    * @description The confidence score for the transcript, between 0.0 (low confidence) and 1.0 (high confidence)
    */
   confidence?: number | null;
-  /** @description Enable [Content Moderation](https://www.assemblyai.com/docs/Models/content_moderation), can be true or false */
+  /** @description Whether [Content Moderation](https://www.assemblyai.com/docs/Models/content_moderation) is enabled, can be true or false */
   content_safety?: boolean | null;
   /**
-   * @description An array of results for the Content Moderation model, if it was enabled during the transcription request.
+   * @description An array of results for the Content Moderation model, if it is enabled.
    * See [Content moderation](https://www.assemblyai.com/docs/Models/content_moderation) for more information.
    */
-  content_safety_labels?: ContentSafetyLabelsResult;
+  content_safety_labels?: ContentSafetyLabelsResult | null;
   /** @description Customize how words are spelled and formatted using to and from values */
   custom_spelling?: TranscriptCustomSpelling[] | null;
-  /** @description Whether custom topics was enabled in the transcription request, either true or false */
+  /** @description Whether custom topics is enabled, either true or false */
   custom_topics?: boolean | null;
   /** @description Transcribe Filler Words, like "umm", in your media file; can be true or false */
   disfluencies?: boolean | null;
-  /** @description Whether [Dual channel transcription](https://www.assemblyai.com/docs/Models/speech_recognition#dual-channel-transcription) was enabled in the transcription request, either true or false */
+  /** @description Whether [Dual channel transcription](https://www.assemblyai.com/docs/Models/speech_recognition#dual-channel-transcription) is enabled, either true or false */
   dual_channel?: boolean | null;
   /**
-   * @description An array of results for the Entity Detection model, if it was enabled during the transcription request.
+   * @description An array of results for the Entity Detection model, if it is enabled.
    * See [Entity detection](https://www.assemblyai.com/docs/Models/entity_detection) for more information.
    */
   entities?: Entity[] | null;
-  /** @description Enable [Entity Detection](https://www.assemblyai.com/docs/Models/entity_detection), can be true or false */
+  /** @description Whether [Entity Detection](https://www.assemblyai.com/docs/Models/entity_detection) is enabled, can be true or false */
   entity_detection?: boolean | null;
   /** @description Error message of why the transcript failed */
   error?: string;
-  /** @description Whether [Profanity Filtering](https://www.assemblyai.com/docs/Models/speech_recognition#profanity-filtering) was enabled in the transcription request, either true or false */
+  /** @description Whether [Profanity Filtering](https://www.assemblyai.com/docs/Models/speech_recognition#profanity-filtering) is enabled, either true or false */
   filter_profanity?: boolean | null;
-  /** @description Whether Text Formatting was enabled in the transcription request, either true or false */
+  /** @description Whether Text Formatting is enabled, either true or false */
   format_text?: boolean | null;
-  /** @description Enable [Topic Detection](https://www.assemblyai.com/docs/Models/iab_classification), can be true or false */
+  /** @description Whether [Topic Detection](https://www.assemblyai.com/docs/Models/iab_classification) is enabled, can be true or false */
   iab_categories?: boolean | null;
   /**
-   * @description The result of the Topic Detection model, if it was enabled during the transcription request.
+   * @description The result of the Topic Detection model, if it is enabled.
    * See [Topic Detection](https://www.assemblyai.com/docs/Models/iab_classification) for more information.
    */
-  iab_categories_result?: {
-    /** @description An array of results for the Topic Detection model. */
-    results: TopicDetectionResult[];
-    /** @description Will be either success, or unavailable in the rare case that the Content Moderation model failed. */
-    status: AudioIntelligenceModelStatus;
-    /** @description The overall relevance of topic to the entire audio file */
-    summary: {
-      [key: string]: number;
-    };
-  } | null;
-  /** @description The unique identifier of your transcription */
+  iab_categories_result?: TopicDetectionModelResult | null;
+  /** @description The unique identifier of your transcript */
   id: string;
   /**
    * @description The language of your audio file.
@@ -616,24 +634,24 @@ export type Transcript = {
    * The default value is 'en_us'.
    */
   language_code?: TranscriptLanguageCode;
-  /** @description Whether [Automatic language detection](https://www.assemblyai.com/docs/Models/speech_recognition#automatic-language-detection) was enabled in the transcription request, either true or false */
+  /** @description Whether [Automatic language detection](https://www.assemblyai.com/docs/Models/speech_recognition#automatic-language-detection) is enabled, either true or false */
   language_detection?: boolean | null;
   /**
    * @deprecated
-   * @description The language model that was used for the transcription
+   * @description The language model that was used for the transcript
    */
   language_model: string;
-  /** @description Whether Automatic Punctuation was enabled in the transcription request, either true or false. */
+  /** @description Whether Automatic Punctuation is enabled, either true or false */
   punctuate?: boolean | null;
-  /** @description Whether [PII Redaction](https://www.assemblyai.com/docs/Models/pii_redaction) was enabled in the transcription request, either true or false */
+  /** @description Whether [PII Redaction](https://www.assemblyai.com/docs/Models/pii_redaction) is enabled, either true or false */
   redact_pii: boolean;
   /**
-   * @description Whether a redacted version of the audio file was generated (enabled or disabled in the transcription request),
+   * @description Whether a redacted version of the audio file was generated,
    * either true or false. See [PII redaction](https://www.assemblyai.com/docs/Models/pii_redaction) for more information.
    */
   redact_pii_audio?: boolean | null;
   /**
-   * @description The audio quality of the PII-redacted audio file, if enabled in the transcription request.
+   * @description The audio quality of the PII-redacted audio file, if redact_pii_audio is enabled.
    * See [PII redaction](https://www.assemblyai.com/docs/Models/pii_redaction) for more information.
    */
   redact_pii_audio_quality?: string | null;
@@ -644,16 +662,16 @@ export type Transcript = {
   redact_pii_policies?: PiiPolicy[] | null;
   /** @description The replacement logic for detected PII, can be "entity_type" or "hash". See [PII redaction](https://www.assemblyai.com/docs/Models/pii_redaction) for more details. */
   redact_pii_sub?: SubstitutionPolicy;
-  /** @description Enable [Sentiment Analysis](https://www.assemblyai.com/docs/Models/sentiment_analysis), can be true or false */
+  /** @description Whether [Sentiment Analysis](https://www.assemblyai.com/docs/Models/sentiment_analysis) is enabled, can be true or false */
   sentiment_analysis?: boolean | null;
   /**
-   * @description An array of results for the Sentiment Analysis model, if it was enabled during the transcription request.
+   * @description An array of results for the Sentiment Analysis model, if it is enabled.
    * See [Sentiment analysis](https://www.assemblyai.com/docs/Models/sentiment_analysis) for more information.
    */
   sentiment_analysis_results?: SentimentAnalysisResult[] | null;
-  /** @description Enable [Speaker diarization](https://www.assemblyai.com/docs/Models/speaker_diarization), can be true or false */
+  /** @description Whether [Speaker diarization](https://www.assemblyai.com/docs/Models/speaker_diarization) is enabled, can be true or false */
   speaker_labels?: boolean | null;
-  /** @description Defaults to null. Tells the speaker label model how many speakers it should attempt to identify, up to 10. See [Speaker diarization](https://www.assemblyai.com/docs/Models/speaker_diarization) for more details. */
+  /** @description Tell the speaker label model how many speakers it should attempt to identify, up to 10. See [Speaker diarization](https://www.assemblyai.com/docs/Models/speaker_diarization) for more details. */
   speakers_expected?: number | null;
   /**
    * Format: float
@@ -663,42 +681,42 @@ export type Transcript = {
   speech_threshold?: number | null;
   /**
    * @deprecated
-   * @description Whether speed boost was enabled in the transcription request
+   * @description Whether speed boost is enabled
    */
   speed_boost?: boolean | null;
-  /** @description The status of your transcription. Possible values are queued, processing, completed, or error. */
+  /** @description The status of your transcript. Possible values are queued, processing, completed, or error. */
   status: TranscriptStatus;
-  /** @description Whether [Summarization](https://www.assemblyai.com/docs/Models/summarization) was enabled in the transcription request, either true or false */
+  /** @description Whether [Summarization](https://www.assemblyai.com/docs/Models/summarization) is enabled, either true or false */
   summarization: boolean;
-  /** @description The generated summary of the media file, if [Summarization](https://www.assemblyai.com/docs/Models/summarization) was enabled in the transcription request */
+  /** @description The generated summary of the media file, if [Summarization](https://www.assemblyai.com/docs/Models/summarization) is enabled */
   summary?: string | null;
   /**
    * @description The Summarization model used to generate the summary,
-   * if [Summarization](https://www.assemblyai.com/docs/Models/summarization) was enabled in the transcription request
+   * if [Summarization](https://www.assemblyai.com/docs/Models/summarization) is enabled
    */
   summary_model?: string | null;
-  /** @description The type of summary generated, if [Summarization](https://www.assemblyai.com/docs/Models/summarization) was enabled in the transcription request */
+  /** @description The type of summary generated, if [Summarization](https://www.assemblyai.com/docs/Models/summarization) is enabled */
   summary_type?: string | null;
   /** @description The textual transcript of your media file */
   text?: string | null;
   /** @description True while a request is throttled and false when a request is no longer throttled */
   throttled?: boolean | null;
-  /** @description The list of custom topics provided if custom topics was enabled in the transcription request */
+  /** @description The list of custom topics provided if custom topics is enabled */
   topics?: string[];
   /**
    * @description When dual_channel or speaker_labels is enabled, a list of turn-by-turn utterance objects.
    * See [Speaker diarization](https://www.assemblyai.com/docs/Models/speaker_diarization) for more information.
    */
   utterances?: TranscriptUtterance[] | null;
-  /** @description Whether webhook authentication details were provided in the transcription request */
+  /** @description Whether webhook authentication details were provided */
   webhook_auth: boolean;
-  /** @description The header name which should be sent back with webhook calls, if provided in the transcription request */
+  /** @description The header name which should be sent back with webhook calls */
   webhook_auth_header_name?: string | null;
-  /** @description The status code we received from your server when delivering your webhook, if a webhook URL was provided in the transcription request */
+  /** @description The status code we received from your server when delivering your webhook, if a webhook URL was provided */
   webhook_status_code?: number | null;
-  /** @description The URL to which we send webhooks upon trancription completion, if provided in the transcription request */
+  /** @description The URL to which we send webhooks upon trancription completion */
   webhook_url?: string | null;
-  /** @description The list of custom vocabulary to boost transcription probability for, if provided in the transcription request */
+  /** @description The list of custom vocabulary to boost transcription probability for */
   word_boost?: string[];
   /**
    * @description An array of temporally-sequential word objects, one for each word in the transcript.
@@ -708,7 +726,7 @@ export type Transcript = {
 };
 
 /**
- * @description The word boost parameter value, if provided in the transcription request.
+ * @description The word boost parameter value
  * @enum {string}
  */
 export type TranscriptBoostParam = "low" | "default" | "high";
@@ -726,7 +744,7 @@ export type TranscriptCustomSpelling = {
  * The default value is 'en_us'.
  *
  * @default en_us
- * @enum {string|null}
+ * @enum {string}
  */
 export type TranscriptLanguageCode =
   | "en"
@@ -805,7 +823,7 @@ export type TranscriptSentence = {
 };
 
 /**
- * @description The status of your transcription. Possible values are queued, processing, completed, or error.
+ * @description The status of your transcript. Possible values are queued, processing, completed, or error.
  * @enum {string}
  */
 export type TranscriptStatus = "queued" | "processing" | "completed" | "error";

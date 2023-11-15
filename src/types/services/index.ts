@@ -3,5 +3,5 @@ type BaseServiceParams = {
   baseUrl?: string;
 };
 
-export type * from "./abstractions";
+export * from "./abstractions";
 export type { BaseServiceParams };
