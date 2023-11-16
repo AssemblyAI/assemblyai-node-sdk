@@ -14,19 +14,19 @@ type OneOf<T extends any[]> = T extends [infer Only]
   : never;
 
 export type AudioData = {
-  /** @description Raw audio data, base64 encoded. This can be the raw data recorded directly from a microphone or read from an audio file. */
+  /** @description Base64 encoded raw audio data */
   audio_data: string;
 };
 
 export type FinalTranscript = RealtimeBaseTranscript & {
   /**
-   * @description Describes the type of message.
+   * @description Describes the type of message
    * @constant
    */
   message_type: "FinalTranscript";
-  /** @description Whether the text has been punctuated and cased. */
+  /** @description Whether the text is punctuated and cased */
   punctuated: boolean;
-  /** @description Whether the text has been formatted (e.g. Dollar -> $) */
+  /** @description Whether the text is formatted, for example Dollar -> $ */
   text_formatted: boolean;
 };
 
@@ -39,32 +39,35 @@ export type MessageType =
 
 export type PartialTranscript = RealtimeBaseTranscript & {
   /**
-   * @description Describes the type of message.
+   * @description Describes the type of message
    * @constant
    */
   message_type: "PartialTranscript";
 };
 
 export type RealtimeBaseMessage = {
-  /** @description Describes the type of the message. */
+  /** @description Describes the type of the message */
   message_type: MessageType;
 };
 
 export type RealtimeBaseTranscript = {
-  /** @description End time of audio sample relative to session start, in milliseconds. */
+  /** @description End time of audio sample relative to session start, in milliseconds */
   audio_end: number;
-  /** @description Start time of audio sample relative to session start, in milliseconds. */
+  /** @description Start time of audio sample relative to session start, in milliseconds */
   audio_start: number;
   /**
    * Format: double
-   * @description The confidence score of the entire transcription, between 0 and 1.
+   * @description The confidence score of the entire transcription, between 0 and 1
    */
   confidence: number;
-  /** @description The timestamp for the partial transcript. */
+  /** @description The timestamp for the partial transcript */
   created: Date;
-  /** @description The partial transcript for your audio. */
+  /** @description The partial transcript for your audio */
   text: string;
-  /** @description An array of objects, with the information for each word in the transcription text. Includes the start/end time (in milliseconds) of the word, the confidence score of the word, and the text (i.e. the word itself). */
+  /**
+   * @description An array of objects, with the information for each word in the transcription text.
+   * Includes the start and end time of the word in milliseconds, the confidence score of the word, and the text, which is the word itself.
+   */
   words: Word[];
 };
 
@@ -85,27 +88,27 @@ export type RealtimeTranscript = PartialTranscript | FinalTranscript;
 export type RealtimeTranscriptType = "PartialTranscript" | "FinalTranscript";
 
 export type SessionBegins = RealtimeBaseMessage & {
-  /** @description Timestamp when this session will expire. */
+  /** @description Timestamp when this session will expire */
   expires_at: Date;
   /**
-   * @description Describes the type of the message.
+   * @description Describes the type of the message
    * @constant
    */
   message_type: "SessionBegins";
-  /** @description Unique identifier for the established session. */
+  /** @description Unique identifier for the established session */
   session_id: string;
 };
 
 export type SessionTerminated = RealtimeBaseMessage & {
   /**
-   * @description Describes the type of the message.
+   * @description Describes the type of the message
    * @constant
    */
   message_type: "SessionTerminated";
 };
 
 export type TerminateSession = RealtimeBaseMessage & {
-  /** @description A boolean value to communicate that you wish to end your real-time session forever. */
+  /** @description Set to true to end your real-time session forever */
   terminate_session: boolean;
 };
 

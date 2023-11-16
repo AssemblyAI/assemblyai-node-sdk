@@ -8,7 +8,7 @@
 [![AssemblyAI Twitter](https://img.shields.io/twitter/follow/AssemblyAI?label=%40AssemblyAI&style=social)](https://twitter.com/AssemblyAI)
 [![AssemblyAI YouTube](https://img.shields.io/youtube/channel/subscribers/UCtatfZMf-8EkIwASXM4ts0A)](https://www.youtube.com/@AssemblyAI)
 [![Discord](https://img.shields.io/discord/875120158014853141?logo=discord&label=Discord&link=https%3A%2F%2Fdiscord.com%2Fchannels%2F875120158014853141&style=social)
-](https://discord.gg/5aQNZyq3)
+](https://assemblyai.com/discord)
 
 # AssemblyAI Node.js SDK
 
@@ -79,7 +79,7 @@ const transcript = await client.transcripts.create({
   poll: true,
   // How frequently the transcript is polled in ms. Defaults to 3000.
   pollingInterval: 1000,
-  // How long to wait in ms until the "Polling timeout" error is thrown. Defaults to 180000.
+  // How long to wait in ms until the "Polling timeout" error is thrown. Defaults to infinite (-1).
   pollingTimeout: 5000,
 })
 ```
@@ -92,9 +92,21 @@ This will return the transcript object in its current state. If the transcript i
 const transcript = await client.transcripts.get(transcript.id)
 ```
 
+If you disabled polling during transcript creation, you can still poll until the transcript `status` is `completed` or `error` using `waitUntilReady`:
+
+```javascript
+const transcript = await client.transcripts.waitUntilReady(transcript.id,
+{
+  // How frequently the transcript is polled in ms. Defaults to 3000.
+  pollingInterval: 1000,
+  // How long to wait in ms until the "Polling timeout" error is thrown. Defaults to infinite (-1).
+  pollingTimeout: 5000,
+})
+```
+
 ## List transcripts
 
-This will return a page of transcripts that you have created.
+This will return a page of transcripts you created.
 
 ```javascript
 const page = await client.transcripts.list()

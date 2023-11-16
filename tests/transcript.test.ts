@@ -99,6 +99,30 @@ describe('transcript', () => {
     expect(transcript.status).toBe('completed')
   }, 6000)
 
+  it('should wait on the transcript until ready', async () => {
+    fetchMock.doMockOnceIf(
+      requestMatches({ url: `/v2/transcript/${transcriptId}`, method: 'GET' }),
+      JSON.stringify({ status: 'queued', id: transcriptId })
+    )
+    fetchMock.doMockOnceIf(
+      requestMatches({ url: `/v2/transcript/${transcriptId}`, method: 'GET' }),
+      JSON.stringify({ status: 'processing' })
+    )
+    fetchMock.doMockOnceIf(
+      requestMatches({ url: `/v2/transcript/${transcriptId}`, method: 'GET' }),
+      JSON.stringify({ status: 'completed' })
+    )
+    const transcript = await assembly.transcripts.waitUntilReady(
+      transcriptId,
+      {
+        pollingInterval: 1000,
+        pollingTimeout: 5000,
+      },
+    )
+
+    expect(transcript.status).toBe('completed')
+  }, 6000)
+
   it('should retrieve a page of transcripts', async () => {
     fetchMock.doMockOnceIf(
       requestMatches({ url: '/v2/transcript', method: 'GET' }),
@@ -193,20 +217,20 @@ describe('transcript', () => {
 
   it('should get srt subtitles', async () => {
     fetchMock.doMockOnceIf(
-      requestMatches({ url: `/v2/transcript/${transcriptId}/srt`, method: 'GET' }),
+      requestMatches({ url: `/v2/transcript/${transcriptId}/srt?chars_per_caption=32`, method: 'GET' }),
       'Lorem ipsum'
     )
-    const subtitle = await assembly.transcripts.subtitles(transcriptId, 'srt')
+    const subtitle = await assembly.transcripts.subtitles(transcriptId, 'srt', 32)
 
     expect(subtitle).toBeTruthy()
   })
 
   it('should get vtt subtitles', async () => {
     fetchMock.doMockOnceIf(
-      requestMatches({ url: `/v2/transcript/${transcriptId}/vtt`, method: 'GET' }),
+      requestMatches({ url: `/v2/transcript/${transcriptId}/vtt?chars_per_caption=32`, method: 'GET' }),
       'Lorem ipsum'
     )
-    const subtitle = await assembly.transcripts.subtitles(transcriptId, 'vtt')
+    const subtitle = await assembly.transcripts.subtitles(transcriptId, 'vtt', 32)
 
     expect(subtitle).toBeTruthy()
   })
