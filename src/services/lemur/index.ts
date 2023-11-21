@@ -1,8 +1,8 @@
 import {
-  LemurSummaryParameters,
-  LemurActionItemsParameters,
-  LemurQuestionAnswerParameters,
-  LemurTaskParameters,
+  LemurSummaryParams,
+  LemurActionItemsParams,
+  LemurQuestionAnswerParams,
+  LemurTaskParams,
   LemurSummaryResponse,
   LemurQuestionAnswerResponse,
   LemurActionItemsResponse,
@@ -12,7 +12,7 @@ import {
 import { BaseService } from "../base";
 
 export class LemurService extends BaseService {
-  summary(params: LemurSummaryParameters): Promise<LemurSummaryResponse> {
+  summary(params: LemurSummaryParams): Promise<LemurSummaryResponse> {
     return this.fetchJson<LemurSummaryResponse>("/lemur/v3/generate/summary", {
       method: "POST",
       body: JSON.stringify(params),
@@ -20,7 +20,7 @@ export class LemurService extends BaseService {
   }
 
   questionAnswer(
-    params: LemurQuestionAnswerParameters
+    params: LemurQuestionAnswerParams
   ): Promise<LemurQuestionAnswerResponse> {
     return this.fetchJson<LemurQuestionAnswerResponse>(
       "/lemur/v3/generate/question-answer",
@@ -32,7 +32,7 @@ export class LemurService extends BaseService {
   }
 
   actionItems(
-    params: LemurActionItemsParameters
+    params: LemurActionItemsParams
   ): Promise<LemurActionItemsResponse> {
     return this.fetchJson<LemurActionItemsResponse>(
       "/lemur/v3/generate/action-items",
@@ -43,7 +43,7 @@ export class LemurService extends BaseService {
     );
   }
 
-  task(params: LemurTaskParameters): Promise<LemurTaskResponse> {
+  task(params: LemurTaskParams): Promise<LemurTaskResponse> {
     return this.fetchJson<LemurTaskResponse>("/lemur/v3/generate/task", {
       method: "POST",
       body: JSON.stringify(params),

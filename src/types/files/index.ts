@@ -1,4 +1,4 @@
-type FileUploadParameters = string | FileUploadData;
+type FileUploadParams = string | FileUploadData;
 type FileUploadData =
   | NodeJS.ReadableStream
   | ReadableStream
@@ -8,4 +8,4 @@ type FileUploadData =
   | ArrayBufferLike
   | Uint8Array;
 
-export type { FileUploadParameters, FileUploadData };
+export type { FileUploadParams, FileUploadData };
