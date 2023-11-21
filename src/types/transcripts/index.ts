@@ -1,3 +1,6 @@
+import { FileUploadParams } from "../files";
+import { TranscriptParams } from "../openapi.generated";
+
 export type PollingOptions = {
   /**
    * The amount of time to wait between polling requests.
@@ -10,6 +13,7 @@ export type PollingOptions = {
    */
   pollingTimeout?: number;
 };
+
 export type CreateTranscriptOptions = {
   /**
    * Whether to poll the transcript until it is ready.
@@ -17,3 +21,26 @@ export type CreateTranscriptOptions = {
    */
   poll?: boolean;
 } & PollingOptions;
+
+/**
+ * The audio to transcribe. This can be a public URL, a local file path, a readable file stream, or a file buffer.
+ */
+export type AudioToTranscribe = FileUploadParams;
+
+/**
+ * The parameters to transcribe an audio file.
+ */
+export type TranscribeParams = { audio: AudioToTranscribe } & Omit<
+  TranscriptParams,
+  "audio_url"
+>;
+
+/**
+ * The parameters to start the transcription of an audio file.
+ */
+export type SubmitParams = TranscribeParams;
+
+/**
+ * The options to transcribe an audio file, including polling options.
+ */
+export type TranscribeOptions = PollingOptions;

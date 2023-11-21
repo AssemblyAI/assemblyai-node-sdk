@@ -6,6 +6,12 @@
   "module": "dist/index.esm.js",
   "types": "dist/index.d.ts",
   "typings": "dist/index.d.ts",
+  "exports": {
+    "default": "./dist/index.js",
+    "require": "./dist/index.js",
+    "import": "./dist/index.esm.js",
+    "node": "./dist/index.js"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/AssemblyAI/assemblyai-node-sdk.git"
@@ -18,10 +24,10 @@
   "scripts": {
     "build": "pnpm clean && pnpm rollup -c",
     "clean": "rimraf dist",
-    "lint": "eslint -c .eslintrc.json 'src/**/*'",
+    "lint": "eslint -c .eslintrc.json '{src,tests}/**/*.{js,ts}'",
     "test": "pnpm lint && pnpm test:unit",
     "test:unit": "jest --config jest.config.rollup.ts",
-    "format": "prettier --write 'src/**/*.ts'",
+    "format": "prettier '**/*' --write",
     "generate-types": "tsx ./scripts/generate-types.ts && pnpm format",
     "copybara:dry-run": "./copybara.sh dry_run --init-history",
     "copybara:pr": "./copybara.sh sync_out --init-history"
@@ -38,8 +44,7 @@
   "homepage": "https://www.assemblyai.com/docs",
   "files": [
     "dist",
-    "src",
-    "types"
+    "src"
   ],
   "devDependencies": {
     "@types/jest": "^29.5.5",

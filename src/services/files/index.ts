@@ -2,7 +2,7 @@
 // to keep the assemblyai module more compatible. Some fs polyfills don't include `createReadStream`.
 import fs from "fs";
 import { BaseService } from "../base";
-import { UploadedFile, FileUploadParameters, FileUploadData } from "../..";
+import { UploadedFile, FileUploadParams, FileUploadData } from "../..";
 
 export class FileService extends BaseService {
   /**
@@ -10,7 +10,7 @@ export class FileService extends BaseService {
    * @param input The local file path to upload, or a stream or buffer of the file to upload.
    * @return A promise that resolves to the uploaded file URL.
    */
-  async upload(input: FileUploadParameters): Promise<string> {
+  async upload(input: FileUploadParams): Promise<string> {
     let fileData: FileUploadData;
     if (typeof input === "string") fileData = fs.createReadStream(input);
     else fileData = input;

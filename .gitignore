@@ -15,8 +15,7 @@ node_modules
 .DS_Store
 Thumbs.db
 
-# Ignore built ts files
-dist/**/*
+dist
 
 # Ignore Jest directory
 .jest

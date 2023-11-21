@@ -1,16 +1,16 @@
 /**
  * Interface for classes that can create resources.
  * @template T The type of the resource.
- * @template Parameters The type of the parameters required to create the resource.
+ * @template Params The type of the parameters required to create the resource.
  */
-interface Createable<T, Parameters, Options = Record<string, unknown>> {
+interface Createable<T, Params, Options = Record<string, unknown>> {
   /**
    * Create a new resource.
    * @param params The parameters of the new resource.
    * @param options The options used for creating the new resource.
    * @return A promise that resolves to the newly created resource.
    */
-  create(params: Parameters, options?: Options): Promise<T>;
+  create(params: Params, options?: Options): Promise<T>;
 }
 
 /**

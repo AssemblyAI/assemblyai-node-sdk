@@ -44,7 +44,7 @@ import { AssemblyAI } from "assemblyai";
 
 const client = new AssemblyAI({
   apiKey: process.env.ASSEMBLYAI_API_KEY,
-})
+});
 ```
 
 You can now use the `client` object to interact with the AssemblyAI API.
@@ -54,34 +54,43 @@ You can now use the `client` object to interact with the AssemblyAI API.
 When you create a transcript, you can either pass in a URL to an audio file, or upload a file directly.
 
 ```javascript
-// Using a remote URL
-const transcript = await client.transcripts.create({
-  audio_url: 'https://storage.googleapis.com/aai-web-samples/espn-bears.m4a',
-})
+// Transcribe file at remote URL
+let transcript = await client.transcripts.transcribe({
+  audio: "https://storage.googleapis.com/aai-web-samples/espn-bears.m4a",
+});
+
+// Upload a file via local path and transcribe
+let transcript = await client.transcripts.transcribe({
+  audio: "./news.mp4",
+});
 ```
 
+> **Note**
+> You can also pass streams and buffers to the `audio` property.
+
+`transcribe` queues a transcription job and polls it until the `status` is `completed` or `error`.
+You can configure the polling interval and polling timeout using these options:
+
 ```javascript
-// Uploading a file
-const transcript = await client.transcripts.create({
-  audio_url: './news.mp4',
-})
+let transcript = await client.transcripts.transcribe(
+  {
+    audio: "https://storage.googleapis.com/aai-web-samples/espn-bears.m4a",
+  },
+  {
+    // How frequently the transcript is polled in ms. Defaults to 3000.
+    pollingInterval: 1000,
+    // How long to wait in ms until the "Polling timeout" error is thrown. Defaults to infinite (-1).
+    pollingTimeout: 5000,
+  }
+);
 ```
 
-By default, when you create a transcript, it'll be polled until the status is `completed` or `error`.
-You can configure whether to poll, the polling interval, and polling timeout using these options:
+If you don't want to wait until the transcript is ready, you can use `submit`:
 
 ```javascript
-const transcript = await client.transcripts.create({
-  audio_url: 'https://storage.googleapis.com/aai-web-samples/espn-bears.m4a',
-},
-{
-  // Enable or disable polling. Defaults to true.
-  poll: true,
-  // How frequently the transcript is polled in ms. Defaults to 3000.
-  pollingInterval: 1000,
-  // How long to wait in ms until the "Polling timeout" error is thrown. Defaults to infinite (-1).
-  pollingTimeout: 5000,
-})
+let transcript = await client.transcripts.submit({
+  audio: "https://storage.googleapis.com/aai-web-samples/espn-bears.m4a",
+});
 ```
 
 ## Get a transcript
@@ -89,19 +98,18 @@ const transcript = await client.transcripts.create({
 This will return the transcript object in its current state. If the transcript is still processing, the `status` field will be `queued` or `processing`. Once the transcript is complete, the `status` field will be `completed`.
 
 ```javascript
-const transcript = await client.transcripts.get(transcript.id)
+const transcript = await client.transcripts.get(transcript.id);
 ```
 
-If you disabled polling during transcript creation, you can still poll until the transcript `status` is `completed` or `error` using `waitUntilReady`:
+If you created a transcript using `submit`, you can still poll until the transcript `status` is `completed` or `error` using `waitUntilReady`:
 
 ```javascript
-const transcript = await client.transcripts.waitUntilReady(transcript.id,
-{
+const transcript = await client.transcripts.waitUntilReady(transcript.id, {
   // How frequently the transcript is polled in ms. Defaults to 3000.
   pollingInterval: 1000,
   // How long to wait in ms until the "Polling timeout" error is thrown. Defaults to infinite (-1).
   pollingTimeout: 5000,
-})
+});
 ```
 
 ## List transcripts
@@ -109,7 +117,7 @@ const transcript = await client.transcripts.waitUntilReady(transcript.id,
 This will return a page of transcripts you created.
 
 ```javascript
-const page = await client.transcripts.list()
+const page = await client.transcripts.list();
 ```
 
 You can also paginate over all pages.
@@ -117,15 +125,15 @@ You can also paginate over all pages.
 ```typescript
 let nextPageUrl: string | null = null;
 do {
-  const page = await client.transcripts.list(nextPageUrl)
-  nextPageUrl = page.page_details.next_url
-} while(nextPageUrl !== null)
+  const page = await client.transcripts.list(nextPageUrl);
+  nextPageUrl = page.page_details.next_url;
+} while (nextPageUrl !== null);
 ```
 
 ## Delete a transcript
 
 ```javascript
-const res = await client.transcripts.delete(transcript.id)
+const res = await client.transcripts.delete(transcript.id);
 ```
 
 ## Use LeMUR
@@ -133,42 +141,46 @@ const res = await client.transcripts.delete(transcript.id)
 Call [LeMUR endpoints](https://www.assemblyai.com/docs/API%20reference/lemur) to summarize, ask questions, generate action items, or run a custom task.
 
 Custom Summary:
+
 ```javascript
 const { response } = await client.lemur.summary({
-  transcript_ids: ['0d295578-8c75-421a-885a-2c487f188927'],
-  answer_format: 'one sentence',
+  transcript_ids: ["0d295578-8c75-421a-885a-2c487f188927"],
+  answer_format: "one sentence",
   context: {
-    speakers: ['Alex', 'Bob'],
-  }
-})
+    speakers: ["Alex", "Bob"],
+  },
+});
 ```
 
 Question & Answer:
+
 ```javascript
 const { response } = await client.lemur.questionAnswer({
-  transcript_ids: ['0d295578-8c75-421a-885a-2c487f188927'],
+  transcript_ids: ["0d295578-8c75-421a-885a-2c487f188927"],
   questions: [
     {
-      question: 'What are they discussing?',
-      answer_format: 'text',
-    }
-  ]
-})
+      question: "What are they discussing?",
+      answer_format: "text",
+    },
+  ],
+});
 ```
 
 Action Items:
+
 ```javascript
 const { response } = await client.lemur.actionItems({
-  transcript_ids: ['0d295578-8c75-421a-885a-2c487f188927'],
-})
+  transcript_ids: ["0d295578-8c75-421a-885a-2c487f188927"],
+});
 ```
 
 Custom Task:
+
 ```javascript
 const { response } = await client.lemur.task({
-  transcript_ids: ['0d295578-8c75-421a-885a-2c487f188927'],
-  prompt: 'Write a haiku about this conversation.',
-})
+  transcript_ids: ["0d295578-8c75-421a-885a-2c487f188927"],
+  prompt: "Write a haiku about this conversation.",
+});
 ```
 
 ## Transcribe in real time
@@ -195,7 +207,7 @@ You can also generate a temporary auth token for real-time.
 ```typescript
 const token = await client.realtime.createTemporaryToken({ expires_in = 60 });
 const rt = client.realtime.createService({
-  token: token
+  token: token,
 });
 ```
 
@@ -205,6 +217,7 @@ const rt = client.realtime.createService({
 
 You can configure the following events.
 
+<!-- prettier-ignore -->
 ```typescript
 rt.on("open", ({ sessionId, expiresAt }) => console.log('Session ID:', sessionId, 'Expires at:', expiresAt));
 rt.on("close", (code: number, reason: string) => console.log('Closed', code, reason));
@@ -228,6 +241,7 @@ getAudio((chunk) => {
   rt.sendAudio(chunk);
 });
 ```
+
 Or send audio data via a stream by piping to the realtime stream.
 
 ```typescript

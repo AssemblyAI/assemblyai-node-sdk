@@ -4,7 +4,7 @@ import {
   SentencesResponse,
   Transcript,
   TranscriptList,
-  CreateTranscriptParameters,
+  TranscriptParams,
   CreateTranscriptOptions,
   Createable,
   Deletable,
@@ -12,17 +12,20 @@ import {
   Retrieveable,
   SubtitleFormat,
   RedactedAudioResponse,
-  TranscriptListParameters,
+  ListTranscriptParams,
   WordSearchResponse,
   BaseServiceParams,
   PollingOptions,
+  TranscribeParams,
+  TranscribeOptions,
+  SubmitParams,
 } from "../..";
 import { FileService } from "../files";
 
 export class TranscriptService
   extends BaseService
   implements
-    Createable<Transcript, CreateTranscriptParameters, CreateTranscriptOptions>,
+    Createable<Transcript, TranscriptParams, CreateTranscriptOptions>,
     Retrieveable<Transcript>,
     Deletable<Transcript>,
     Listable<TranscriptList>
@@ -32,13 +35,57 @@ export class TranscriptService
   }
 
   /**
+   * Transcribe an audio file. This will create a transcript and wait until the transcript status is "completed" or "error".
+   * @param params The parameters to transcribe an audio file.
+   * @param options The options to transcribe an audio file.
+   * @returns A promise that resolves to the transcript. The transcript status is "completed" or "error".
+   */
+  async transcribe(
+    params: TranscribeParams,
+    options?: TranscribeOptions
+  ): Promise<Transcript> {
+    const transcript = await this.submit(params);
+    return await this.waitUntilReady(transcript.id, options);
+  }
+
+  /**
+   * Submits a transcription job for an audio file. This will not wait until the transcript status is "completed" or "error".
+   * @param params The parameters to start the transcription of an audio file.
+   * @returns A promise that resolves to the queued transcript.
+   */
+  async submit(params: SubmitParams): Promise<Transcript> {
+    const { audio, ...createParams } = params;
+    let audioUrl;
+    if (typeof audio === "string") {
+      const path = getPath(audio);
+      if (path !== null) {
+        // audio is local path, upload local file
+        audioUrl = await this.files.upload(path);
+      } else {
+        // audio is not a local path, assume it's a URL
+        audioUrl = audio;
+      }
+    } else {
+      // audio is of uploadable type
+      audioUrl = await this.files.upload(audio);
+    }
+
+    const data = await this.fetchJson<Transcript>("/v2/transcript", {
+      method: "POST",
+      body: JSON.stringify({ ...createParams, audio_url: audioUrl }),
+    });
+    return data;
+  }
+
+  /**
    * Create a transcript.
    * @param params The parameters to create a transcript.
    * @param options The options used for creating the new transcript.
-   * @returns A promise that resolves to the newly created transcript.
+   * @returns A promise that resolves to the transcript.
+   * @deprecated Use `transcribe` instead to transcribe a audio file that includes polling, or `submit` to transcribe a audio file without polling.
    */
   async create(
-    params: CreateTranscriptParameters,
+    params: TranscriptParams,
     options?: CreateTranscriptOptions
   ): Promise<Transcript> {
     const path = getPath(params.audio_url);
@@ -59,6 +106,12 @@ export class TranscriptService
     return data;
   }
 
+  /**
+   * Wait until the transcript ready, either the status is "completed" or "error".
+   * @param transcriptId The ID of the transcript.
+   * @param options The options to wait until the transcript is ready.
+   * @returns A promise that resolves to the transcript. The transcript status is "completed" or "error".
+   */
   async waitUntilReady(
     transcriptId: string,
     options?: PollingOptions
@@ -96,7 +149,7 @@ export class TranscriptService
    * @param parameters The parameters to filter the transcript list by, or the URL to retrieve the transcript list from.
    */
   async list(
-    parameters?: TranscriptListParameters | string
+    parameters?: ListTranscriptParams | string
   ): Promise<TranscriptList> {
     let url = "/v2/transcript";
     if (typeof parameters === "string") {
@@ -105,7 +158,7 @@ export class TranscriptService
       url = `${url}?${new URLSearchParams(
         Object.keys(parameters).map((key) => [
           key,
-          parameters[key as keyof TranscriptListParameters]?.toString() || "",
+          parameters[key as keyof ListTranscriptParams]?.toString() || "",
         ])
       )}`;
     }
