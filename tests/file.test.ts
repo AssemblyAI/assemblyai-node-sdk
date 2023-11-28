@@ -1,15 +1,8 @@
-import { AssemblyAI } from "../src";
 import { createReadStream } from "fs";
 import { readFile } from "fs/promises";
 import fetchMock from "jest-fetch-mock";
 import path from "path";
-import { Stream } from "stream";
-import {
-  createClient,
-  defaultApiKey,
-  defaultBaseUrl,
-  requestMatches,
-} from "./utils";
+import { createClient, requestMatches } from "./utils";
 
 fetchMock.enableMocks();
 

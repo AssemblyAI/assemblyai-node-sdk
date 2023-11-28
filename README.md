@@ -10,10 +10,11 @@
 [![Discord](https://img.shields.io/discord/875120158014853141?logo=discord&label=Discord&link=https%3A%2F%2Fdiscord.com%2Fchannels%2F875120158014853141&style=social)
 ](https://assemblyai.com/discord)
 
-# AssemblyAI Node.js SDK
+# AssemblyAI JavaScript SDK
 
-The AssemblyAI Node.js SDK provides an easy-to-use interface for interacting with the AssemblyAI API,
+The AssemblyAI JavaScript SDK provides an easy-to-use interface for interacting with the AssemblyAI API,
 which supports async and real-time transcription, as well as the latest LeMUR models.
+It is written primarily for Node.js in TypeScript with all types exported, but also [compatible with other runtimes](./docs/compat.md).
 
 ## Installation
 
@@ -51,7 +52,7 @@ You can now use the `client` object to interact with the AssemblyAI API.
 
 ## Create a transcript
 
-When you create a transcript, you can either pass in a URL to an audio file, or upload a file directly.
+When you create a transcript, you can either pass in a URL to an audio file or upload a file directly.
 
 ```javascript
 // Transcribe file at remote URL
@@ -242,10 +243,10 @@ getAudio((chunk) => {
 });
 ```
 
-Or send audio data via a stream by piping to the realtime stream.
+Or send audio data via a stream by piping to the real-time stream.
 
 ```typescript
-audioStream.pipe(rt.stream());
+audioStream.pipeTo(rt.stream());
 ```
 
 Close the connection when you're finished.

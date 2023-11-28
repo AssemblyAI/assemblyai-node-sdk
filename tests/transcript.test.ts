@@ -1,4 +1,3 @@
-import { AssemblyAI } from "../src";
 import fetchMock from "jest-fetch-mock";
 import path from "path";
 import {

@@ -7,6 +7,7 @@ import {
   LemurBaseResponse,
   PartialTranscript,
   RealtimeTranscript,
+  CreateRealtimeServiceParams,
   TranscribeParams,
 } from "../src";
 
@@ -16,15 +17,17 @@ const client = new AssemblyAI({
 
 (async function transcribeUsingRealtime() {
   const useToken = false;
-  const serviceParams: any = {
-    sampleRate: 16_000,
-    wordBoost: ["gore", "climate"],
-  };
+  let token: undefined | string = undefined;
   if (useToken) {
-    serviceParams.token = await client.realtime.createTemporaryToken({
+    token = await client.realtime.createTemporaryToken({
       expires_in: 480,
     });
   }
+  const serviceParams: CreateRealtimeServiceParams = {
+    sampleRate: 16_000,
+    wordBoost: ["gore", "climate"],
+    token: token,
+  };
   const rt = client.realtime.createService(serviceParams);
 
   rt.on("open", ({ sessionId, expiresAt }) => {
@@ -282,7 +285,7 @@ const transcribeParams: TranscribeParams = {
     );
     console.log(page);
     nextPageUrl = page.page_details.next_url;
-  } while (!!nextPageUrl);
+  } while (nextPageUrl);
 })();
 
 async function searchTranscript(transcript: Transcript) {

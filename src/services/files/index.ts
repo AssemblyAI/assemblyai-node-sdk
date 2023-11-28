@@ -1,5 +1,3 @@
-// import the fs module instead if specific named exports
-// to keep the assemblyai module more compatible. Some fs polyfills don't include `createReadStream`.
 import fs from "fs";
 import { BaseService } from "../base";
 import { UploadedFile, FileUploadParams, FileUploadData } from "../..";

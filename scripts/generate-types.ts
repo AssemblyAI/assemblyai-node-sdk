@@ -6,7 +6,7 @@ async function generateTypes(apiSpecPath: string, outputPath: string) {
   let output = await openapiTS(localPath, {
     alphabetize: true,
     exportType: true,
-    transform(schemaObject, metadata) {
+    transform(schemaObject) {
       if (
         "x-fern-type" in schemaObject &&
         schemaObject["x-fern-type"] === "datetime"
@@ -26,7 +26,7 @@ async function generateTypes(apiSpecPath: string, outputPath: string) {
       output.indexOf("\n  };\n  responses", schemasPosition)
     )
     // Turn components["schemas"]["{TYPE_NAME}"] into TYPE_NAME
-    .replace(/components\[\"schemas\"]\[\"(\w*)\"\]/gm, "$1")
+    .replace(/components\["schemas"]\["(\w*)"\]/gm, "$1")
     .split("\n")
     // De-indent everything by 4
     .map((l) => l.substring(4))
