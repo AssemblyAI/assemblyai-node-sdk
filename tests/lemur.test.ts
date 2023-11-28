@@ -1,5 +1,4 @@
 import fetchMock from "jest-fetch-mock";
-import { AssemblyAI } from "../src";
 import { createClient, requestMatches } from "./utils";
 
 const knownTranscriptIds = ["transcript_123"];

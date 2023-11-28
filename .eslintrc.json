@@ -2,15 +2,25 @@
   "root": true,
   "extends": ["eslint:recommended", "plugin:@typescript-eslint/recommended"],
   "parser": "@typescript-eslint/parser",
-  "parserOptions": { "project": ["./tsconfig.json"] },
+  "parserOptions": {
+    "project": ["./tsconfig.json"]
+  },
   "plugins": ["@typescript-eslint"],
   "rules": {},
-  "ignorePatterns": [
-    "/*.js",
-    "/*.ts",
-    "tests",
-    "dist",
-    "node_modules",
-    "scripts"
+  "ignorePatterns": ["/*.js", "/*.ts", "dist", "node_modules"],
+  "overrides": [
+    {
+      "files": ["tests/**/*"],
+      "parserOptions": {
+        "project": ["./tsconfig.test.json"]
+      }
+    },
+
+    {
+      "files": ["scripts/**/*"],
+      "parserOptions": {
+        "project": ["./tsconfig.scripts.json"]
+      }
+    }
   ]
 }

@@ -1,4 +1,6 @@
-import WebSocket from "ws";
+import { WritableStream } from "@swimburger/isomorphic-streams";
+import WebSocket from "isomorphic-ws";
+import { ErrorEvent, MessageEvent, CloseEvent } from "ws";
 import {
   RealtimeEvents,
   RealtimeListeners,
@@ -14,7 +16,6 @@ import {
   RealtimeErrorMessages,
   RealtimeErrorType,
 } from "../../utils/errors";
-import Stream from "stream";
 
 const defaultRealtimeUrl = "wss://api.assemblyai.com/v2/realtime/ws";
 
@@ -88,16 +89,15 @@ export class RealtimeService {
 
       const url = this.connectionUrl();
 
-      let headers;
       if (this.token) {
-        headers = undefined;
-      } else if (this.apiKey) {
-        headers = { Authorization: this.apiKey };
+        this.socket = new WebSocket(url.toString());
+      } else {
+        this.socket = new WebSocket(url.toString(), {
+          headers: { Authorization: this.apiKey },
+        });
       }
 
-      this.socket = new WebSocket(url.toString(), { headers });
-
-      this.socket.onclose = ({ code, reason }: WebSocket.CloseEvent) => {
+      this.socket.onclose = ({ code, reason }: CloseEvent) => {
         if (!reason) {
           if (code in RealtimeErrorType) {
             reason = RealtimeErrorMessages[code as RealtimeErrorType];
@@ -106,12 +106,12 @@ export class RealtimeService {
         this.listeners.close?.(code, reason);
       };
 
-      this.socket.onerror = (errorEvent: WebSocket.ErrorEvent) => {
-        if (errorEvent.error) this.listeners.error?.(errorEvent.error as Error);
-        else this.listeners.error?.(new Error(errorEvent.message));
+      this.socket.onerror = (event: ErrorEvent) => {
+        if (event.error) this.listeners.error?.(event.error as Error);
+        else this.listeners.error?.(new Error(event.message));
       };
 
-      this.socket.onmessage = ({ data }: WebSocket.MessageEvent) => {
+      this.socket.onmessage = ({ data }: MessageEvent) => {
         const message = JSON.parse(data.toString()) as RealtimeMessage;
         if ("error" in message) {
           this.listeners.error?.(new RealtimeError(message.error));
@@ -150,25 +150,35 @@ export class RealtimeService {
     });
   }
 
-  sendAudio(audio: ArrayBuffer) {
+  sendAudio(audio: ArrayBufferLike) {
     if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
       throw new Error("Socket is not open for communication");
     }
-
+    let audioData;
+    if (typeof Buffer !== "undefined") {
+      audioData = Buffer.from(audio).toString("base64");
+    } else {
+      // Buffer is not available in the browser by default
+      // https://stackoverflow.com/a/42334410/2919731
+      audioData = btoa(
+        new Uint8Array(audio).reduce(
+          (data, byte) => data + String.fromCharCode(byte),
+          ""
+        )
+      );
+    }
     const payload = {
-      audio_data: Buffer.from(audio).toString("base64"),
+      audio_data: audioData,
     };
     this.socket.send(JSON.stringify(payload));
   }
 
-  stream(): NodeJS.WritableStream {
-    const stream = new Stream.Writable({
-      write: (chunk: Buffer, encoding, next) => {
+  stream(): WritableStream<ArrayBufferLike> {
+    return new WritableStream<ArrayBufferLike>({
+      write: (chunk: ArrayBufferLike) => {
         this.sendAudio(chunk);
-        next();
       },
     });
-    return stream;
   }
 
   async close(waitForSessionTermination = true) {
@@ -185,7 +195,7 @@ export class RealtimeService {
           this.socket.send(terminateSessionMessage);
         }
       }
-      this.socket.removeAllListeners();
+      if ("removeAllListeners" in this.socket) this.socket.removeAllListeners();
       this.socket.close();
     }
 

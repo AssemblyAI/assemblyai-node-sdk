@@ -1,3 +1,4 @@
+import { TransformStream } from "stream/web";
 import WS from "jest-websocket-mock";
 import fetchMock from "jest-fetch-mock";
 import { AssemblyAI, RealtimeService } from "../src";
@@ -6,7 +7,7 @@ import {
   RealtimeErrorType,
   RealtimeErrorMessages,
 } from "../src/utils/errors/realtime";
-import stream from "stream";
+
 import { createClient, defaultApiKey, requestMatches } from "./utils";
 
 fetchMock.enableMocks();
@@ -141,9 +142,11 @@ describe("realtime", () => {
   });
 
   it("can send audio using stream", async () => {
-    const writeStream = new stream.PassThrough();
-    writeStream.pipe(rt.stream());
-    writeStream.write(Buffer.alloc(5_000));
+    const stream = new TransformStream<Buffer, Buffer>();
+    const writer = stream.writable.getWriter();
+    stream.readable.pipeTo(rt.stream());
+    await writer.ready;
+    writer.write(Buffer.alloc(5_000));
     await expect(server).toReceiveMessage(
       JSON.stringify({ audio_data: Buffer.alloc(5_000).toString("base64") })
     );

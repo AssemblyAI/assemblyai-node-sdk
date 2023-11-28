@@ -1,5 +1,18 @@
 # Changelog
 
+## [4.0.0]
+
+### Added
+
+- Add `browser` and `browser:min` exports, at `dist/index.umd.js` and `dist/index.umd.min.js`. These exports are browser compatible versions of the SDK, with a few limitations. You can't use the file system and you have to use a temporary auth token with the real-time transcriber.
+
+### Changed
+
+- `RealtimeService.sendAudio` accepts audio via type `ArrayBufferLike`.
+- **Breaking**: `RealtimeService.stream` returns a [WHATWG Streams Standard stream](https://nodejs.org/api/webstreams.html), instead of a Node stream. In the browser, the native web standard stream will be used.
+- `ws` is used as the WebSocket client as before, but in the browser, the native WebSocket client is used.
+- Rename Node SDK to JavaScript SDK as the SDK is compatible with more runtimes now.
+
 ## [3.1.1] - 2023-11-21
 
 ### Added
