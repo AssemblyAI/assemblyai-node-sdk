@@ -1,5 +1,5 @@
-import { WritableStream } from "@swimburger/isomorphic-streams";
-import WebSocket from "isomorphic-ws";
+import { WritableStream } from "#streams";
+import WebSocket from "#ws";
 import { ErrorEvent, MessageEvent, CloseEvent } from "ws";
 import {
   RealtimeEvents,
@@ -33,8 +33,8 @@ export class RealtimeService {
     this.realtimeUrl = params.realtimeUrl ?? defaultRealtimeUrl;
     this.sampleRate = params.sampleRate ?? 16_000;
     this.wordBoost = params.wordBoost;
-    if ("apiKey" in params) this.apiKey = params.apiKey;
-    if ("token" in params) this.token = params.token;
+    if ("apiKey" in params && params.apiKey) this.apiKey = params.apiKey;
+    if ("token" in params && params.token) this.token = params.token;
 
     if (!(this.apiKey || this.token)) {
       throw new Error("API key or temporary token is required.");

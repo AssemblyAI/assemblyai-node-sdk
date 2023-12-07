@@ -4,7 +4,8 @@
 
 ### Added
 
-- Add `browser` and `browser:min` exports, at `dist/index.umd.js` and `dist/index.umd.min.js`. These exports are browser compatible versions of the SDK, with a few limitations. You can't use the file system and you have to use a temporary auth token with the real-time transcriber.
+- Add `node`, `deno`, `bun`, `browser`, and `workerd` (Cloudflare Workers) exports to package.json. These exports are compatible versions of the SDK, with a few limitations in some cases. For more details, consult the [SDK Compatibility document](./docs/compat.md).
+- Add `dist/assemblyai.umd.js` and `dist/assemblyai.umd.min.js`. You can reference these script files directly in the browser and the SDK will be available at the global `assemblyai` variable.
 
 ### Changed
 

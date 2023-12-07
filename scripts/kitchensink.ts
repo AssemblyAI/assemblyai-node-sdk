@@ -133,7 +133,7 @@ const transcribeParams: TranscribeParams = {
     await getParagraphs(transcript);
     console.error("Error expected but not thrown.");
   } catch (error) {
-    console.log("Error expected:", error.toString());
+    console.log("Error expected:", error);
     await deleteTranscript(transcript);
   }
 });
@@ -145,7 +145,7 @@ const transcribeParams: TranscribeParams = {
     });
     console.error("Error expected but not thrown.");
   } catch (error) {
-    console.log("Error expected:", error.toString());
+    console.log("Error expected:", error);
   }
 })();
 
