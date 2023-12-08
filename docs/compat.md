@@ -3,6 +3,11 @@
 The JavaScript SDK is developed for Node.js but is also compatible with other runtimes
 such as the browser, Deno, Bun, Cloudflare Workers, etc.
 
+## Node.js compatibility
+
+The SDK supports Node.js 18, 20, and 21.
+If you do use an older version of Node.js like version 16, you'll need to polyfill `fetch`.
+
 ## Browser compatibility
 
 To make the SDK compatible with the browser, the SDK aims to use web standards as much as possible.
@@ -40,7 +45,7 @@ However, there are still incompatibilities between Node.js and the browser.
   });
   ```
 
-- You can't pass local audio file paths to `client.files.upload`, `client.transcripts.transcribe`, and `client.transcripts.submit`. If you do, you'll get the following error: "Function is not supported in this environment.".
+- You can't pass local audio file paths to `client.files.upload`, `client.transcripts.transcribe`, and `client.transcripts.submit`. If you do, you'll get the following error: "Interacting with the file system is not supported in this environment.".
   If you want to transcribe audio files, you must use a public URL, a stream, or a buffer.
 
 > [!WARNING]

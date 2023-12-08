@@ -3,6 +3,5 @@
   "compilerOptions": {
     "rootDir": "."
   },
-  "include": ["src", "tests"],
-  "exclude": ["node_modules", "scripts"]
+  "include": ["src", "scripts"]
 }

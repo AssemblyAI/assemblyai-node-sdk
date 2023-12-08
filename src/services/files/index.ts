@@ -1,4 +1,4 @@
-import fs from "fs";
+import { readFile } from "#fs";
 import { BaseService } from "../base";
 import { UploadedFile, FileUploadParams, FileUploadData } from "../..";
 
@@ -10,7 +10,7 @@ export class FileService extends BaseService {
    */
   async upload(input: FileUploadParams): Promise<string> {
     let fileData: FileUploadData;
-    if (typeof input === "string") fileData = fs.createReadStream(input);
+    if (typeof input === "string") fileData = await readFile(input);
     else fileData = input;
 
     const data = await this.fetchJson<UploadedFile>("/v2/upload", {

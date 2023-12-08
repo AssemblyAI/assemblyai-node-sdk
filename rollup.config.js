@@ -1,30 +1,12 @@
-const pkg = require("./package.json");
-const ts = require("rollup-plugin-typescript2");
+const ts = require("@rollup/plugin-typescript");
 const terser = require("@rollup/plugin-terser");
-const alias = require("@rollup/plugin-alias");
-const { nodeResolve } = require("@rollup/plugin-node-resolve");
+const nodeResolve = require("@rollup/plugin-node-resolve");
 
-const cjsFile = pkg.main;
-const esmFile = pkg.module;
-const browserFile = pkg.exports["."].browser;
-
-const defaultPlugins = [
-  ts({
-    tsconfigOverride: { exclude: ["**/*.test.ts"] },
-  }),
-];
-const defaultConfig = {
-  plugins: defaultPlugins,
-  external: ["fs", "isomorphic-ws", "@swimburger/isomorphic-streams"],
+const umdConfig = {
   input: "src/index.ts",
-};
-
-const browserConfig = {
-  ...defaultConfig,
   plugins: [
-    ...defaultConfig.plugins,
-    alias({
-      entries: [{ find: "fs", replacement: "./src/browser/fs.ts" }],
+    ts({
+      compilerOptions: { target: "ES2015", customConditions: ["browser"] },
     }),
     nodeResolve({ browser: true }),
   ],
@@ -33,32 +15,70 @@ const browserConfig = {
 
 module.exports = [
   {
-    ...defaultConfig,
+    input: "src/index.ts",
+    plugins: [
+      // we don't know where this will be used, could be browser, could be another runtime
+      // so we compile to es2015 for maximum compatibility.
+      ts({ compilerOptions: { target: "ES2015" } }),
+    ],
+    external: ["#ws"],
     output: [
       {
-        file: cjsFile,
-        format: "cjs",
+        file: `./dist/index.mjs`,
+        format: "es",
         exports: "named",
       },
       {
-        file: esmFile,
+        file: `./dist/index.cjs`,
+        format: "cjs",
+        exports: "named",
+      },
+    ],
+  },
+  {
+    input: "src/index.ts",
+    plugins: [ts({ compilerOptions: { customConditions: ["node"] } })],
+    external: ["fs", "stream", "stream/web", "#ws"],
+    output: [
+      {
+        file: `./dist/node.mjs`,
+        format: "es",
+        exports: "named",
+      },
+      {
+        file: `./dist/node.cjs`,
+        format: "cjs",
+        exports: "named",
+      },
+    ],
+  },
+  {
+    input: "src/index.ts",
+    plugins: [ts({ compilerOptions: { customConditions: ["deno"] } })],
+    external: ["#ws"],
+    output: [
+      {
+        file: `./dist/deno.mjs`,
         format: "es",
         exports: "named",
       },
     ],
   },
   {
-    ...browserConfig,
+    input: "src/index.ts",
+    plugins: [ts({ compilerOptions: { customConditions: ["bun"] } })],
+    external: ["#ws"],
     output: [
       {
-        name: "assemblyai",
-        file: browserFile,
-        format: "esm",
+        file: `./dist/bun.mjs`,
+        format: "es",
+        exports: "named",
       },
     ],
   },
+  // Browser UMD build to reference directly in the browser.
   {
-    ...browserConfig,
+    ...umdConfig,
     output: [
       {
         name: "assemblyai",
@@ -67,9 +87,10 @@ module.exports = [
       },
     ],
   },
+  // Browser UMD minified build to reference directly in the browser.
   {
-    ...browserConfig,
-    plugins: [...browserConfig.plugins, terser()],
+    ...umdConfig,
+    plugins: [...umdConfig.plugins, terser()],
     output: [
       {
         name: "assemblyai",

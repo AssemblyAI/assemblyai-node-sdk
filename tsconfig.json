@@ -2,9 +2,9 @@
   "compilerOptions": {
     "outDir": "./dist",
     "rootDir": "./src",
-    "module": "esnext",
-    "moduleResolution": "node",
-    "target": "es6",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "target": "ES2021",
     "allowJs": false,
     "declaration": true,
     "removeComments": false,
@@ -13,6 +13,5 @@
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true
   },
-  "include": ["src"],
-  "exclude": ["node_modules", "scripts", "**/*.spec.ts"]
+  "include": ["src"]
 }
