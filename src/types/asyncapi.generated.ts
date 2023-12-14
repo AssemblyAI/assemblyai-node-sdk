@@ -95,7 +95,10 @@ export type SessionBegins = RealtimeBaseMessage & {
    * @constant
    */
   message_type: "SessionBegins";
-  /** @description Unique identifier for the established session */
+  /**
+   * Format: uuid
+   * @description Unique identifier for the established session
+   */
   session_id: string;
 };
 

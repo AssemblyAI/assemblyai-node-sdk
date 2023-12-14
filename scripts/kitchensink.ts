@@ -140,8 +140,8 @@ const transcribeParams: TranscribeParams = {
 
 (async function createTranscriptWithNullUrl() {
   try {
-    await client.transcripts.create({
-      audio_url: null as unknown as string,
+    await client.transcripts.submit({
+      audio: null as unknown as string,
     });
     console.error("Error expected but not thrown.");
   } catch (error) {
@@ -149,7 +149,7 @@ const transcribeParams: TranscribeParams = {
   }
 })();
 
-(async function createTranscriptWithword_boost() {
+(async function createTranscriptWithWordBoost() {
   const transcript = await client.transcripts.transcribe({
     ...transcribeParams,
     boost_param: "high",
