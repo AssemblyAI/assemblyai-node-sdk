@@ -19,6 +19,19 @@ type OneOf<T extends any[]> = T extends [infer Only]
  */
 export type AudioIntelligenceModelStatus = "success" | "unavailable";
 
+/**
+ * @example {
+ *   "count": 1,
+ *   "rank": 0.08,
+ *   "text": "air quality alerts",
+ *   "timestamps": [
+ *     {
+ *       "start": 3978,
+ *       "end": 5114
+ *     }
+ *   ]
+ * }
+ */
 export type AutoHighlightResult = {
   /** @description The total number of times the key phrase appears in the audio file */
   count: number;
@@ -35,14 +48,226 @@ export type AutoHighlightResult = {
 
 /**
  * @description An array of results for the Key Phrases model, if it is enabled.
- * See [Key phrases](https://www.assemblyai.com/docs/Models/key_phrases) for more information.
+ * See [Key phrases](https://www.assemblyai.com/docs/models/key-phrases) for more information.
+ *
+ * @example {
+ *   "status": "success",
+ *   "results": [
+ *     {
+ *       "count": 1,
+ *       "rank": 0.08,
+ *       "text": "air quality alerts",
+ *       "timestamps": [
+ *         {
+ *           "start": 3978,
+ *           "end": 5114
+ *         }
+ *       ]
+ *     },
+ *     {
+ *       "count": 1,
+ *       "rank": 0.08,
+ *       "text": "wide ranging air quality consequences",
+ *       "timestamps": [
+ *         {
+ *           "start": 235388,
+ *           "end": 238694
+ *         }
+ *       ]
+ *     },
+ *     {
+ *       "count": 1,
+ *       "rank": 0.07,
+ *       "text": "more wildfires",
+ *       "timestamps": [
+ *         {
+ *           "start": 230972,
+ *           "end": 232354
+ *         }
+ *       ]
+ *     },
+ *     {
+ *       "count": 1,
+ *       "rank": 0.07,
+ *       "text": "air pollution",
+ *       "timestamps": [
+ *         {
+ *           "start": 156004,
+ *           "end": 156910
+ *         }
+ *       ]
+ *     },
+ *     {
+ *       "count": 3,
+ *       "rank": 0.07,
+ *       "text": "weather systems",
+ *       "timestamps": [
+ *         {
+ *           "start": 47344,
+ *           "end": 47958
+ *         },
+ *         {
+ *           "start": 205268,
+ *           "end": 205818
+ *         },
+ *         {
+ *           "start": 211588,
+ *           "end": 213434
+ *         }
+ *       ]
+ *     },
+ *     {
+ *       "count": 2,
+ *       "rank": 0.06,
+ *       "text": "high levels",
+ *       "timestamps": [
+ *         {
+ *           "start": 121128,
+ *           "end": 121646
+ *         },
+ *         {
+ *           "start": 155412,
+ *           "end": 155866
+ *         }
+ *       ]
+ *     },
+ *     {
+ *       "count": 1,
+ *       "rank": 0.06,
+ *       "text": "health conditions",
+ *       "timestamps": [
+ *         {
+ *           "start": 152138,
+ *           "end": 152666
+ *         }
+ *       ]
+ *     },
+ *     {
+ *       "count": 2,
+ *       "rank": 0.06,
+ *       "text": "Peter de Carlo",
+ *       "timestamps": [
+ *         {
+ *           "start": 18948,
+ *           "end": 19930
+ *         },
+ *         {
+ *           "start": 268298,
+ *           "end": 269194
+ *         }
+ *       ]
+ *     },
+ *     {
+ *       "count": 1,
+ *       "rank": 0.06,
+ *       "text": "New York City",
+ *       "timestamps": [
+ *         {
+ *           "start": 125768,
+ *           "end": 126274
+ *         }
+ *       ]
+ *     },
+ *     {
+ *       "count": 1,
+ *       "rank": 0.05,
+ *       "text": "respiratory conditions",
+ *       "timestamps": [
+ *         {
+ *           "start": 152964,
+ *           "end": 153786
+ *         }
+ *       ]
+ *     },
+ *     {
+ *       "count": 3,
+ *       "rank": 0.05,
+ *       "text": "New York",
+ *       "timestamps": [
+ *         {
+ *           "start": 125768,
+ *           "end": 126034
+ *         },
+ *         {
+ *           "start": 171448,
+ *           "end": 171938
+ *         },
+ *         {
+ *           "start": 176008,
+ *           "end": 176322
+ *         }
+ *       ]
+ *     },
+ *     {
+ *       "count": 3,
+ *       "rank": 0.05,
+ *       "text": "climate change",
+ *       "timestamps": [
+ *         {
+ *           "start": 229548,
+ *           "end": 230230
+ *         },
+ *         {
+ *           "start": 244576,
+ *           "end": 245162
+ *         },
+ *         {
+ *           "start": 263348,
+ *           "end": 263950
+ *         }
+ *       ]
+ *     },
+ *     {
+ *       "count": 1,
+ *       "rank": 0.05,
+ *       "text": "Johns Hopkins University Varsity",
+ *       "timestamps": [
+ *         {
+ *           "start": 23972,
+ *           "end": 25490
+ *         }
+ *       ]
+ *     },
+ *     {
+ *       "count": 1,
+ *       "rank": 0.05,
+ *       "text": "heart conditions",
+ *       "timestamps": [
+ *         {
+ *           "start": 153988,
+ *           "end": 154506
+ *         }
+ *       ]
+ *     },
+ *     {
+ *       "count": 1,
+ *       "rank": 0.05,
+ *       "text": "air quality warnings",
+ *       "timestamps": [
+ *         {
+ *           "start": 12308,
+ *           "end": 13434
+ *         }
+ *       ]
+ *     }
+ *   ]
+ * }
  */
 export type AutoHighlightsResult = {
   /** @description A temporally-sequential array of Key Phrases */
   results: AutoHighlightResult[];
 };
 
-/** @description Chapter of the audio file */
+/**
+ * @description Chapter of the audio file
+ * @example {
+ *   "summary": "Smoke from hundreds of wildfires in Canada is triggering air quality alerts throughout the US. Skylines from Maine to Maryland to Minnesota are gray and smoggy. In some places, the air quality warnings include the warning to stay inside.",
+ *   "gist": "Smoggy air quality alerts across US",
+ *   "headline": "Smoke from hundreds of wildfires in Canada is triggering air quality alerts across US",
+ *   "start": 250,
+ *   "end": 28840
+ * }
+ */
 export type Chapter = {
   /** @description The starting time, in milliseconds, for the chapter */
   end: number;
@@ -56,6 +281,13 @@ export type Chapter = {
   summary: string;
 };
 
+/**
+ * @example {
+ *   "label": "disasters",
+ *   "confidence": 0.8142836093902588,
+ *   "severity": 0.4093044400215149
+ * }
+ */
 export type ContentSafetyLabel = {
   /**
    * Format: double
@@ -71,6 +303,24 @@ export type ContentSafetyLabel = {
   severity: number;
 };
 
+/**
+ * @example {
+ *   "text": "Smoke from hundreds of wildfires in Canada is triggering air quality alerts throughout the US. Skylines from Maine to Maryland to Minnesota are gray and smoggy. And in some places, the air quality warnings include the warning to stay inside. We wanted to better understand what's happening here and why, so we called Peter de Carlo, an associate professor in the Department of Environmental Health and Engineering at Johns Hopkins University Varsity. Good morning, professor. Good morning.",
+ *   "labels": [
+ *     {
+ *       "label": "disasters",
+ *       "confidence": 0.8142836093902588,
+ *       "severity": 0.4093044400215149
+ *     }
+ *   ],
+ *   "sentences_idx_start": 0,
+ *   "sentences_idx_end": 5,
+ *   "timestamp": {
+ *     "start": 250,
+ *     "end": 28840
+ *   }
+ * }
+ */
 export type ContentSafetyLabelResult = {
   /** @description An array of safety labels, one per sensitive topic that was detected in the section */
   labels: ContentSafetyLabel[];
@@ -86,7 +336,45 @@ export type ContentSafetyLabelResult = {
 
 /**
  * @description An array of results for the Content Moderation model, if it is enabled.
- * See [Content moderation](https://www.assemblyai.com/docs/Models/content_moderation) for more information.
+ * See [Content moderation](https://www.assemblyai.com/docs/models/content-moderation) for more information.
+ *
+ * @example {
+ *   "status": "success",
+ *   "results": [
+ *     {
+ *       "text": "Smoke from hundreds of wildfires in Canada is triggering air quality alerts throughout the US. Skylines from Maine to Maryland to Minnesota are gray and smoggy. And in some places, the air quality warnings include the warning to stay inside. We wanted to better understand what's happening here and why, so we called Peter de Carlo, an associate professor in the Department of Environmental Health and Engineering at Johns Hopkins University Varsity. Good morning, professor. Good morning.",
+ *       "labels": [
+ *         {
+ *           "label": "disasters",
+ *           "confidence": 0.8142836093902588,
+ *           "severity": 0.4093044400215149
+ *         }
+ *       ],
+ *       "sentences_idx_start": 0,
+ *       "sentences_idx_end": 5,
+ *       "timestamp": {
+ *         "start": 250,
+ *         "end": 28840
+ *       }
+ *     }
+ *   ],
+ *   "summary": {
+ *     "disasters": 0.9940800441842205,
+ *     "health_issues": 0.9216489289040967
+ *   },
+ *   "severity_score_summary": {
+ *     "disasters": {
+ *       "low": 0.5733263024656846,
+ *       "medium": 0.42667369753431533,
+ *       "high": 0
+ *     },
+ *     "health_issues": {
+ *       "low": 0.22863814977924785,
+ *       "medium": 0.45014154926938227,
+ *       "high": 0.32122030095136983
+ *     }
+ *   }
+ * }
  */
 export type ContentSafetyLabelsResult = {
   results: ContentSafetyLabelResult[];
@@ -102,12 +390,25 @@ export type ContentSafetyLabelsResult = {
   };
 };
 
+/**
+ * @example {
+ *   "expires_in": 480
+ * }
+ */
 export type CreateRealtimeTemporaryTokenParams = {
   /** @description The amount of time until the token expires in seconds */
   expires_in: number;
 };
 
-/** @description A detected entity */
+/**
+ * @description A detected entity
+ * @example {
+ *   "entity_type": "location",
+ *   "text": "Canada",
+ *   "start": 2548,
+ *   "end": 3130
+ * }
+ */
 export type Entity = {
   /** @description The ending time, in milliseconds, for the detected entity in the audio file */
   end: number;
@@ -154,6 +455,11 @@ export type EntityType =
   | "url"
   | "us_social_security_number";
 
+/**
+ * @example {
+ *   "error": "format_text must be a Boolean"
+ * }
+ */
 export type Error = {
   /** @description Error message */
   error: string;
@@ -161,13 +467,41 @@ export type Error = {
   status?: "error";
 };
 
+/**
+ * @example {
+ *   "transcript_ids": [
+ *     "64nygnr62k-405c-4ae8-8a6b-d90b40ff3cce"
+ *   ],
+ *   "context": "This is an interview about wildfires.",
+ *   "final_model": "default",
+ *   "temperature": 0,
+ *   "max_output_size": 3000
+ * }
+ */
 export type LemurActionItemsParams = LemurBaseParams;
 
+/**
+ * @example {
+ *   "request_id": "5e1b27c2-691f-4414-8bc5-f14678442f9e",
+ *   "response": "Here are some potential action items based on the transcript:\n\n- Monitor air quality levels in affected areas and issue warnings as needed.\n\n- Advise vulnerable populations like children, the elderly, and those with respiratory conditions to limit time outdoors.\n\n- Have schools cancel outdoor activities when air quality is poor.\n\n- Educate the public on health impacts of smoke inhalation and precautions to take.\n\n- Track progression of smoke plumes using weather and air quality monitoring systems.\n\n- Coordinate cross-regionally to manage smoke exposure as air masses shift.\n\n- Plan for likely increase in such events due to climate change. Expand monitoring and forecasting capabilities.\n\n- Conduct research to better understand health impacts of wildfire smoke and mitigation strategies.\n\n- Develop strategies to prevent and manage wildfires to limit air quality impacts.\n"
+ * }
+ */
 export type LemurActionItemsResponse = LemurBaseResponse & {
   /** @description The response generated by LeMUR */
   response: string;
 };
 
+/**
+ * @example {
+ *   "transcript_ids": [
+ *     "64nygnr62k-405c-4ae8-8a6b-d90b40ff3cce"
+ *   ],
+ *   "context": "This is an interview about wildfires.",
+ *   "final_model": "default",
+ *   "temperature": 0,
+ *   "max_output_size": 3000
+ * }
+ */
 export type LemurBaseParams = {
   /** @description Context to provide the model. This can be a string or a free-form JSON value. */
   context?: OneOf<
@@ -200,18 +534,32 @@ export type LemurBaseParams = {
   transcript_ids?: string[];
 };
 
+/**
+ * @example {
+ *   "request_id": "5e1b27c2-691f-4414-8bc5-f14678442f9e"
+ * }
+ */
 export type LemurBaseResponse = {
-  /** @description The ID of the LeMUR request */
+  /**
+   * Format: uuid
+   * @description The ID of the LeMUR request
+   */
   request_id: string;
 };
 
 /**
- * @description The model that is used for the final prompt after compression is performed (options: "basic" and "default").
+ * @description The model that is used for the final prompt after compression is performed.
  *
  * @enum {string}
  */
-export type LemurModel = "default" | "basic";
+export type LemurModel = "default" | "basic" | "assemblyai/mistral-7b";
 
+/**
+ * @example {
+ *   "question": "Where are there wildfires?",
+ *   "answer_format": "List of countries in ISO 3166-1 alpha-2 format"
+ * }
+ */
 export type LemurQuestion = {
   /** @description How you want the answer to be returned. This can be any text. Can't be used with answer_options. Examples: "short sentence", "bullet points" */
   answer_format?: string;
@@ -230,7 +578,13 @@ export type LemurQuestion = {
   question: string;
 };
 
-/** @description An answer generated by LeMUR and its question */
+/**
+ * @description An answer generated by LeMUR and its question
+ * @example {
+ *   "answer": "CA, US",
+ *   "question": "Where are there wildfires?"
+ * }
+ */
 export type LemurQuestionAnswer = {
   /** @description The answer generated by LeMUR */
   answer: string;
@@ -238,40 +592,134 @@ export type LemurQuestionAnswer = {
   question: string;
 };
 
+/**
+ * @example {
+ *   "transcript_ids": [
+ *     "64nygnr62k-405c-4ae8-8a6b-d90b40ff3cce"
+ *   ],
+ *   "context": "This is an interview about wildfires.",
+ *   "questions": [
+ *     {
+ *       "question": "Where are there wildfires?",
+ *       "answer_format": "List of countries in ISO 3166-1 alpha-2 format",
+ *       "answer_options": [
+ *         "US",
+ *         "CA"
+ *       ]
+ *     },
+ *     {
+ *       "question": "Is global warming affecting wildfires?",
+ *       "answer_options": [
+ *         "yes",
+ *         "no"
+ *       ]
+ *     }
+ *   ],
+ *   "final_model": "default",
+ *   "temperature": 0,
+ *   "max_output_size": 3000
+ * }
+ */
 export type LemurQuestionAnswerParams = LemurBaseParams & {
   /** @description A list of questions to ask */
   questions: LemurQuestion[];
 };
 
+/**
+ * @example {
+ *   "request_id": "5e1b27c2-691f-4414-8bc5-f14678442f9e",
+ *   "response": [
+ *     {
+ *       "answer": "CA, US",
+ *       "question": "Where are there wildfires?"
+ *     },
+ *     {
+ *       "answer": "yes",
+ *       "question": "Is global warming affecting wildfires?"
+ *     }
+ *   ]
+ * }
+ */
 export type LemurQuestionAnswerResponse = LemurBaseResponse & {
   /** @description The answers generated by LeMUR and their questions */
   response: LemurQuestionAnswer[];
 };
 
+/**
+ * @example {
+ *   "transcript_ids": [
+ *     "64nygnr62k-405c-4ae8-8a6b-d90b40ff3cce"
+ *   ],
+ *   "context": "This is an interview about wildfires.",
+ *   "final_model": "default",
+ *   "temperature": 0,
+ *   "max_output_size": 3000
+ * }
+ */
 export type LemurSummaryParams = LemurBaseParams & {
   /** @description How you want the summary to be returned. This can be any text. Examples: "TLDR", "bullet points" */
   answer_format?: string;
 };
 
+/**
+ * @example {
+ *   "request_id": "5e1b27c2-691f-4414-8bc5-f14678442f9e",
+ *   "response": "- Wildfires in Canada are sending smoke and air pollution across parts of the US, triggering air quality alerts from Maine to Minnesota. Concentrations of particulate matter have exceeded safety levels.\n\n- Weather systems are channeling the smoke through Pennsylvania into the Mid-Atlantic and Northeast regions. New York City has canceled outdoor activities to keep children and vulnerable groups indoors.\n\n- Very small particulate matter can enter the lungs and impact respiratory, cardiovascular and neurological health. Young children, the elderly and those with preexisting conditions are most at risk.\n\n- The conditions causing the poor air quality could get worse or shift to different areas in coming days depending on weather patterns. More wildfires may also contribute to higher concentrations.\n\n- Climate change is leading to longer and more severe fire seasons. Events of smoke traveling long distances and affecting air quality over wide areas will likely become more common in the future.\"\n"
+ * }
+ */
 export type LemurSummaryResponse = LemurBaseResponse & {
   /** @description The response generated by LeMUR */
   response: string;
 };
 
+/**
+ * @example {
+ *   "transcript_ids": [
+ *     "64nygnr62k-405c-4ae8-8a6b-d90b40ff3cce"
+ *   ],
+ *   "prompt": "List all the locations affected by wildfires.",
+ *   "context": "This is an interview about wildfires.",
+ *   "final_model": "default",
+ *   "temperature": 0,
+ *   "max_output_size": 3000
+ * }
+ */
 export type LemurTaskParams = LemurBaseParams & {
   /** @description Your text to prompt the model to produce a desired output, including any context you want to pass into the model. */
   prompt: string;
 };
 
+/**
+ * @example {
+ *   "request_id": "5e1b27c2-691f-4414-8bc5-f14678442f9e",
+ *   "response": "Based on the transcript, the following locations were mentioned as being affected by wildfire smoke from Canada:\n\n- Maine\n- Maryland\n- Minnesota\n- Mid Atlantic region\n- Northeast region\n- New York City\n- Baltimore\n"
+ * }
+ */
 export type LemurTaskResponse = LemurBaseResponse & {
-  /** @description The response generated by LeMUR */
+  /** @description The response generated by LeMUR. */
   response: string;
 };
 
+/**
+ * @example {
+ *   "after_id": "a7c5cafd-2c2e-4bdd-b0b2-69dade2f7a1b",
+ *   "before_id": "9ea68fd3-f953-42c1-9742-976c447fb463",
+ *   "created_on": "2023-11-03",
+ *   "limit": 2,
+ *   "status": "completed",
+ *   "throttled_only": false
+ * }
+ */
 export type ListTranscriptParams = {
-  /** @description Get transcripts that were created after this transcript ID */
+  /**
+   * Format: uuid
+   * @description Get transcripts that were created after this transcript ID
+   */
   after_id?: string;
-  /** @description Get transcripts that were created before this transcript ID */
+  /**
+   * Format: uuid
+   * @description Get transcripts that were created before this transcript ID
+   */
   before_id?: string;
   /**
    * Format: date
@@ -290,6 +738,15 @@ export type ListTranscriptParams = {
   throttled_only?: boolean;
 };
 
+/**
+ * @example {
+ *   "limit": 10,
+ *   "result_count": 10,
+ *   "current_url": "https://api.assemblyai.com/v2/transcript?limit=10",
+ *   "prev_url": "https://api.assemblyai.com/v2/transcript?limit=10&before_id=62npeahu2b-a8ea-4112-854c-69542c20d90c",
+ *   "next_url": "https://api.assemblyai.com/v2/transcript?limit=10&after_id=62nfw3mlar-01ad-4631-92f6-629929496eed"
+ * }
+ */
 export type PageDetails = {
   current_url: string;
   limit: number;
@@ -298,10 +755,85 @@ export type PageDetails = {
   result_count: number;
 };
 
+/**
+ * @example {
+ *   "paragraphs": [
+ *     {
+ *       "text": "Smoke from hundreds of wildfires in Canada is triggering air quality alerts throughout the US. Skylines from Maine to Maryland to Minnesota are gray and smoggy. And in some places, the air quality warnings include the warning to stay inside. We wanted to better understand what's happening here and why, so we called Peter Decarlo, an associate professor in the Department of Environmental Health and Engineering at Johns Hopkins University. Good morning, professor.",
+ *       "start": 250,
+ *       "end": 26950,
+ *       "confidence": 0.73033,
+ *       "words": [
+ *         {
+ *           "text": "Smoke",
+ *           "start": 250,
+ *           "end": 650,
+ *           "confidence": 0.73033,
+ *           "speaker": null
+ *         },
+ *         {
+ *           "text": "from",
+ *           "start": 730,
+ *           "end": 1022,
+ *           "confidence": 1,
+ *           "speaker": null
+ *         },
+ *         {
+ *           "text": "hundreds",
+ *           "start": 1076,
+ *           "end": 1466,
+ *           "confidence": 0.99992,
+ *           "speaker": null
+ *         },
+ *         {
+ *           "text": "of",
+ *           "start": 1498,
+ *           "end": 1646,
+ *           "confidence": 1,
+ *           "speaker": null
+ *         }
+ *       ]
+ *     },
+ *     {
+ *       "text": "Good morning. So what is it about the conditions right now that have caused this round of wildfires to affect so many people so far away? Well, there's a couple of things. The season has been pretty dry already, and then the fact that we're getting hit in the US. Is because there's a couple of weather systems that are essentially channeling the smoke from those Canadian wildfires through Pennsylvania into the Mid Atlantic and the Northeast and kind of just dropping the smoke there.",
+ *       "start": 27850,
+ *       "end": 56190,
+ *       "confidence": 0.99667,
+ *       "words": [
+ *         {
+ *           "text": "Good",
+ *           "start": 27850,
+ *           "end": 28262,
+ *           "confidence": 0.99667,
+ *           "speaker": null
+ *         },
+ *         {
+ *           "text": "morning.",
+ *           "start": 28316,
+ *           "end": 28920,
+ *           "confidence": 0.99742,
+ *           "speaker": null
+ *         },
+ *         {
+ *           "text": "So",
+ *           "start": 29290,
+ *           "end": 29702,
+ *           "confidence": 0.94736,
+ *           "speaker": null
+ *         }
+ *       ]
+ *     }
+ *   ],
+ *   "id": "d5a3d302-066e-43fb-b63b-8f57baf185db",
+ *   "confidence": 0.9578730257009361,
+ *   "audio_duration": 281
+ * }
+ */
 export type ParagraphsResponse = {
   audio_duration: number;
   /** Format: double */
   confidence: number;
+  /** Format: uuid */
   id: string;
   paragraphs: TranscriptParagraph[];
 };
@@ -336,20 +868,44 @@ export type PiiPolicy =
   | "drivers_license"
   | "banking_information";
 
+/**
+ * @example {
+ *   "request_id": "914fe7e4-f10a-4364-8946-34614c2873f6",
+ *   "request_id_to_purge": "b7eb03ec-1650-4181-949b-75d9de317de1",
+ *   "deleted": true
+ * }
+ */
 export type PurgeLemurRequestDataResponse = {
   /** @description Whether the request data was deleted */
   deleted: boolean;
-  /** @description The ID of the deletion request of the LeMUR request */
+  /**
+   * Format: uuid
+   * @description The ID of the deletion request of the LeMUR request
+   */
   request_id: string;
-  /** @description The ID of the LeMUR request to purge the data for */
+  /**
+   * Format: uuid
+   * @description The ID of the LeMUR request to purge the data for
+   */
   request_id_to_purge: string;
 };
 
+/**
+ * @example {
+ *   "token": "fe4145dd1e7a2e149488dcd2d553a8018a89833fc5084837d66fd1bcf5a105d4"
+ * }
+ */
 export type RealtimeTemporaryTokenResponse = {
   /** @description The temporary authentication token for real-time transcription */
   token: string;
 };
 
+/**
+ * @example {
+ *   "redacted_audio_url": "https://s3.us-west-2.amazonaws.com/api.assembly.ai.usw2/redacted-audio/785efd9e-0e20-45e1-967b-3db17770ed9f.wav?AWSAccessKeyId=ASIAVASQFLPGLUP5JD7Y&Signature=z1r2MOA46esiiAmk%2FreBkL8rl6g%3D&x-amz-security-token=IQoJb3JpZ2luX2VjEPv%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaCXVzLXdlc3QtMiJHMEUCIHxKoUJdd5P%2Fdy4WlfvRNppQtauTy7OuAb5azR2OIoYSAiEA8iPx4xAx0pbZztT4e7fGnzPS4phvNCnYKflIijUoxDsq%2BwMIMxAEGgwzNDQ4MzkyNDg4NDQiDJxsCgo0cDg789FV0CrYAwPK3CHbRHoNPFiQ%2FO6EdHZ4OSFRcS%2FDvDyHQRNnYNSwG4JB2mUMWEVw808JWTya%2But4wEcmPiUCVJMTvh70cxhILAxP84CBTuWGM%2Fszbj4tn1thjVsqovf9YZmP17OCFa77Bc9%2F9RwtRaABEqJ2eb6%2Bsir7w0MMzhe1z%2F%2B1PUKxicJAZasBv3Ova%2BTY2eNkPZHQ4Njie4X5sh05b%2BrKnz58E7GTQ1sHZQDYHZecwb5fP0B3LR0vuqNtK%2BdpMAxw5H7BinQ4rdccLmsLLMQeVn8jdRDZNEvsdmoeQL0y0qD%2BUcyGMJoAjMT4FnXhBhVxc3bgkVUbHlZMn48FNCYcmzM8UB9wGmSnr6iQoqEaFElfQVbvAzsW7lnlfLROZxMvGXyliobPYPSaYZlVYgHcIxeWuOAXRtEtmL2jbaX4ghCVgJBVO3BBzTgub2jB0KPU6lYZLLM4kf%2B8hKX8iyxSRc6ZVEefTcyruoDppjB028pA9q75hLH1CZwhfLoM%2F3z5f0aFCl05zQnaa10nbcKj0hERELf4FXqS8yWbSutlRcd7Rr9o8jN31QGUscpsuIvl%2FpyJcZmItX8nO%2FF0s1QjrIi11DLYD9YoOh7eVkN8eKKn5w4cHldVI2sw4NCPqgY6pQE%2BM9va2ad1%2BNrXeQ9t8K41lojTN0BFmM8ERD5fF77xcTlW8VdV%2FiJeLLHDvnYYWVKcga9hSROlmsqvMyn3Tmhz7KQbIepSAOKhcHM%2FyUaLfErvCtjXGwo8nsKForL7SKiGkaRCBmwfQtkSVP6m4tGT50YdGxakh54f8uyC55SbkElknRbpl5haiZ%2F82UddFBkdPcM3t0s7vwbEy%2BbilYyetOr6htc%3D&Expires=1698966551",
+ *   "status": "redacted_audio_ready"
+ * }
+ */
 export type RedactedAudioResponse = {
   /** @description The URL of the redacted audio file */
   redacted_audio_url: string;
@@ -363,10 +919,108 @@ export type RedactedAudioResponse = {
  */
 export type RedactedAudioStatus = "redacted_audio_ready";
 
+/**
+ * @example {
+ *   "sentences": [
+ *     {
+ *       "text": "Smoke from hundreds of wildfires in Canada is triggering air quality alerts throughout the US.",
+ *       "start": 250,
+ *       "end": 6350,
+ *       "confidence": 0.72412,
+ *       "words": [
+ *         {
+ *           "text": "Smoke",
+ *           "start": 250,
+ *           "end": 650,
+ *           "confidence": 0.72412,
+ *           "speaker": null
+ *         },
+ *         {
+ *           "text": "from",
+ *           "start": 730,
+ *           "end": 1022,
+ *           "confidence": 0.99996,
+ *           "speaker": null
+ *         },
+ *         {
+ *           "text": "hundreds",
+ *           "start": 1076,
+ *           "end": 1466,
+ *           "confidence": 0.99992,
+ *           "speaker": null
+ *         },
+ *         {
+ *           "text": "of",
+ *           "start": 1498,
+ *           "end": 1646,
+ *           "confidence": 1,
+ *           "speaker": null
+ *         }
+ *       ],
+ *       "speaker": null
+ *     },
+ *     {
+ *       "text": "Skylines from Maine to Maryland to Minnesota are gray and smoggy.",
+ *       "start": 6500,
+ *       "end": 11050,
+ *       "confidence": 0.99819,
+ *       "words": [
+ *         {
+ *           "text": "Skylines",
+ *           "start": 6500,
+ *           "end": 7306,
+ *           "confidence": 0.99819,
+ *           "speaker": null
+ *         },
+ *         {
+ *           "text": "from",
+ *           "start": 7338,
+ *           "end": 7534,
+ *           "confidence": 0.99987,
+ *           "speaker": null
+ *         },
+ *         {
+ *           "text": "Maine",
+ *           "start": 7572,
+ *           "end": 7962,
+ *           "confidence": 0.9972,
+ *           "speaker": null
+ *         },
+ *         {
+ *           "text": "to",
+ *           "start": 8026,
+ *           "end": 8206,
+ *           "confidence": 1,
+ *           "speaker": null
+ *         },
+ *         {
+ *           "text": "Maryland",
+ *           "start": 8228,
+ *           "end": 8650,
+ *           "confidence": 0.5192,
+ *           "speaker": null
+ *         },
+ *         {
+ *           "text": "to",
+ *           "start": 8730,
+ *           "end": 8926,
+ *           "confidence": 1,
+ *           "speaker": null
+ *         }
+ *       ],
+ *       "speaker": null
+ *     }
+ *   ],
+ *   "id": "d5a3d302-066e-43fb-b63b-8f57baf185db",
+ *   "confidence": 0.9579390654205628,
+ *   "audio_duration": 281
+ * }
+ */
 export type SentencesResponse = {
   audio_duration: number;
   /** Format: double */
   confidence: number;
+  /** Format: uuid */
   id: string;
   sentences: TranscriptSentence[];
 };
@@ -374,7 +1028,17 @@ export type SentencesResponse = {
 /** @enum {unknown} */
 export type Sentiment = "POSITIVE" | "NEUTRAL" | "NEGATIVE";
 
-/** @description The result of the sentiment analysis model */
+/**
+ * @description The result of the sentiment analysis model
+ * @example {
+ *   "text": "Smoke from hundreds of wildfires in Canada is triggering air quality alerts throughout the US.",
+ *   "start": 250,
+ *   "end": 6350,
+ *   "sentiment": "NEGATIVE",
+ *   "confidence": 0.8181032538414001,
+ *   "speaker": null
+ * }
+ */
 export type SentimentAnalysisResult = {
   /**
    * Format: double
@@ -393,6 +1057,13 @@ export type SentimentAnalysisResult = {
   text: string;
 };
 
+/**
+ * @example {
+ *   "low": 0.5733263024656846,
+ *   "medium": 0.42667369753431533,
+ *   "high": 0
+ * }
+ */
 export type SeverityScoreSummary = {
   /** Format: double */
   high: number;
@@ -403,7 +1074,7 @@ export type SeverityScoreSummary = {
 };
 
 /**
- * @description The replacement logic for detected PII, can be "entity_type" or "hash". See [PII redaction](https://www.assemblyai.com/docs/Models/pii_redaction) for more details.
+ * @description The replacement logic for detected PII, can be "entity_type" or "hash". See [PII redaction](https://www.assemblyai.com/docs/models/pii-redaction) for more details.
  * @enum {string}
  */
 export type SubstitutionPolicy = "entity_type" | "hash";
@@ -433,7 +1104,13 @@ export type SummaryType =
   | "headline"
   | "paragraph";
 
-/** @description Timestamp containing a start and end property in milliseconds */
+/**
+ * @description Timestamp containing a start and end property in milliseconds
+ * @example {
+ *   "start": 3978,
+ *   "end": 5114
+ * }
+ */
 export type Timestamp = {
   /** @description The end time in milliseconds */
   end: number;
@@ -443,7 +1120,84 @@ export type Timestamp = {
 
 /**
  * @description The result of the Topic Detection model, if it is enabled.
- * See [Topic Detection](https://www.assemblyai.com/docs/Models/iab_classification) for more information.
+ * See [Topic Detection](https://www.assemblyai.com/docs/models/topic-detection) for more information.
+ *
+ * @example {
+ *   "status": "success",
+ *   "results": [
+ *     {
+ *       "text": "Smoke from hundreds of wildfires in Canada is triggering air quality alerts throughout the US. Skylines from Maine to Maryland to Minnesota are gray and smoggy. And in some places, the air quality warnings include the warning to stay inside. We wanted to better understand what's happening here and why, so we called Peter de Carlo, an associate professor in the Department of Environmental Health and Engineering at Johns Hopkins University Varsity. Good morning, professor. Good morning.",
+ *       "labels": [
+ *         {
+ *           "relevance": 0.988274097442627,
+ *           "label": "Home&Garden>IndoorEnvironmentalQuality"
+ *         },
+ *         {
+ *           "relevance": 0.5821335911750793,
+ *           "label": "NewsAndPolitics>Weather"
+ *         },
+ *         {
+ *           "relevance": 0.0042327106930315495,
+ *           "label": "MedicalHealth>DiseasesAndConditions>LungAndRespiratoryHealth"
+ *         },
+ *         {
+ *           "relevance": 0.0033971222583204508,
+ *           "label": "NewsAndPolitics>Disasters"
+ *         },
+ *         {
+ *           "relevance": 0.002469958271831274,
+ *           "label": "BusinessAndFinance>Business>GreenSolutions"
+ *         },
+ *         {
+ *           "relevance": 0.0014376690378412604,
+ *           "label": "MedicalHealth>DiseasesAndConditions>Cancer"
+ *         },
+ *         {
+ *           "relevance": 0.0014294233405962586,
+ *           "label": "Science>Environment"
+ *         },
+ *         {
+ *           "relevance": 0.001234519761055708,
+ *           "label": "Travel>TravelLocations>PolarTravel"
+ *         },
+ *         {
+ *           "relevance": 0.0010231725173071027,
+ *           "label": "MedicalHealth>DiseasesAndConditions>ColdAndFlu"
+ *         },
+ *         {
+ *           "relevance": 0.0007445293595083058,
+ *           "label": "BusinessAndFinance>Industries>PowerAndEnergyIndustry"
+ *         }
+ *       ],
+ *       "timestamp": {
+ *         "start": 250,
+ *         "end": 28840
+ *       }
+ *     }
+ *   ],
+ *   "summary": {
+ *     "NewsAndPolitics>Weather": 1,
+ *     "Home&Garden>IndoorEnvironmentalQuality": 0.9043831825256348,
+ *     "Science>Environment": 0.16117265820503235,
+ *     "BusinessAndFinance>Industries>EnvironmentalServicesIndustry": 0.14393523335456848,
+ *     "MedicalHealth>DiseasesAndConditions>LungAndRespiratoryHealth": 0.11401086300611496,
+ *     "BusinessAndFinance>Business>GreenSolutions": 0.06348437070846558,
+ *     "NewsAndPolitics>Disasters": 0.05041387677192688,
+ *     "Travel>TravelLocations>PolarTravel": 0.01308488193899393,
+ *     "HealthyLiving": 0.008222488686442375,
+ *     "MedicalHealth>DiseasesAndConditions>ColdAndFlu": 0.0022315620444715023,
+ *     "MedicalHealth>DiseasesAndConditions>HeartAndCardiovascularDiseases": 0.00213034451007843,
+ *     "HealthyLiving>Wellness>SmokingCessation": 0.001540527562610805,
+ *     "MedicalHealth>DiseasesAndConditions>Injuries": 0.0013950627762824297,
+ *     "BusinessAndFinance>Industries>PowerAndEnergyIndustry": 0.0012570273829624057,
+ *     "MedicalHealth>DiseasesAndConditions>Cancer": 0.001097781932912767,
+ *     "MedicalHealth>DiseasesAndConditions>Allergies": 0.0010148967849090695,
+ *     "MedicalHealth>DiseasesAndConditions>MentalHealth": 0.000717321818228811,
+ *     "Style&Fashion>PersonalCare>DeodorantAndAntiperspirant": 0.0006022014422342181,
+ *     "Technology&Computing>Computing>ComputerNetworking": 0.0005461975233629346,
+ *     "MedicalHealth>DiseasesAndConditions>Injuries>FirstAid": 0.0004885646631009877
+ *   }
+ * }
  */
 export type TopicDetectionModelResult = {
   /** @description An array of results for the Topic Detection model */
@@ -456,7 +1210,58 @@ export type TopicDetectionModelResult = {
   };
 };
 
-/** @description The result of the topic detection model */
+/**
+ * @description The result of the topic detection model
+ * @example {
+ *   "text": "Smoke from hundreds of wildfires in Canada is triggering air quality alerts throughout the US. Skylines from Maine to Maryland to Minnesota are gray and smoggy. And in some places, the air quality warnings include the warning to stay inside. We wanted to better understand what's happening here and why, so we called Peter de Carlo, an associate professor in the Department of Environmental Health and Engineering at Johns Hopkins University Varsity. Good morning, professor. Good morning.",
+ *   "labels": [
+ *     {
+ *       "relevance": 0.988274097442627,
+ *       "label": "Home&Garden>IndoorEnvironmentalQuality"
+ *     },
+ *     {
+ *       "relevance": 0.5821335911750793,
+ *       "label": "NewsAndPolitics>Weather"
+ *     },
+ *     {
+ *       "relevance": 0.0042327106930315495,
+ *       "label": "MedicalHealth>DiseasesAndConditions>LungAndRespiratoryHealth"
+ *     },
+ *     {
+ *       "relevance": 0.0033971222583204508,
+ *       "label": "NewsAndPolitics>Disasters"
+ *     },
+ *     {
+ *       "relevance": 0.002469958271831274,
+ *       "label": "BusinessAndFinance>Business>GreenSolutions"
+ *     },
+ *     {
+ *       "relevance": 0.0014376690378412604,
+ *       "label": "MedicalHealth>DiseasesAndConditions>Cancer"
+ *     },
+ *     {
+ *       "relevance": 0.0014294233405962586,
+ *       "label": "Science>Environment"
+ *     },
+ *     {
+ *       "relevance": 0.001234519761055708,
+ *       "label": "Travel>TravelLocations>PolarTravel"
+ *     },
+ *     {
+ *       "relevance": 0.0010231725173071027,
+ *       "label": "MedicalHealth>DiseasesAndConditions>ColdAndFlu"
+ *     },
+ *     {
+ *       "relevance": 0.0007445293595083058,
+ *       "label": "BusinessAndFinance>Industries>PowerAndEnergyIndustry"
+ *     }
+ *   ],
+ *   "timestamp": {
+ *     "start": 250,
+ *     "end": 28840
+ *   }
+ * }
+ */
 export type TopicDetectionResult = {
   labels?: {
     /** @description The IAB taxonomical label for the label of the detected topic, where > denotes supertopic/subtopic relationship */
@@ -472,7 +1277,692 @@ export type TopicDetectionResult = {
   timestamp?: Timestamp;
 };
 
-/** @description A transcript object */
+/**
+ * @description A transcript object
+ * @example {
+ *   "id": "9ea68fd3-f953-42c1-9742-976c447fb463",
+ *   "language_model": "assemblyai_default",
+ *   "acoustic_model": "assemblyai_default",
+ *   "language_code": "en_us",
+ *   "status": "completed",
+ *   "audio_url": "https://github.com/AssemblyAI-Examples/audio-examples/raw/main/20230607_me_canadian_wildfires.mp3",
+ *   "text": "Smoke from hundreds of wildfires in Canada is triggering air quality alerts throughout the US. Skylines from Maine to Maryland to Minnesota are gray and smoggy. And in some places, the air quality warnings include the warning to stay inside. We wanted to better understand what's happening here and why, so we called Peter de Carlo, an associate professor in the Department of Environmental Health and Engineering at Johns Hopkins University Varsity. Good morning, professor. Good morning. What is it about the conditions right now that have caused this round of wildfires to affect so many people so far away? Well, there's a couple of things. The season has been pretty dry already. And then the fact that we're getting hit in the US. Is because there's a couple of weather systems that are essentially channeling the smoke from those Canadian wildfires through Pennsylvania into the Mid Atlantic and the Northeast and kind of just dropping the smoke there. So what is it in this haze that makes it harmful? And I'm assuming it is harmful. It is. The levels outside right now in Baltimore are considered unhealthy. And most of that is due to what's called particulate matter, which are tiny particles, microscopic smaller than the width of your hair that can get into your lungs and impact your respiratory system, your cardiovascular system, and even your neurological your brain. What makes this particularly harmful? Is it the volume of particulant? Is it something in particular? What is it exactly? Can you just drill down on that a little bit more? Yeah. So the concentration of particulate matter I was looking at some of the monitors that we have was reaching levels of what are, in science, big 150 micrograms per meter cubed, which is more than ten times what the annual average should be and about four times higher than what you're supposed to have on a 24 hours average. And so the concentrations of these particles in the air are just much, much higher than we typically see. And exposure to those high levels can lead to a host of health problems. And who is most vulnerable? I noticed that in New York City, for example, they're canceling outdoor activities. And so here it is in the early days of summer, and they have to keep all the kids inside. So who tends to be vulnerable in a situation like this? It's the youngest. So children, obviously, whose bodies are still developing. The elderly, who are their bodies are more in decline and they're more susceptible to the health impacts of breathing, the poor air quality. And then people who have preexisting health conditions, people with respiratory conditions or heart conditions can be triggered by high levels of air pollution. Could this get worse? That's a good question. In some areas, it's much worse than others. And it just depends on kind of where the smoke is concentrated. I think New York has some of the higher concentrations right now, but that's going to change as that air moves away from the New York area. But over the course of the next few days, we will see different areas being hit at different times with the highest concentrations. I was going to ask you about more fires start burning. I don't expect the concentrations to go up too much higher. I was going to ask you how and you started to answer this, but how much longer could this last? Or forgive me if I'm asking you to speculate, but what do you think? Well, I think the fires are going to burn for a little bit longer, but the key for us in the US. Is the weather system changing. And so right now, it's kind of the weather systems that are pulling that air into our mid Atlantic and Northeast region. As those weather systems change and shift, we'll see that smoke going elsewhere and not impact us in this region as much. And so I think that's going to be the defining factor. And I think the next couple of days we're going to see a shift in that weather pattern and start to push the smoke away from where we are. And finally, with the impacts of climate change, we are seeing more wildfires. Will we be seeing more of these kinds of wide ranging air quality consequences or circumstances? I mean, that is one of the predictions for climate change. Looking into the future, the fire season is starting earlier and lasting longer, and we're seeing more frequent fires. So, yeah, this is probably something that we'll be seeing more frequently. This tends to be much more of an issue in the Western US. So the eastern US. Getting hit right now is a little bit new. But yeah, I think with climate change moving forward, this is something that is going to happen more frequently. That's Peter De Carlo, associate professor in the Department of Environmental Health and Engineering at Johns Hopkins University. Sergeant Carlo, thanks so much for joining us and sharing this expertise with us. Thank you for having me.",
+ *   "words": [
+ *     {
+ *       "text": "Smoke",
+ *       "start": 250,
+ *       "end": 650,
+ *       "confidence": 0.97465,
+ *       "speaker": null
+ *     },
+ *     {
+ *       "text": "from",
+ *       "start": 730,
+ *       "end": 1022,
+ *       "confidence": 0.99999,
+ *       "speaker": null
+ *     },
+ *     {
+ *       "text": "hundreds",
+ *       "start": 1076,
+ *       "end": 1418,
+ *       "confidence": 0.99844,
+ *       "speaker": null
+ *     },
+ *     {
+ *       "text": "of",
+ *       "start": 1434,
+ *       "end": 1614,
+ *       "confidence": 0.84,
+ *       "speaker": null
+ *     },
+ *     {
+ *       "text": "wildfires",
+ *       "start": 1652,
+ *       "end": 2346,
+ *       "confidence": 0.89572,
+ *       "speaker": null
+ *     },
+ *     {
+ *       "text": "in",
+ *       "start": 2378,
+ *       "end": 2526,
+ *       "confidence": 0.99994,
+ *       "speaker": null
+ *     },
+ *     {
+ *       "text": "Canada",
+ *       "start": 2548,
+ *       "end": 3130,
+ *       "confidence": 0.93953,
+ *       "speaker": null
+ *     },
+ *     {
+ *       "text": "is",
+ *       "start": 3210,
+ *       "end": 3454,
+ *       "confidence": 0.999,
+ *       "speaker": null
+ *     },
+ *     {
+ *       "text": "triggering",
+ *       "start": 3492,
+ *       "end": 3946,
+ *       "confidence": 0.74794,
+ *       "speaker": null
+ *     },
+ *     {
+ *       "text": "air",
+ *       "start": 3978,
+ *       "end": 4174,
+ *       "confidence": 1,
+ *       "speaker": null
+ *     },
+ *     {
+ *       "text": "quality",
+ *       "start": 4212,
+ *       "end": 4558,
+ *       "confidence": 0.88077,
+ *       "speaker": null
+ *     },
+ *     {
+ *       "text": "alerts",
+ *       "start": 4644,
+ *       "end": 5114,
+ *       "confidence": 0.94814,
+ *       "speaker": null
+ *     },
+ *     {
+ *       "text": "throughout",
+ *       "start": 5162,
+ *       "end": 5466,
+ *       "confidence": 0.99726,
+ *       "speaker": null
+ *     },
+ *     {
+ *       "text": "the",
+ *       "start": 5498,
+ *       "end": 5694,
+ *       "confidence": 0.79,
+ *       "speaker": null
+ *     },
+ *     {
+ *       "text": "US.",
+ *       "start": 5732,
+ *       "end": 6382,
+ *       "confidence": 0.89,
+ *       "speaker": null
+ *     }
+ *   ],
+ *   "utterances": [
+ *     {
+ *       "confidence": 0.9359033333333334,
+ *       "end": 26950,
+ *       "speaker": "A",
+ *       "start": 250,
+ *       "text": "Smoke from hundreds of wildfires in Canada is triggering air quality alerts throughout the US. Skylines from Maine to Maryland to Minnesota are gray and smoggy. And in some places, the air quality warnings include the warning to stay inside. We wanted to better understand what's happening here and why, so we called Peter de Carlo, an associate professor in the Department of Environmental Health and Engineering at Johns Hopkins University Varsity. Good morning, professor.",
+ *       "words": [
+ *         {
+ *           "text": "Smoke",
+ *           "start": 250,
+ *           "end": 650,
+ *           "confidence": 0.97503,
+ *           "speaker": "A"
+ *         },
+ *         {
+ *           "text": "from",
+ *           "start": 730,
+ *           "end": 1022,
+ *           "confidence": 0.99999,
+ *           "speaker": "A"
+ *         },
+ *         {
+ *           "text": "hundreds",
+ *           "start": 1076,
+ *           "end": 1418,
+ *           "confidence": 0.99843,
+ *           "speaker": "A"
+ *         },
+ *         {
+ *           "text": "of",
+ *           "start": 1434,
+ *           "end": 1614,
+ *           "confidence": 0.85,
+ *           "speaker": "A"
+ *         },
+ *         {
+ *           "text": "wildfires",
+ *           "start": 1652,
+ *           "end": 2346,
+ *           "confidence": 0.89657,
+ *           "speaker": "A"
+ *         },
+ *         {
+ *           "text": "in",
+ *           "start": 2378,
+ *           "end": 2526,
+ *           "confidence": 0.99994,
+ *           "speaker": "A"
+ *         },
+ *         {
+ *           "text": "Canada",
+ *           "start": 2548,
+ *           "end": 3130,
+ *           "confidence": 0.93864,
+ *           "speaker": "A"
+ *         },
+ *         {
+ *           "text": "is",
+ *           "start": 3210,
+ *           "end": 3454,
+ *           "confidence": 0.999,
+ *           "speaker": "A"
+ *         },
+ *         {
+ *           "text": "triggering",
+ *           "start": 3492,
+ *           "end": 3946,
+ *           "confidence": 0.75366,
+ *           "speaker": "A"
+ *         },
+ *         {
+ *           "text": "air",
+ *           "start": 3978,
+ *           "end": 4174,
+ *           "confidence": 1,
+ *           "speaker": "A"
+ *         },
+ *         {
+ *           "text": "quality",
+ *           "start": 4212,
+ *           "end": 4558,
+ *           "confidence": 0.87745,
+ *           "speaker": "A"
+ *         },
+ *         {
+ *           "text": "alerts",
+ *           "start": 4644,
+ *           "end": 5114,
+ *           "confidence": 0.94739,
+ *           "speaker": "A"
+ *         },
+ *         {
+ *           "text": "throughout",
+ *           "start": 5162,
+ *           "end": 5466,
+ *           "confidence": 0.99726,
+ *           "speaker": "A"
+ *         },
+ *         {
+ *           "text": "the",
+ *           "start": 5498,
+ *           "end": 5694,
+ *           "confidence": 0.79,
+ *           "speaker": "A"
+ *         },
+ *         {
+ *           "text": "US.",
+ *           "start": 5732,
+ *           "end": 6382,
+ *           "confidence": 0.88,
+ *           "speaker": "A"
+ *         }
+ *       ]
+ *     }
+ *   ],
+ *   "confidence": 0.9404651451800253,
+ *   "audio_duration": 281,
+ *   "punctuate": true,
+ *   "format_text": true,
+ *   "dual_channel": false,
+ *   "webhook_url": "https://your-webhook-url/path",
+ *   "webhook_status_code": 200,
+ *   "webhook_auth": true,
+ *   "webhook_auth_header_name": "webhook-secret",
+ *   "auto_highlights_result": {
+ *     "status": "success",
+ *     "results": [
+ *       {
+ *         "count": 1,
+ *         "rank": 0.08,
+ *         "text": "air quality alerts",
+ *         "timestamps": [
+ *           {
+ *             "start": 3978,
+ *             "end": 5114
+ *           }
+ *         ]
+ *       },
+ *       {
+ *         "count": 1,
+ *         "rank": 0.08,
+ *         "text": "wide ranging air quality consequences",
+ *         "timestamps": [
+ *           {
+ *             "start": 235388,
+ *             "end": 238694
+ *           }
+ *         ]
+ *       },
+ *       {
+ *         "count": 1,
+ *         "rank": 0.07,
+ *         "text": "more wildfires",
+ *         "timestamps": [
+ *           {
+ *             "start": 230972,
+ *             "end": 232354
+ *           }
+ *         ]
+ *       },
+ *       {
+ *         "count": 1,
+ *         "rank": 0.07,
+ *         "text": "air pollution",
+ *         "timestamps": [
+ *           {
+ *             "start": 156004,
+ *             "end": 156910
+ *           }
+ *         ]
+ *       },
+ *       {
+ *         "count": 3,
+ *         "rank": 0.07,
+ *         "text": "weather systems",
+ *         "timestamps": [
+ *           {
+ *             "start": 47344,
+ *             "end": 47958
+ *           },
+ *           {
+ *             "start": 205268,
+ *             "end": 205818
+ *           },
+ *           {
+ *             "start": 211588,
+ *             "end": 213434
+ *           }
+ *         ]
+ *       },
+ *       {
+ *         "count": 2,
+ *         "rank": 0.06,
+ *         "text": "high levels",
+ *         "timestamps": [
+ *           {
+ *             "start": 121128,
+ *             "end": 121646
+ *           },
+ *           {
+ *             "start": 155412,
+ *             "end": 155866
+ *           }
+ *         ]
+ *       },
+ *       {
+ *         "count": 1,
+ *         "rank": 0.06,
+ *         "text": "health conditions",
+ *         "timestamps": [
+ *           {
+ *             "start": 152138,
+ *             "end": 152666
+ *           }
+ *         ]
+ *       },
+ *       {
+ *         "count": 2,
+ *         "rank": 0.06,
+ *         "text": "Peter de Carlo",
+ *         "timestamps": [
+ *           {
+ *             "start": 18948,
+ *             "end": 19930
+ *           },
+ *           {
+ *             "start": 268298,
+ *             "end": 269194
+ *           }
+ *         ]
+ *       },
+ *       {
+ *         "count": 1,
+ *         "rank": 0.06,
+ *         "text": "New York City",
+ *         "timestamps": [
+ *           {
+ *             "start": 125768,
+ *             "end": 126274
+ *           }
+ *         ]
+ *       },
+ *       {
+ *         "count": 1,
+ *         "rank": 0.05,
+ *         "text": "respiratory conditions",
+ *         "timestamps": [
+ *           {
+ *             "start": 152964,
+ *             "end": 153786
+ *           }
+ *         ]
+ *       },
+ *       {
+ *         "count": 3,
+ *         "rank": 0.05,
+ *         "text": "New York",
+ *         "timestamps": [
+ *           {
+ *             "start": 125768,
+ *             "end": 126034
+ *           },
+ *           {
+ *             "start": 171448,
+ *             "end": 171938
+ *           },
+ *           {
+ *             "start": 176008,
+ *             "end": 176322
+ *           }
+ *         ]
+ *       },
+ *       {
+ *         "count": 3,
+ *         "rank": 0.05,
+ *         "text": "climate change",
+ *         "timestamps": [
+ *           {
+ *             "start": 229548,
+ *             "end": 230230
+ *           },
+ *           {
+ *             "start": 244576,
+ *             "end": 245162
+ *           },
+ *           {
+ *             "start": 263348,
+ *             "end": 263950
+ *           }
+ *         ]
+ *       },
+ *       {
+ *         "count": 1,
+ *         "rank": 0.05,
+ *         "text": "Johns Hopkins University Varsity",
+ *         "timestamps": [
+ *           {
+ *             "start": 23972,
+ *             "end": 25490
+ *           }
+ *         ]
+ *       },
+ *       {
+ *         "count": 1,
+ *         "rank": 0.05,
+ *         "text": "heart conditions",
+ *         "timestamps": [
+ *           {
+ *             "start": 153988,
+ *             "end": 154506
+ *           }
+ *         ]
+ *       },
+ *       {
+ *         "count": 1,
+ *         "rank": 0.05,
+ *         "text": "air quality warnings",
+ *         "timestamps": [
+ *           {
+ *             "start": 12308,
+ *             "end": 13434
+ *           }
+ *         ]
+ *       }
+ *     ]
+ *   },
+ *   "auto_highlights": true,
+ *   "audio_start_from": 10,
+ *   "audio_end_at": 280,
+ *   "word_boost": [
+ *     "aws",
+ *     "azure",
+ *     "google cloud"
+ *   ],
+ *   "boost_param": "high",
+ *   "filter_profanity": true,
+ *   "redact_pii": true,
+ *   "redact_pii_audio": true,
+ *   "redact_pii_audio_quality": "mp3",
+ *   "redact_pii_policies": [
+ *     "us_social_security_number",
+ *     "credit_card_number"
+ *   ],
+ *   "redact_pii_sub": "hash",
+ *   "speaker_labels": true,
+ *   "content_safety": true,
+ *   "iab_categories": true,
+ *   "content_safety_labels": {
+ *     "status": "success",
+ *     "results": [
+ *       {
+ *         "text": "Smoke from hundreds of wildfires in Canada is triggering air quality alerts throughout the US. Skylines from Maine to Maryland to Minnesota are gray and smoggy. And in some places, the air quality warnings include the warning to stay inside. We wanted to better understand what's happening here and why, so we called Peter de Carlo, an associate professor in the Department of Environmental Health and Engineering at Johns Hopkins University Varsity. Good morning, professor. Good morning.",
+ *         "labels": [
+ *           {
+ *             "label": "disasters",
+ *             "confidence": 0.8142836093902588,
+ *             "severity": 0.4093044400215149
+ *           }
+ *         ],
+ *         "sentences_idx_start": 0,
+ *         "sentences_idx_end": 5,
+ *         "timestamp": {
+ *           "start": 250,
+ *           "end": 28840
+ *         }
+ *       }
+ *     ],
+ *     "summary": {
+ *       "disasters": 0.9940800441842205,
+ *       "health_issues": 0.9216489289040967
+ *     },
+ *     "severity_score_summary": {
+ *       "disasters": {
+ *         "low": 0.5733263024656846,
+ *         "medium": 0.42667369753431533,
+ *         "high": 0
+ *       },
+ *       "health_issues": {
+ *         "low": 0.22863814977924785,
+ *         "medium": 0.45014154926938227,
+ *         "high": 0.32122030095136983
+ *       }
+ *     }
+ *   },
+ *   "iab_categories_result": {
+ *     "status": "success",
+ *     "results": [
+ *       {
+ *         "text": "Smoke from hundreds of wildfires in Canada is triggering air quality alerts throughout the US. Skylines from Maine to Maryland to Minnesota are gray and smoggy. And in some places, the air quality warnings include the warning to stay inside. We wanted to better understand what's happening here and why, so we called Peter de Carlo, an associate professor in the Department of Environmental Health and Engineering at Johns Hopkins University Varsity. Good morning, professor. Good morning.",
+ *         "labels": [
+ *           {
+ *             "relevance": 0.988274097442627,
+ *             "label": "Home&Garden>IndoorEnvironmentalQuality"
+ *           },
+ *           {
+ *             "relevance": 0.5821335911750793,
+ *             "label": "NewsAndPolitics>Weather"
+ *           },
+ *           {
+ *             "relevance": 0.0042327106930315495,
+ *             "label": "MedicalHealth>DiseasesAndConditions>LungAndRespiratoryHealth"
+ *           },
+ *           {
+ *             "relevance": 0.0033971222583204508,
+ *             "label": "NewsAndPolitics>Disasters"
+ *           },
+ *           {
+ *             "relevance": 0.002469958271831274,
+ *             "label": "BusinessAndFinance>Business>GreenSolutions"
+ *           },
+ *           {
+ *             "relevance": 0.0014376690378412604,
+ *             "label": "MedicalHealth>DiseasesAndConditions>Cancer"
+ *           },
+ *           {
+ *             "relevance": 0.0014294233405962586,
+ *             "label": "Science>Environment"
+ *           },
+ *           {
+ *             "relevance": 0.001234519761055708,
+ *             "label": "Travel>TravelLocations>PolarTravel"
+ *           },
+ *           {
+ *             "relevance": 0.0010231725173071027,
+ *             "label": "MedicalHealth>DiseasesAndConditions>ColdAndFlu"
+ *           },
+ *           {
+ *             "relevance": 0.0007445293595083058,
+ *             "label": "BusinessAndFinance>Industries>PowerAndEnergyIndustry"
+ *           }
+ *         ],
+ *         "timestamp": {
+ *           "start": 250,
+ *           "end": 28840
+ *         }
+ *       }
+ *     ],
+ *     "summary": {
+ *       "NewsAndPolitics>Weather": 1,
+ *       "Home&Garden>IndoorEnvironmentalQuality": 0.9043831825256348,
+ *       "Science>Environment": 0.16117265820503235,
+ *       "BusinessAndFinance>Industries>EnvironmentalServicesIndustry": 0.14393523335456848,
+ *       "MedicalHealth>DiseasesAndConditions>LungAndRespiratoryHealth": 0.11401086300611496,
+ *       "BusinessAndFinance>Business>GreenSolutions": 0.06348437070846558,
+ *       "NewsAndPolitics>Disasters": 0.05041387677192688,
+ *       "Travel>TravelLocations>PolarTravel": 0.01308488193899393,
+ *       "HealthyLiving": 0.008222488686442375,
+ *       "MedicalHealth>DiseasesAndConditions>ColdAndFlu": 0.0022315620444715023,
+ *       "MedicalHealth>DiseasesAndConditions>HeartAndCardiovascularDiseases": 0.00213034451007843,
+ *       "HealthyLiving>Wellness>SmokingCessation": 0.001540527562610805,
+ *       "MedicalHealth>DiseasesAndConditions>Injuries": 0.0013950627762824297,
+ *       "BusinessAndFinance>Industries>PowerAndEnergyIndustry": 0.0012570273829624057,
+ *       "MedicalHealth>DiseasesAndConditions>Cancer": 0.001097781932912767,
+ *       "MedicalHealth>DiseasesAndConditions>Allergies": 0.0010148967849090695,
+ *       "MedicalHealth>DiseasesAndConditions>MentalHealth": 0.000717321818228811,
+ *       "Style&Fashion>PersonalCare>DeodorantAndAntiperspirant": 0.0006022014422342181,
+ *       "Technology&Computing>Computing>ComputerNetworking": 0.0005461975233629346,
+ *       "MedicalHealth>DiseasesAndConditions>Injuries>FirstAid": 0.0004885646631009877
+ *     }
+ *   },
+ *   "language_detection": false,
+ *   "custom_spelling": null,
+ *   "throttled": null,
+ *   "auto_chapters": true,
+ *   "summarization": true,
+ *   "summary_type": "bullets",
+ *   "summary_model": "informative",
+ *   "custom_topics": true,
+ *   "topics": [],
+ *   "speech_threshold": 0.5,
+ *   "disfluencies": false,
+ *   "sentiment_analysis": true,
+ *   "chapters": [
+ *     {
+ *       "summary": "Smoke from hundreds of wildfires in Canada is triggering air quality alerts throughout the US. Skylines from Maine to Maryland to Minnesota are gray and smoggy. In some places, the air quality warnings include the warning to stay inside.",
+ *       "gist": "Smoggy air quality alerts across US",
+ *       "headline": "Smoke from hundreds of wildfires in Canada is triggering air quality alerts across US",
+ *       "start": 250,
+ *       "end": 28840
+ *     },
+ *     {
+ *       "summary": "Air pollution levels in Baltimore are considered unhealthy. Exposure to high levels can lead to a host of health problems. With climate change, we are seeing more wildfires. Will we be seeing more of these kinds of wide ranging air quality consequences?",
+ *       "gist": "What is it about the conditions right now that have caused this round",
+ *       "headline": "High particulate matter in wildfire smoke can lead to serious health problems",
+ *       "start": 29610,
+ *       "end": 280340
+ *     }
+ *   ],
+ *   "sentiment_analysis_results": null,
+ *   "entity_detection": true,
+ *   "entities": [
+ *     {
+ *       "entity_type": "location",
+ *       "text": "Canada",
+ *       "start": 2548,
+ *       "end": 3130
+ *     },
+ *     {
+ *       "entity_type": "location",
+ *       "text": "the US",
+ *       "start": 5498,
+ *       "end": 6382
+ *     },
+ *     {
+ *       "entity_type": "location",
+ *       "text": "Maine",
+ *       "start": 7492,
+ *       "end": 7914
+ *     },
+ *     {
+ *       "entity_type": "location",
+ *       "text": "Maryland",
+ *       "start": 8212,
+ *       "end": 8634
+ *     },
+ *     {
+ *       "entity_type": "location",
+ *       "text": "Minnesota",
+ *       "start": 8932,
+ *       "end": 9578
+ *     },
+ *     {
+ *       "entity_type": "person_name",
+ *       "text": "Peter de Carlo",
+ *       "start": 18948,
+ *       "end": 19930
+ *     },
+ *     {
+ *       "entity_type": "occupation",
+ *       "text": "associate professor",
+ *       "start": 20292,
+ *       "end": 21194
+ *     },
+ *     {
+ *       "entity_type": "organization",
+ *       "text": "Department of Environmental Health and Engineering",
+ *       "start": 21508,
+ *       "end": 23706
+ *     },
+ *     {
+ *       "entity_type": "organization",
+ *       "text": "Johns Hopkins University Varsity",
+ *       "start": 23972,
+ *       "end": 25490
+ *     },
+ *     {
+ *       "entity_type": "occupation",
+ *       "text": "professor",
+ *       "start": 26076,
+ *       "end": 26950
+ *     },
+ *     {
+ *       "entity_type": "location",
+ *       "text": "the US",
+ *       "start": 45184,
+ *       "end": 45898
+ *     },
+ *     {
+ *       "entity_type": "nationality",
+ *       "text": "Canadian",
+ *       "start": 49728,
+ *       "end": 50086
+ *     }
+ *   ],
+ *   "summary": "- Smoke from hundreds of wildfires in Canada is triggering air quality alerts throughout the US. Skylines from Maine to Maryland to Minnesota are gray and smoggy. In some places, the air quality warnings include the warning to stay inside.\\n- Air pollution levels in Baltimore are considered unhealthy. Exposure to high levels can lead to a host of health problems. With climate change, we are seeing more wildfires. Will we be seeing more of these kinds of wide ranging air quality consequences?",
+ *   "speakers_expected": 2
+ * }
+ */
 export type Transcript = {
   /**
    * @deprecated
@@ -490,13 +1980,13 @@ export type Transcript = {
   audio_start_from?: number | null;
   /** @description The URL of the media that was transcribed */
   audio_url: string;
-  /** @description Whether [Auto Chapters](https://www.assemblyai.com/docs/Models/auto_chapters) is enabled, can be true or false */
+  /** @description Whether [Auto Chapters](https://www.assemblyai.com/docs/models/auto-chapters) is enabled, can be true or false */
   auto_chapters?: boolean | null;
   /** @description Whether Key Phrases is enabled, either true or false */
   auto_highlights: boolean;
   /**
    * @description An array of results for the Key Phrases model, if it is enabled.
-   * See [Key phrases](https://www.assemblyai.com/docs/Models/key_phrases) for more information.
+   * See [Key phrases](https://www.assemblyai.com/docs/models/key-phrases) for more information.
    */
   auto_highlights_result?: AutoHighlightsResult | null;
   /** @description The word boost parameter value */
@@ -508,11 +1998,11 @@ export type Transcript = {
    * @description The confidence score for the transcript, between 0.0 (low confidence) and 1.0 (high confidence)
    */
   confidence?: number | null;
-  /** @description Whether [Content Moderation](https://www.assemblyai.com/docs/Models/content_moderation) is enabled, can be true or false */
+  /** @description Whether [Content Moderation](https://www.assemblyai.com/docs/models/content-moderation) is enabled, can be true or false */
   content_safety?: boolean | null;
   /**
    * @description An array of results for the Content Moderation model, if it is enabled.
-   * See [Content moderation](https://www.assemblyai.com/docs/Models/content_moderation) for more information.
+   * See [Content moderation](https://www.assemblyai.com/docs/models/content-moderation) for more information.
    */
   content_safety_labels?: ContentSafetyLabelsResult | null;
   /** @description Customize how words are spelled and formatted using to and from values */
@@ -521,37 +2011,40 @@ export type Transcript = {
   custom_topics?: boolean | null;
   /** @description Transcribe Filler Words, like "umm", in your media file; can be true or false */
   disfluencies?: boolean | null;
-  /** @description Whether [Dual channel transcription](https://www.assemblyai.com/docs/Models/speech_recognition#dual-channel-transcription) is enabled, either true or false */
+  /** @description Whether [Dual channel transcription](https://www.assemblyai.com/docs/models/speech-recognition#dual-channel-transcription) was enabled in the transcription request, either true or false */
   dual_channel?: boolean | null;
   /**
    * @description An array of results for the Entity Detection model, if it is enabled.
-   * See [Entity detection](https://www.assemblyai.com/docs/Models/entity_detection) for more information.
+   * See [Entity detection](https://www.assemblyai.com/docs/models/entity-detection) for more information.
    */
   entities?: Entity[] | null;
-  /** @description Whether [Entity Detection](https://www.assemblyai.com/docs/Models/entity_detection) is enabled, can be true or false */
+  /** @description Whether [Entity Detection](https://www.assemblyai.com/docs/models/entity-detection) is enabled, can be true or false */
   entity_detection?: boolean | null;
   /** @description Error message of why the transcript failed */
   error?: string;
-  /** @description Whether [Profanity Filtering](https://www.assemblyai.com/docs/Models/speech_recognition#profanity-filtering) is enabled, either true or false */
+  /** @description Whether [Profanity Filtering](https://www.assemblyai.com/docs/models/speech-recognition#profanity-filtering) is enabled, either true or false */
   filter_profanity?: boolean | null;
   /** @description Whether Text Formatting is enabled, either true or false */
   format_text?: boolean | null;
-  /** @description Whether [Topic Detection](https://www.assemblyai.com/docs/Models/iab_classification) is enabled, can be true or false */
+  /** @description Whether [Topic Detection](https://www.assemblyai.com/docs/models/topic-detection) is enabled, can be true or false */
   iab_categories?: boolean | null;
   /**
    * @description The result of the Topic Detection model, if it is enabled.
-   * See [Topic Detection](https://www.assemblyai.com/docs/Models/iab_classification) for more information.
+   * See [Topic Detection](https://www.assemblyai.com/docs/models/topic-detection) for more information.
    */
   iab_categories_result?: TopicDetectionModelResult | null;
-  /** @description The unique identifier of your transcript */
+  /**
+   * Format: uuid
+   * @description The unique identifier of your transcript
+   */
   id: string;
   /**
    * @description The language of your audio file.
-   * Possible values are found in [Supported Languages](https://www.assemblyai.com/docs/Concepts/supported_languages).
+   * Possible values are found in [Supported Languages](https://www.assemblyai.com/docs/concepts/supported-languages).
    * The default value is 'en_us'.
    */
   language_code?: TranscriptLanguageCode;
-  /** @description Whether [Automatic language detection](https://www.assemblyai.com/docs/Models/speech_recognition#automatic-language-detection) is enabled, either true or false */
+  /** @description Whether [Automatic language detection](https://www.assemblyai.com/docs/models/speech-recognition#automatic-language-detection) is enabled, either true or false */
   language_detection?: boolean | null;
   /**
    * @deprecated
@@ -560,35 +2053,35 @@ export type Transcript = {
   language_model: string;
   /** @description Whether Automatic Punctuation is enabled, either true or false */
   punctuate?: boolean | null;
-  /** @description Whether [PII Redaction](https://www.assemblyai.com/docs/Models/pii_redaction) is enabled, either true or false */
+  /** @description Whether [PII Redaction](https://www.assemblyai.com/docs/models/pii-redaction) is enabled, either true or false */
   redact_pii: boolean;
   /**
    * @description Whether a redacted version of the audio file was generated,
-   * either true or false. See [PII redaction](https://www.assemblyai.com/docs/Models/pii_redaction) for more information.
+   * either true or false. See [PII redaction](https://www.assemblyai.com/docs/models/pii-redaction) for more information.
    */
   redact_pii_audio?: boolean | null;
   /**
    * @description The audio quality of the PII-redacted audio file, if redact_pii_audio is enabled.
-   * See [PII redaction](https://www.assemblyai.com/docs/Models/pii_redaction) for more information.
+   * See [PII redaction](https://www.assemblyai.com/docs/models/pii-redaction) for more information.
    */
   redact_pii_audio_quality?: string | null;
   /**
    * @description The list of PII Redaction policies that were enabled, if PII Redaction is enabled.
-   * See [PII redaction](https://www.assemblyai.com/docs/Models/pii_redaction) for more information.
+   * See [PII redaction](https://www.assemblyai.com/docs/models/pii-redaction) for more information.
    */
   redact_pii_policies?: PiiPolicy[] | null;
-  /** @description The replacement logic for detected PII, can be "entity_type" or "hash". See [PII redaction](https://www.assemblyai.com/docs/Models/pii_redaction) for more details. */
+  /** @description The replacement logic for detected PII, can be "entity_type" or "hash". See [PII redaction](https://www.assemblyai.com/docs/models/pii-redaction) for more details. */
   redact_pii_sub?: SubstitutionPolicy;
-  /** @description Whether [Sentiment Analysis](https://www.assemblyai.com/docs/Models/sentiment_analysis) is enabled, can be true or false */
+  /** @description Whether [Sentiment Analysis](https://www.assemblyai.com/docs/models/sentiment-analysis) is enabled, can be true or false */
   sentiment_analysis?: boolean | null;
   /**
    * @description An array of results for the Sentiment Analysis model, if it is enabled.
-   * See [Sentiment analysis](https://www.assemblyai.com/docs/Models/sentiment_analysis) for more information.
+   * See [Sentiment analysis](https://www.assemblyai.com/docs/models/sentiment-analysis) for more information.
    */
   sentiment_analysis_results?: SentimentAnalysisResult[] | null;
-  /** @description Whether [Speaker diarization](https://www.assemblyai.com/docs/Models/speaker_diarization) is enabled, can be true or false */
+  /** @description Whether [Speaker diarization](https://www.assemblyai.com/docs/models/speaker-diarization) is enabled, can be true or false */
   speaker_labels?: boolean | null;
-  /** @description Tell the speaker label model how many speakers it should attempt to identify, up to 10. See [Speaker diarization](https://www.assemblyai.com/docs/Models/speaker_diarization) for more details. */
+  /** @description Tell the speaker label model how many speakers it should attempt to identify, up to 10. See [Speaker diarization](https://www.assemblyai.com/docs/models/speaker-diarization) for more details. */
   speakers_expected?: number | null;
   /**
    * Format: float
@@ -603,16 +2096,16 @@ export type Transcript = {
   speed_boost?: boolean | null;
   /** @description The status of your transcript. Possible values are queued, processing, completed, or error. */
   status: TranscriptStatus;
-  /** @description Whether [Summarization](https://www.assemblyai.com/docs/Models/summarization) is enabled, either true or false */
+  /** @description Whether [Summarization](https://www.assemblyai.com/docs/models/summarization) is enabled, either true or false */
   summarization: boolean;
-  /** @description The generated summary of the media file, if [Summarization](https://www.assemblyai.com/docs/Models/summarization) is enabled */
+  /** @description The generated summary of the media file, if [Summarization](https://www.assemblyai.com/docs/models/summarization) is enabled */
   summary?: string | null;
   /**
    * @description The Summarization model used to generate the summary,
-   * if [Summarization](https://www.assemblyai.com/docs/Models/summarization) is enabled
+   * if [Summarization](https://www.assemblyai.com/docs/models/summarization) is enabled
    */
   summary_model?: string | null;
-  /** @description The type of summary generated, if [Summarization](https://www.assemblyai.com/docs/Models/summarization) is enabled */
+  /** @description The type of summary generated, if [Summarization](https://www.assemblyai.com/docs/models/summarization) is enabled */
   summary_type?: string | null;
   /** @description The textual transcript of your media file */
   text?: string | null;
@@ -622,7 +2115,7 @@ export type Transcript = {
   topics?: string[];
   /**
    * @description When dual_channel or speaker_labels is enabled, a list of turn-by-turn utterance objects.
-   * See [Speaker diarization](https://www.assemblyai.com/docs/Models/speaker_diarization) for more information.
+   * See [Speaker diarization](https://www.assemblyai.com/docs/models/speaker-diarization) for more information.
    */
   utterances?: TranscriptUtterance[] | null;
   /** @description Whether webhook authentication details were provided */
@@ -637,7 +2130,7 @@ export type Transcript = {
   word_boost?: string[];
   /**
    * @description An array of temporally-sequential word objects, one for each word in the transcript.
-   * See [Speech recognition](https://www.assemblyai.com/docs/Models/speech_recognition) for more information.
+   * See [Speech recognition](https://www.assemblyai.com/docs/models/speech-recognition) for more information.
    */
   words?: TranscriptWord[] | null;
 };
@@ -648,7 +2141,15 @@ export type Transcript = {
  */
 export type TranscriptBoostParam = "low" | "default" | "high";
 
-/** @description Object containing words or phrases to replace, and the word or phrase to replace with */
+/**
+ * @description Object containing words or phrases to replace, and the word or phrase to replace with
+ * @example {
+ *   "from": [
+ *     "dicarlo"
+ *   ],
+ *   "to": "Decarlo"
+ * }
+ */
 export type TranscriptCustomSpelling = {
   /** @description Words or phrases to replace */
   from: string[];
@@ -657,7 +2158,7 @@ export type TranscriptCustomSpelling = {
 };
 
 /**
- * @description The language of your audio file. Possible values are found in [Supported Languages](https://www.assemblyai.com/docs/Concepts/supported_languages).
+ * @description The language of your audio file. Possible values are found in [Supported Languages](https://www.assemblyai.com/docs/concepts/supported-languages).
  * The default value is 'en_us'.
  *
  * @default en_us
@@ -685,33 +2186,118 @@ export type TranscriptLanguageCode =
   | "uk"
   | "vi";
 
+/**
+ * @example {
+ *   "page_details": {
+ *     "limit": 2,
+ *     "result_count": 2,
+ *     "current_url": "https://api.assemblyai.com/v2/transcript?limit=2",
+ *     "prev_url": "https://api.assemblyai.com/v2/transcript?limit=2&before_id=62npeahu2b-a8ea-4112-854c-69542c20d90c",
+ *     "next_url": "https://api.assemblyai.com/v2/transcript?limit=2&after_id=62nfw3mlar-01ad-4631-92f6-629929496eed"
+ *   },
+ *   "transcripts": [
+ *     {
+ *       "id": "9ea68fd3-f953-42c1-9742-976c447fb463",
+ *       "resource_url": "https://api.assemblyai.com/v2/transcript/9ea68fd3-f953-42c1-9742-976c447fb463",
+ *       "status": "completed",
+ *       "created": "2023-11-02T21:49:25.586965",
+ *       "completed": "2023-11-02T21:49:25.586965",
+ *       "audio_url": "https://github.com/AssemblyAI-Examples/audio-examples/raw/main/20230607_me_canadian_wildfires.mp3"
+ *     },
+ *     {
+ *       "id": "d5a3d302-066e-43fb-b63b-8f57baf185db",
+ *       "resource_url": "https://api.assemblyai.com/v2/transcript/d5a3d302-066e-43fb-b63b-8f57baf185db",
+ *       "status": "completed",
+ *       "created": "2023-11-02T21:49:25.586965",
+ *       "completed": "2023-11-02T21:49:25.586965",
+ *       "audio_url": "http://deleted_by_user"
+ *     }
+ *   ]
+ * }
+ */
 export type TranscriptList = {
   page_details: PageDetails;
   transcripts: TranscriptListItem[];
 };
 
+/**
+ * @example {
+ *   "id": "9ea68fd3-f953-42c1-9742-976c447fb463",
+ *   "resource_url": "https://api.assemblyai.com/v2/transcript/9ea68fd3-f953-42c1-9742-976c447fb463",
+ *   "status": "completed",
+ *   "created": "2023-11-02T21:49:25.586965",
+ *   "completed": "2023-11-02T21:49:25.586965",
+ *   "audio_url": "https://github.com/AssemblyAI-Examples/audio-examples/raw/main/20230607_me_canadian_wildfires.mp3"
+ * }
+ */
 export type TranscriptListItem = {
   audio_url: string;
   completed?: Date;
   created: Date;
+  /** Format: uuid */
   id: string;
   resource_url: string;
   status: TranscriptStatus;
 };
 
-/** @description The parameters for creating a transcript */
+/**
+ * @description The parameters for creating a transcript
+ * @example {
+ *   "language_code": "en_us",
+ *   "punctuate": true,
+ *   "format_text": true,
+ *   "dual_channel": true,
+ *   "webhook_url": "https://your-webhook-url/path",
+ *   "webhook_auth_header_name": "webhook-secret",
+ *   "webhook_auth_header_value": "webhook-secret-value",
+ *   "auto_highlights": true,
+ *   "audio_start_from": 10,
+ *   "audio_end_at": 280,
+ *   "word_boost": [
+ *     "aws",
+ *     "azure",
+ *     "google cloud"
+ *   ],
+ *   "boost_param": "high",
+ *   "filter_profanity": true,
+ *   "redact_pii": true,
+ *   "redact_pii_audio": true,
+ *   "redact_pii_audio_quality": "mp3",
+ *   "redact_pii_policies": [
+ *     "us_social_security_number",
+ *     "credit_card_number"
+ *   ],
+ *   "redact_pii_sub": "hash",
+ *   "speaker_labels": true,
+ *   "speakers_expected": 2,
+ *   "content_safety": true,
+ *   "iab_categories": true,
+ *   "language_detection": false,
+ *   "custom_spelling": [],
+ *   "disfluencies": false,
+ *   "sentiment_analysis": true,
+ *   "auto_chapters": true,
+ *   "entity_detection": true,
+ *   "speech_threshold": 0.5,
+ *   "summarization": true,
+ *   "summary_model": "informative",
+ *   "summary_type": "bullets",
+ *   "custom_topics": true,
+ *   "topics": []
+ * }
+ */
 export type TranscriptOptionalParams = {
   /** @description The point in time, in milliseconds, to stop transcribing in your media file */
   audio_end_at?: number;
   /** @description The point in time, in milliseconds, to begin transcribing in your media file */
   audio_start_from?: number;
-  /** @description Enable [Auto Chapters](https://www.assemblyai.com/docs/Models/auto_chapters), can be true or false */
+  /** @description Enable [Auto Chapters](https://www.assemblyai.com/docs/models/auto-chapters), can be true or false */
   auto_chapters?: boolean;
   /** @description Whether Key Phrases is enabled, either true or false */
   auto_highlights?: boolean;
   /** @description The word boost parameter value */
   boost_param?: TranscriptBoostParam;
-  /** @description Enable [Content Moderation](https://www.assemblyai.com/docs/Models/content_moderation), can be true or false */
+  /** @description Enable [Content Moderation](https://www.assemblyai.com/docs/models/content-moderation), can be true or false */
   content_safety?: boolean;
   /** @description Customize how words are spelled and formatted using to and from values */
   custom_spelling?: TranscriptCustomSpelling[];
@@ -719,44 +2305,44 @@ export type TranscriptOptionalParams = {
   custom_topics?: boolean;
   /** @description Transcribe Filler Words, like "umm", in your media file; can be true or false */
   disfluencies?: boolean;
-  /** @description Enable [Dual Channel](https://assemblyai.com/docs/Models/speech_recognition#dual-channel-transcription) transcription, can be true or false */
+  /** @description Enable [Dual Channel](https://www.assemblyai.com/docs/models/speech-recognition#dual-channel-transcription) transcription, can be true or false. */
   dual_channel?: boolean;
-  /** @description Enable [Entity Detection](https://www.assemblyai.com/docs/Models/entity_detection), can be true or false */
+  /** @description Enable [Entity Detection](https://www.assemblyai.com/docs/models/entity-detection), can be true or false */
   entity_detection?: boolean;
   /** @description Filter profanity from the transcribed text, can be true or false */
   filter_profanity?: boolean;
   /** @description Enable Text Formatting, can be true or false */
   format_text?: boolean;
-  /** @description Enable [Topic Detection](https://www.assemblyai.com/docs/Models/iab_classification), can be true or false */
+  /** @description Enable [Topic Detection](https://www.assemblyai.com/docs/models/topic-detection), can be true or false */
   iab_categories?: boolean;
   /**
-   * @description The language of your audio file. Possible values are found in [Supported Languages](https://www.assemblyai.com/docs/Concepts/supported_languages).
+   * @description The language of your audio file. Possible values are found in [Supported Languages](https://www.assemblyai.com/docs/concepts/supported-languages).
    * The default value is 'en_us'.
    */
   language_code?: TranscriptLanguageCode | null;
-  /** @description Whether [Automatic language detection](https://www.assemblyai.com/docs/Models/speech_recognition#automatic-language-detection) is enabled, either true or false */
+  /** @description Whether [Automatic language detection](https://www.assemblyai.com/docs/models/speech-recognition#automatic-language-detection) was enabled in the transcription request, either true or false. */
   language_detection?: boolean;
   /** @description Enable Automatic Punctuation, can be true or false */
   punctuate?: boolean;
   /** @description Redact PII from the transcribed text using the Redact PII model, can be true or false */
   redact_pii?: boolean;
-  /** @description Generate a copy of the original media file with spoken PII "beeped" out, can be true or false. See [PII redaction](https://www.assemblyai.com/docs/Models/pii_redaction) for more details. */
+  /** @description Generate a copy of the original media file with spoken PII "beeped" out, can be true or false. See [PII redaction](https://www.assemblyai.com/docs/models/pii-redaction) for more details. */
   redact_pii_audio?: boolean;
   /**
-   * @description Controls the filetype of the audio created by redact_pii_audio. Currently supports mp3 (default) and wav. See [PII redaction](https://www.assemblyai.com/docs/Models/pii_redaction) for more details.
+   * @description Controls the filetype of the audio created by redact_pii_audio. Currently supports mp3 (default) and wav. See [PII redaction](https://www.assemblyai.com/docs/models/pii-redaction) for more details.
    * @default mp3
    */
   redact_pii_audio_quality?: string;
-  /** @description The list of PII Redaction policies to enable. See [PII redaction](https://www.assemblyai.com/docs/Models/pii_redaction) for more details. */
+  /** @description The list of PII Redaction policies to enable. See [PII redaction](https://www.assemblyai.com/docs/models/pii-redaction) for more details. */
   redact_pii_policies?: PiiPolicy[];
-  /** @description The replacement logic for detected PII, can be "entity_type" or "hash". See [PII redaction](https://www.assemblyai.com/docs/Models/pii_redaction) for more details. */
+  /** @description The replacement logic for detected PII, can be "entity_type" or "hash". See [PII redaction](https://www.assemblyai.com/docs/models/pii-redaction) for more details. */
   redact_pii_sub?: SubstitutionPolicy | null;
-  /** @description Enable [Sentiment Analysis](https://www.assemblyai.com/docs/Models/sentiment_analysis), can be true or false */
+  /** @description Enable [Sentiment Analysis](https://www.assemblyai.com/docs/models/sentiment-analysis), can be true or false */
   sentiment_analysis?: boolean;
-  /** @description Enable [Speaker diarization](https://www.assemblyai.com/docs/Models/speaker_diarization), can be true or false */
+  /** @description Enable [Speaker diarization](https://www.assemblyai.com/docs/models/speaker-diarization), can be true or false */
   speaker_labels?: boolean;
   /**
-   * @description Tell the speaker label model how many speakers it should attempt to identify, up to 10. See [Speaker diarization](https://www.assemblyai.com/docs/Models/speaker_diarization) for more details.
+   * @description Tells the speaker label model how many speakers it should attempt to identify, up to 10. See [Speaker diarization](https://www.assemblyai.com/docs/models/speaker-diarization) for more details.
    * @default null
    */
   speakers_expected?: number | null;
@@ -768,7 +2354,7 @@ export type TranscriptOptionalParams = {
    * @default null
    */
   speech_threshold?: number | null;
-  /** @description Enable [Summarization](https://www.assemblyai.com/docs/Models/summarization), can be true or false */
+  /** @description Enable [Summarization](https://www.assemblyai.com/docs/models/summarization), can be true or false */
   summarization?: boolean;
   /**
    * @description The model to summarize the transcript
@@ -798,10 +2384,50 @@ export type TranscriptOptionalParams = {
   word_boost?: string[];
 };
 
+/**
+ * @example {
+ *   "text": "Smoke from hundreds of wildfires in Canada is triggering air quality alerts throughout the US. Skylines from Maine to Maryland to Minnesota are gray and smoggy. And in some places, the air quality warnings include the warning to stay inside. We wanted to better understand what's happening here and why, so we called Peter Decarlo, an associate professor in the Department of Environmental Health and Engineering at Johns Hopkins University. Good morning, professor.",
+ *   "start": 250,
+ *   "end": 26950,
+ *   "confidence": 0.73033,
+ *   "words": [
+ *     {
+ *       "text": "Smoke",
+ *       "start": 250,
+ *       "end": 650,
+ *       "confidence": 0.73033,
+ *       "speaker": null
+ *     },
+ *     {
+ *       "text": "from",
+ *       "start": 730,
+ *       "end": 1022,
+ *       "confidence": 1,
+ *       "speaker": null
+ *     },
+ *     {
+ *       "text": "hundreds",
+ *       "start": 1076,
+ *       "end": 1466,
+ *       "confidence": 0.99992,
+ *       "speaker": null
+ *     },
+ *     {
+ *       "text": "of",
+ *       "start": 1498,
+ *       "end": 1646,
+ *       "confidence": 1,
+ *       "speaker": null
+ *     }
+ *   ]
+ * }
+ */
 export type TranscriptParagraph = {
   /** Format: double */
   confidence: number;
   end: number;
+  /** @description The speaker of the sentence if [Speaker Diarization](https://www.assemblyai.com/docs/models/speaker-diarization) is enabled, else null */
+  speaker?: string | null;
   start: number;
   text: string;
   words: TranscriptWord[];
@@ -813,10 +2439,51 @@ export type TranscriptParams = TranscriptOptionalParams & {
   audio_url: string;
 };
 
+/**
+ * @example {
+ *   "text": "Smoke from hundreds of wildfires in Canada is triggering air quality alerts throughout the US.",
+ *   "start": 250,
+ *   "end": 6350,
+ *   "confidence": 0.72412,
+ *   "words": [
+ *     {
+ *       "text": "Smoke",
+ *       "start": 250,
+ *       "end": 650,
+ *       "confidence": 0.72412,
+ *       "speaker": null
+ *     },
+ *     {
+ *       "text": "from",
+ *       "start": 730,
+ *       "end": 1022,
+ *       "confidence": 0.99996,
+ *       "speaker": null
+ *     },
+ *     {
+ *       "text": "hundreds",
+ *       "start": 1076,
+ *       "end": 1466,
+ *       "confidence": 0.99992,
+ *       "speaker": null
+ *     },
+ *     {
+ *       "text": "of",
+ *       "start": 1498,
+ *       "end": 1646,
+ *       "confidence": 1,
+ *       "speaker": null
+ *     }
+ *   ],
+ *   "speaker": null
+ * }
+ */
 export type TranscriptSentence = {
   /** Format: double */
   confidence: number;
   end: number;
+  /** @description The speaker of the sentence if [Speaker Diarization](https://www.assemblyai.com/docs/models/speaker-diarization) is enabled, else null */
+  speaker?: string | null;
   start: number;
   text: string;
   words: TranscriptWord[];
@@ -828,6 +2495,122 @@ export type TranscriptSentence = {
  */
 export type TranscriptStatus = "queued" | "processing" | "completed" | "error";
 
+/**
+ * @example {
+ *   "confidence": 0.9359033333333334,
+ *   "end": 26950,
+ *   "speaker": "A",
+ *   "start": 250,
+ *   "text": "Smoke from hundreds of wildfires in Canada is triggering air quality alerts throughout the US. Skylines from Maine to Maryland to Minnesota are gray and smoggy. And in some places, the air quality warnings include the warning to stay inside. We wanted to better understand what's happening here and why, so we called Peter de Carlo, an associate professor in the Department of Environmental Health and Engineering at Johns Hopkins University Varsity. Good morning, professor.",
+ *   "words": [
+ *     {
+ *       "text": "Smoke",
+ *       "start": 250,
+ *       "end": 650,
+ *       "confidence": 0.97503,
+ *       "speaker": "A"
+ *     },
+ *     {
+ *       "text": "from",
+ *       "start": 730,
+ *       "end": 1022,
+ *       "confidence": 0.99999,
+ *       "speaker": "A"
+ *     },
+ *     {
+ *       "text": "hundreds",
+ *       "start": 1076,
+ *       "end": 1418,
+ *       "confidence": 0.99843,
+ *       "speaker": "A"
+ *     },
+ *     {
+ *       "text": "of",
+ *       "start": 1434,
+ *       "end": 1614,
+ *       "confidence": 0.85,
+ *       "speaker": "A"
+ *     },
+ *     {
+ *       "text": "wildfires",
+ *       "start": 1652,
+ *       "end": 2346,
+ *       "confidence": 0.89657,
+ *       "speaker": "A"
+ *     },
+ *     {
+ *       "text": "in",
+ *       "start": 2378,
+ *       "end": 2526,
+ *       "confidence": 0.99994,
+ *       "speaker": "A"
+ *     },
+ *     {
+ *       "text": "Canada",
+ *       "start": 2548,
+ *       "end": 3130,
+ *       "confidence": 0.93864,
+ *       "speaker": "A"
+ *     },
+ *     {
+ *       "text": "is",
+ *       "start": 3210,
+ *       "end": 3454,
+ *       "confidence": 0.999,
+ *       "speaker": "A"
+ *     },
+ *     {
+ *       "text": "triggering",
+ *       "start": 3492,
+ *       "end": 3946,
+ *       "confidence": 0.75366,
+ *       "speaker": "A"
+ *     },
+ *     {
+ *       "text": "air",
+ *       "start": 3978,
+ *       "end": 4174,
+ *       "confidence": 1,
+ *       "speaker": "A"
+ *     },
+ *     {
+ *       "text": "quality",
+ *       "start": 4212,
+ *       "end": 4558,
+ *       "confidence": 0.87745,
+ *       "speaker": "A"
+ *     },
+ *     {
+ *       "text": "alerts",
+ *       "start": 4644,
+ *       "end": 5114,
+ *       "confidence": 0.94739,
+ *       "speaker": "A"
+ *     },
+ *     {
+ *       "text": "throughout",
+ *       "start": 5162,
+ *       "end": 5466,
+ *       "confidence": 0.99726,
+ *       "speaker": "A"
+ *     },
+ *     {
+ *       "text": "the",
+ *       "start": 5498,
+ *       "end": 5694,
+ *       "confidence": 0.79,
+ *       "speaker": "A"
+ *     },
+ *     {
+ *       "text": "US.",
+ *       "start": 5732,
+ *       "end": 6382,
+ *       "confidence": 0.88,
+ *       "speaker": "A"
+ *     }
+ *   ]
+ * }
+ */
 export type TranscriptUtterance = {
   /**
    * Format: double
@@ -846,20 +2629,75 @@ export type TranscriptUtterance = {
   words: TranscriptWord[];
 };
 
+/**
+ * @example {
+ *   "text": "Smoke",
+ *   "start": 250,
+ *   "end": 650,
+ *   "confidence": 0.97465,
+ *   "speaker": null
+ * }
+ */
 export type TranscriptWord = {
   /** Format: double */
   confidence: number;
   end: number;
+  /** @description The speaker of the sentence if [Speaker Diarization](https://www.assemblyai.com/docs/models/speaker-diarization) is enabled, else null */
   speaker?: string | null;
   start: number;
   text: string;
 };
 
+/**
+ * @example {
+ *   "upload_url": "https://cdn.assemblyai.com/upload/f756988d-47e2-4ca3-96ce-04bb168f8f2a"
+ * }
+ */
 export type UploadedFile = {
   /** @description A URL that points to your audio file, accessible only by AssemblyAI's servers */
   upload_url: string;
 };
 
+/**
+ * @example {
+ *   "text": "smoke",
+ *   "count": 6,
+ *   "timestamps": [
+ *     [
+ *       250,
+ *       650
+ *     ],
+ *     [
+ *       49168,
+ *       49398
+ *     ],
+ *     [
+ *       55284,
+ *       55594
+ *     ],
+ *     [
+ *       168888,
+ *       169118
+ *     ],
+ *     [
+ *       215108,
+ *       215386
+ *     ],
+ *     [
+ *       225944,
+ *       226170
+ *     ]
+ *   ],
+ *   "indexes": [
+ *     0,
+ *     136,
+ *     156,
+ *     486,
+ *     652,
+ *     698
+ *   ]
+ * }
+ */
 export type WordSearchMatch = {
   /** @description The total amount of times the word is in the transcript */
   count: number;
@@ -871,8 +2709,85 @@ export type WordSearchMatch = {
   timestamps: WordSearchTimestamp[];
 };
 
+/**
+ * @example {
+ *   "id": "d5a3d302-066e-43fb-b63b-8f57baf185db",
+ *   "total_count": 10,
+ *   "matches": [
+ *     {
+ *       "text": "smoke",
+ *       "count": 6,
+ *       "timestamps": [
+ *         [
+ *           250,
+ *           650
+ *         ],
+ *         [
+ *           49168,
+ *           49398
+ *         ],
+ *         [
+ *           55284,
+ *           55594
+ *         ],
+ *         [
+ *           168888,
+ *           169118
+ *         ],
+ *         [
+ *           215108,
+ *           215386
+ *         ],
+ *         [
+ *           225944,
+ *           226170
+ *         ]
+ *       ],
+ *       "indexes": [
+ *         0,
+ *         136,
+ *         156,
+ *         486,
+ *         652,
+ *         698
+ *       ]
+ *     },
+ *     {
+ *       "text": "wildfires",
+ *       "count": 4,
+ *       "timestamps": [
+ *         [
+ *           1668,
+ *           2346
+ *         ],
+ *         [
+ *           33852,
+ *           34546
+ *         ],
+ *         [
+ *           50118,
+ *           51110
+ *         ],
+ *         [
+ *           231356,
+ *           232354
+ *         ]
+ *       ],
+ *       "indexes": [
+ *         4,
+ *         90,
+ *         140,
+ *         716
+ *       ]
+ *     }
+ *   ]
+ * }
+ */
 export type WordSearchResponse = {
-  /** @description The ID of the transcript */
+  /**
+   * Format: uuid
+   * @description The ID of the transcript
+   */
   id: string;
   /** @description The matches of the search */
   matches: WordSearchMatch[];
@@ -880,5 +2795,11 @@ export type WordSearchResponse = {
   total_count: number;
 };
 
-/** @description An array of timestamps structured as [`start_time`, `end_time`] in milliseconds */
+/**
+ * @description An array of timestamps structured as [`start_time`, `end_time`] in milliseconds
+ * @example [
+ *   250,
+ *   650
+ * ]
+ */
 export type WordSearchTimestamp = number[];
