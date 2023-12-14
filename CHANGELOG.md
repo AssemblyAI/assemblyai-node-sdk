@@ -1,6 +1,17 @@
 # Changelog
 
-## [4.0.0]
+## [4.0.1] - 2023-12-14
+
+### Added
+
+- Add `"assemblyai/mistral-7b"` to `LemurModel` type
+
+### Changed
+
+- Update types with `@example`
+- Update types with `Format: uuid` if applicable
+
+## [4.0.0] - 2023-12-08
 
 ### Added
 
