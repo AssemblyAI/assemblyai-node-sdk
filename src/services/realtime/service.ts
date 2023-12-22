@@ -10,6 +10,7 @@ import {
   PartialTranscript,
   FinalTranscript,
   SessionBeginsEventData,
+  AudioEncoding,
 } from "../..";
 import {
   RealtimeError,
@@ -23,6 +24,7 @@ export class RealtimeService {
   private realtimeUrl: string;
   private sampleRate: number;
   private wordBoost?: string[];
+  private encoding?: AudioEncoding;
   private apiKey?: string;
   private token?: string;
   private socket?: WebSocket;
@@ -33,10 +35,11 @@ export class RealtimeService {
     this.realtimeUrl = params.realtimeUrl ?? defaultRealtimeUrl;
     this.sampleRate = params.sampleRate ?? 16_000;
     this.wordBoost = params.wordBoost;
-    if ("apiKey" in params && params.apiKey) this.apiKey = params.apiKey;
+    this.encoding = params.encoding;
     if ("token" in params && params.token) this.token = params.token;
+    if ("apiKey" in params && params.apiKey) this.apiKey = params.apiKey;
 
-    if (!(this.apiKey || this.token)) {
+    if (!(this.token || this.apiKey)) {
       throw new Error("API key or temporary token is required.");
     }
   }
@@ -55,6 +58,9 @@ export class RealtimeService {
     searchParams.set("sample_rate", this.sampleRate.toString());
     if (this.wordBoost && this.wordBoost.length > 0) {
       searchParams.set("word_boost", JSON.stringify(this.wordBoost));
+    }
+    if (this.encoding) {
+      searchParams.set("encoding", this.encoding);
     }
     url.search = searchParams.toString();
 

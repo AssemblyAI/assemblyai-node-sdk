@@ -12,21 +12,20 @@ import {
 } from "../src";
 
 const client = new AssemblyAI({
-  apiKey: process.env.ASSEMBLYAI_API_KEY || "",
+  apiKey: process.env.ASSEMBLYAI_API_KEY!,
 });
 
 (async function transcribeUsingRealtime() {
   const useToken = false;
-  let token: undefined | string = undefined;
-  if (useToken) {
-    token = await client.realtime.createTemporaryToken({
-      expires_in: 480,
-    });
-  }
   const serviceParams: CreateRealtimeServiceParams = {
     sampleRate: 16_000,
     wordBoost: ["gore", "climate"],
-    token: token,
+    token: useToken
+      ? await client.realtime.createTemporaryToken({
+          expires_in: 480,
+        })
+      : undefined,
+    encoding: "pcm_s16le",
   };
   const rt = client.realtime.createService(serviceParams);
 
@@ -51,7 +50,7 @@ const client = new AssemblyAI({
     await rt.connect();
 
     const chunkSize = 8 * 1024;
-    const audio = createReadStream("./tests/static/gore-short.wav", {
+    const audio = createReadStream("./tests/static/gore.wav", {
       highWaterMark: chunkSize,
     });
     for await (const chunk of audio) {

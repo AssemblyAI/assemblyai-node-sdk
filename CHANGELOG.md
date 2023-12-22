@@ -1,5 +1,17 @@
 # Changelog
 
+## [4.1.0] - 2023-12-22
+
+### Added
+
+- Add `"anthropic/claude-2-1"` to `LemurModel` type
+- Add `encoding` option to the real-time service and factory. `encoding` can be `"pcm_s16le"` or `"pcm_mulaw"`.
+- `"pcm_mulaw"` is a newly supported audio encoding for the real-time service.
+
+### Changed
+
+- Allow any string into `final_model` for LeMUR requests
+
 ## [4.0.1] - 2023-12-14
 
 ### Added
