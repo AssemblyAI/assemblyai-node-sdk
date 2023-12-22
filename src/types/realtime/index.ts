@@ -1,4 +1,5 @@
 import {
+  AudioEncoding,
   FinalTranscript,
   PartialTranscript,
   RealtimeTranscript,
@@ -9,6 +10,7 @@ type CreateRealtimeServiceParams = {
   realtimeUrl?: string;
   sampleRate?: number;
   wordBoost?: string[];
+  encoding?: AudioEncoding;
 } & (
   | {
       apiKey?: string;
@@ -22,6 +24,7 @@ type RealtimeServiceParams = {
   realtimeUrl?: string;
   sampleRate?: number;
   wordBoost?: string[];
+  encoding?: AudioEncoding;
 } & (
   | {
       apiKey: string;

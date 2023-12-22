@@ -2,6 +2,8 @@
 /* tslint:disable */
 /* eslint-disable */
 
+import { LiteralUnion } from "./helpers";
+
 /** OneOf type helpers */
 type Without<T, U> = { [P in Exclude<keyof T, keyof U>]?: never };
 type XOR<T, U> = T | U extends object
@@ -512,7 +514,7 @@ export type LemurBaseParams = {
       }
     ]
   >;
-  final_model?: LemurModel;
+  final_model?: LiteralUnion<LemurModel, string>;
   /**
    * @description Custom formatted transcript data. Maximum size is the context limit of the selected model, which defaults to 100000.
    * Use either transcript_ids or input_text as input into LeMUR.
@@ -552,7 +554,11 @@ export type LemurBaseResponse = {
  *
  * @enum {string}
  */
-export type LemurModel = "default" | "basic" | "assemblyai/mistral-7b";
+export type LemurModel =
+  | "default"
+  | "basic"
+  | "assemblyai/mistral-7b"
+  | "anthropic/claude-2-1";
 
 /**
  * @example {

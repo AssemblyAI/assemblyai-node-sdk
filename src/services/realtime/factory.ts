@@ -16,12 +16,12 @@ export class RealtimeServiceFactory extends BaseService {
   }
 
   createService(params?: CreateRealtimeServiceParams): RealtimeService {
-    if (!params) params = { apiKey: this.rtFactoryParams.apiKey };
-    else if (!("token" in params) && !params.apiKey) {
-      params.apiKey = this.rtFactoryParams.apiKey;
+    const serviceParams = { ...params } as Record<string, unknown>;
+    if (!serviceParams.token && !serviceParams.apiKey) {
+      serviceParams.apiKey = this.rtFactoryParams.apiKey;
     }
 
-    return new RealtimeService(params as RealtimeServiceParams);
+    return new RealtimeService(serviceParams as RealtimeServiceParams);
   }
 
   async createTemporaryToken(params: RealtimeTokenParams) {

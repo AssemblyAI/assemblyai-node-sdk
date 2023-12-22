@@ -2,6 +2,8 @@
 /* tslint:disable */
 /* eslint-disable */
 
+import { LiteralUnion } from "./helpers";
+
 /** OneOf type helpers */
 type Without<T, U> = { [P in Exclude<keyof T, keyof U>]?: never };
 type XOR<T, U> = T | U extends object
@@ -17,6 +19,13 @@ export type AudioData = {
   /** @description Base64 encoded raw audio data */
   audio_data: string;
 };
+
+/**
+ * @description The encoding of the audio data
+ * @default pcm_s16le
+ * @enum {string}
+ */
+export type AudioEncoding = "pcm_s16le" | "pcm_mulaw";
 
 export type FinalTranscript = RealtimeBaseTranscript & {
   /**
