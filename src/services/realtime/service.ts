@@ -102,6 +102,7 @@ export class RealtimeService {
           headers: { Authorization: this.apiKey },
         });
       }
+      this.socket.binaryType = "arraybuffer";
 
       this.socket.onclose = ({ code, reason }: CloseEvent) => {
         if (!reason) {
@@ -160,23 +161,7 @@ export class RealtimeService {
     if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
       throw new Error("Socket is not open for communication");
     }
-    let audioData;
-    if (typeof Buffer !== "undefined") {
-      audioData = Buffer.from(audio).toString("base64");
-    } else {
-      // Buffer is not available in the browser by default
-      // https://stackoverflow.com/a/42334410/2919731
-      audioData = btoa(
-        new Uint8Array(audio).reduce(
-          (data, byte) => data + String.fromCharCode(byte),
-          ""
-        )
-      );
-    }
-    const payload = {
-      audio_data: audioData,
-    };
-    this.socket.send(JSON.stringify(payload));
+    this.socket.send(audio);
   }
 
   stream(): WritableStream<ArrayBufferLike> {

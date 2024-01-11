@@ -136,9 +136,7 @@ describe("realtime", () => {
   it("can send audio", async () => {
     const data = new ArrayBuffer(8);
     rt.sendAudio(data);
-    await expect(server).toReceiveMessage(
-      JSON.stringify({ audio_data: Buffer.from(data).toString("base64") })
-    );
+    await expect(server).toReceiveMessage(data);
   });
 
   it("can send audio using stream", async () => {
@@ -146,10 +144,9 @@ describe("realtime", () => {
     const writer = stream.writable.getWriter();
     stream.readable.pipeTo(rt.stream());
     await writer.ready;
-    writer.write(Buffer.alloc(5_000));
-    await expect(server).toReceiveMessage(
-      JSON.stringify({ audio_data: Buffer.alloc(5_000).toString("base64") })
-    );
+    const data = Buffer.alloc(5_000);
+    writer.write(data);
+    await expect(server).toReceiveMessage(data);
   });
 
   it("can receive transcript", () => {
