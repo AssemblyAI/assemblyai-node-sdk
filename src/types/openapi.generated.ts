@@ -514,6 +514,12 @@ export type LemurBaseParams = {
       }
     ]
   >;
+  /**
+   * @description The model that is used for the final prompt after compression is performed.
+   * Defaults to "default".
+   *
+   * @default default
+   */
   final_model?: LiteralUnion<LemurModel, string>;
   /**
    * @description Custom formatted transcript data. Maximum size is the context limit of the selected model, which defaults to 100000.
@@ -2305,6 +2311,8 @@ export type TranscriptOptionalParams = {
   boost_param?: TranscriptBoostParam;
   /** @description Enable [Content Moderation](https://www.assemblyai.com/docs/models/content-moderation), can be true or false */
   content_safety?: boolean;
+  /** @description The confidence threshold for content moderation. Values must be between 25 and 100. */
+  content_safety_confidence?: number;
   /** @description Customize how words are spelled and formatted using to and from values */
   custom_spelling?: TranscriptCustomSpelling[];
   /** @description Whether custom topics is enabled, either true or false */

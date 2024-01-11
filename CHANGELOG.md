@@ -1,5 +1,15 @@
 # Changelog
 
+## [4.2.0] - 2024-01-11
+
+### Added
+
+- Add `content_safety_confidence` to `TranscriptParams` & `TranscriptOptionalParams`.
+
+### Changed
+
+- The `RealtimeService` now sends audio as binary instead of a base64-encoded JSON object.
+
 ## [4.1.0] - 2023-12-22
 
 ### Added
