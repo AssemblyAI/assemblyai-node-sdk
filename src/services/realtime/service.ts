@@ -4,13 +4,14 @@ import { ErrorEvent, MessageEvent, CloseEvent } from "ws";
 import {
   RealtimeEvents,
   RealtimeListeners,
-  RealtimeServiceParams,
+  RealtimeTranscriberParams,
   RealtimeMessage,
   RealtimeTranscript,
   PartialTranscript,
   FinalTranscript,
   SessionBeginsEventData,
   AudioEncoding,
+  AudioData,
 } from "../..";
 import {
   RealtimeError,
@@ -20,7 +21,7 @@ import {
 
 const defaultRealtimeUrl = "wss://api.assemblyai.com/v2/realtime/ws";
 
-export class RealtimeService {
+export class RealtimeTranscriber {
   private realtimeUrl: string;
   private sampleRate: number;
   private wordBoost?: string[];
@@ -31,7 +32,7 @@ export class RealtimeService {
   private listeners: RealtimeListeners = {};
   private sessionTerminatedResolve?: () => void;
 
-  constructor(params: RealtimeServiceParams) {
+  constructor(params: RealtimeTranscriberParams) {
     this.realtimeUrl = params.realtimeUrl ?? defaultRealtimeUrl;
     this.sampleRate = params.sampleRate ?? 16_000;
     this.wordBoost = params.wordBoost;
@@ -157,16 +158,16 @@ export class RealtimeService {
     });
   }
 
-  sendAudio(audio: ArrayBufferLike) {
+  sendAudio(audio: AudioData) {
     if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
       throw new Error("Socket is not open for communication");
     }
     this.socket.send(audio);
   }
 
-  stream(): WritableStream<ArrayBufferLike> {
-    return new WritableStream<ArrayBufferLike>({
-      write: (chunk: ArrayBufferLike) => {
+  stream(): WritableStream<AudioData> {
+    return new WritableStream<AudioData>({
+      write: (chunk: AudioData) => {
         this.sendAudio(chunk);
       },
     });
@@ -194,3 +195,8 @@ export class RealtimeService {
     this.socket = undefined;
   }
 }
+
+/**
+ * @deprecated Use RealtimeTranscriber instead
+ */
+export class RealtimeService extends RealtimeTranscriber {}

@@ -1,27 +1,35 @@
 import {
   BaseServiceParams,
   RealtimeTokenParams,
-  CreateRealtimeServiceParams,
-  RealtimeServiceParams,
+  CreateRealtimeTranscriberParams,
+  RealtimeTranscriberParams,
   RealtimeTemporaryTokenResponse,
+  CreateRealtimeServiceParams,
 } from "../..";
-import { RealtimeService } from "./service";
+import { RealtimeService, RealtimeTranscriber } from "./service";
 import { BaseService } from "../base";
 
-export class RealtimeServiceFactory extends BaseService {
+export class RealtimeTranscriberFactory extends BaseService {
   private rtFactoryParams: BaseServiceParams;
   constructor(params: BaseServiceParams) {
     super(params);
     this.rtFactoryParams = params;
   }
 
+  /**
+   * @deprecated Use transcriber(...) instead
+   */
   createService(params?: CreateRealtimeServiceParams): RealtimeService {
+    return this.transcriber(params);
+  }
+
+  transcriber(params?: CreateRealtimeTranscriberParams): RealtimeTranscriber {
     const serviceParams = { ...params } as Record<string, unknown>;
     if (!serviceParams.token && !serviceParams.apiKey) {
       serviceParams.apiKey = this.rtFactoryParams.apiKey;
     }
 
-    return new RealtimeService(serviceParams as RealtimeServiceParams);
+    return new RealtimeTranscriber(serviceParams as RealtimeTranscriberParams);
   }
 
   async createTemporaryToken(params: RealtimeTokenParams) {
@@ -35,3 +43,8 @@ export class RealtimeServiceFactory extends BaseService {
     return data.token;
   }
 }
+
+/**
+ * @deprecated Use RealtimeTranscriberFactory instead
+ */
+export class RealtimeServiceFactory extends RealtimeTranscriberFactory {}

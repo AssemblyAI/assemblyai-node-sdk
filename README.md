@@ -184,18 +184,18 @@ const { response } = await client.lemur.task({
 });
 ```
 
-## Transcribe in real time
+## Transcribe in real-time
 
-Create the real-time service.
+Create the real-time transcriber.
 
 ```typescript
-const rt = client.realtime.createService();
+const rt = client.realtime.transcriber();
 ```
 
 You can also pass in the following options.
 
 ```typescript
-const rt = client.realtime.createService({
+const rt = client.realtime.transcriber({
   realtimeUrl: 'wss://localhost/override',
   apiKey: process.env.ASSEMBLYAI_API_KEY // The API key passed to `AssemblyAI` will be used by default,
   sampleRate: 16_000,
@@ -207,7 +207,7 @@ You can also generate a temporary auth token for real-time.
 
 ```typescript
 const token = await client.realtime.createTemporaryToken({ expires_in = 60 });
-const rt = client.realtime.createService({
+const rt = client.realtime.transcriber({
   token: token,
 });
 ```
