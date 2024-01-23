@@ -15,10 +15,11 @@ type OneOf<T extends any[]> = T extends [infer Only]
   ? OneOf<[XOR<A, B>, ...Rest]>
   : never;
 
-export type AudioData = {
-  /** @description Base64 encoded raw audio data */
-  audio_data: string;
-};
+/**
+ * Format: binary
+ * @description Binary audio data
+ */
+export type AudioData = ArrayBufferLike;
 
 /**
  * @description The encoding of the audio data

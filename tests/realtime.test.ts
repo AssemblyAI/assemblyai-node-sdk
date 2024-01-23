@@ -1,7 +1,7 @@
 import { TransformStream } from "stream/web";
 import WS from "jest-websocket-mock";
 import fetchMock from "jest-fetch-mock";
-import { AssemblyAI, RealtimeService } from "../src";
+import { AssemblyAI, RealtimeTranscriber } from "../src";
 import {
   RealtimeError,
   RealtimeErrorType,
@@ -25,16 +25,16 @@ const sessionTerminatedMessage = {
 };
 let server: WS;
 let aai: AssemblyAI;
-let rt: RealtimeService;
+let rt: RealtimeTranscriber;
 let onOpen: jest.Mock;
 
-async function connect(rt: RealtimeService, server: WS) {
+async function connect(rt: RealtimeTranscriber, server: WS) {
   const connectPromise = rt.connect();
   await server.connected;
   server.send(JSON.stringify(sessionBeginsMessage));
   await connectPromise;
 }
-async function close(rt: RealtimeService, server: WS) {
+async function close(rt: RealtimeTranscriber, server: WS) {
   const closePromise = rt.close();
   server.send(JSON.stringify(sessionTerminatedMessage));
   await closePromise;
@@ -45,7 +45,7 @@ describe("realtime", () => {
   beforeEach(async () => {
     server = new WS(realtimeUrl);
     aai = createClient();
-    rt = aai.realtime.createService({ realtimeUrl });
+    rt = aai.realtime.transcriber({ realtimeUrl });
     onOpen = jest.fn();
     rt.on("open", onOpen);
     await connect(rt, server);
@@ -64,7 +64,7 @@ describe("realtime", () => {
   });
 
   it("fails with no websocket URL", async () => {
-    const rt = new RealtimeService({
+    const rt = new RealtimeTranscriber({
       apiKey,
       realtimeUrl: "https://api.assemblyai.com",
     });
@@ -85,7 +85,7 @@ describe("realtime", () => {
     const baseUrlOverride = "wss://localhost:1235";
     const server = new WS(baseUrlOverride);
     const aai = new AssemblyAI({ apiKey });
-    const rt = aai.realtime.createService({
+    const rt = aai.realtime.transcriber({
       realtimeUrl: baseUrlOverride,
       token,
     });
@@ -98,7 +98,7 @@ describe("realtime", () => {
     const realtimeUrl = "wss://localhost:5678";
     const server = new WS(realtimeUrl);
     const aai = createClient();
-    const rt = aai.realtime.createService({ realtimeUrl, token });
+    const rt = aai.realtime.transcriber({ realtimeUrl, token });
     await connect(rt, server);
     await close(rt, server);
   });
@@ -107,7 +107,7 @@ describe("realtime", () => {
     const realtimeUrl = "wss://localhost:5678";
     const server = new WS(realtimeUrl);
     const aai = createClient();
-    const rt = aai.realtime.createService({ realtimeUrl, apiKey: "123" });
+    const rt = aai.realtime.transcriber({ realtimeUrl, apiKey: "123" });
     await connect(rt, server);
     await close(rt, server);
   });
@@ -127,7 +127,7 @@ describe("realtime", () => {
     const realtimeUrl = "wss://localhost:5678";
     const server = new WS(realtimeUrl);
     const aai = createClient();
-    const rt = aai.realtime.createService({ realtimeUrl, apiKey: "123" });
+    const rt = aai.realtime.transcriber({ realtimeUrl, apiKey: "123" });
     await connect(rt, server);
     await rt.close(false);
     await server.closed;
@@ -198,7 +198,7 @@ describe("realtime", () => {
     const realtimeUrl = "wss://localhost:5678";
     const server = new WS(realtimeUrl);
     const aai = createClient();
-    const rt = aai.realtime.createService({ realtimeUrl, apiKey: "123" });
+    const rt = aai.realtime.transcriber({ realtimeUrl, apiKey: "123" });
     const onOpen = jest.fn();
     rt.on("open", onOpen);
     await connect(rt, server);

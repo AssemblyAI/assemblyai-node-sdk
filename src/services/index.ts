@@ -1,6 +1,11 @@
 import { BaseServiceParams } from "..";
 import { LemurService } from "./lemur";
-import { RealtimeService, RealtimeServiceFactory } from "./realtime";
+import {
+  RealtimeTranscriber,
+  RealtimeTranscriberFactory,
+  RealtimeService,
+  RealtimeServiceFactory,
+} from "./realtime";
 import { TranscriptService } from "./transcripts";
 import { FileService } from "./files";
 
@@ -25,7 +30,7 @@ class AssemblyAI {
   /**
    * The realtime service.
    */
-  public realtime: RealtimeServiceFactory;
+  public realtime: RealtimeTranscriberFactory;
 
   /**
    * Create a new AssemblyAI client.
@@ -38,13 +43,15 @@ class AssemblyAI {
     this.files = new FileService(params);
     this.transcripts = new TranscriptService(params, this.files);
     this.lemur = new LemurService(params);
-    this.realtime = new RealtimeServiceFactory(params);
+    this.realtime = new RealtimeTranscriberFactory(params);
   }
 }
 
 export {
   AssemblyAI,
   LemurService,
+  RealtimeTranscriberFactory,
+  RealtimeTranscriber,
   RealtimeServiceFactory,
   RealtimeService,
   TranscriptService,

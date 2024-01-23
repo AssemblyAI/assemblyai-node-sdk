@@ -7,19 +7,8 @@ async function generateTypes(apiSpecPath: string, outputPath: string) {
     alphabetize: true,
     exportType: true,
     transform(schemaObject) {
-      if (
-        "x-fern-type" in schemaObject &&
-        schemaObject["x-fern-type"] === "datetime"
-      ) {
-        // Use Date as type instead of String, even though it will be a string.
-        // The service code manually converts the string into a Date.
-        // Fe see `TranscriptService#list`.
-        return schemaObject.nullable ? "Date | null" : "Date";
-      }
-    },
-    postTransform(type) {
-      if (type === `components["schemas"]["LemurModel"] | string`) {
-        return `LiteralUnion<components["schemas"]["LemurModel"], string>`;
+      if ("x-ts-type" in schemaObject) {
+        return schemaObject["x-ts-type"];
       }
     },
   });

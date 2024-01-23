@@ -6,7 +6,7 @@ import {
   RealtimeTranscriptType,
 } from "../asyncapi.generated";
 
-type CreateRealtimeServiceParams = {
+type CreateRealtimeTranscriberParams = {
   realtimeUrl?: string;
   sampleRate?: number;
   wordBoost?: string[];
@@ -20,7 +20,12 @@ type CreateRealtimeServiceParams = {
     }
 );
 
-type RealtimeServiceParams = {
+/**
+ * @deprecated Use CreateRealtimeTranscriberParams instead
+ */
+type CreateRealtimeServiceParams = CreateRealtimeTranscriberParams;
+
+type RealtimeTranscriberParams = {
   realtimeUrl?: string;
   sampleRate?: number;
   wordBoost?: string[];
@@ -33,6 +38,11 @@ type RealtimeServiceParams = {
       token: string;
     }
 );
+
+/**
+ * @deprecated Use RealtimeTranscriberParams instead
+ */
+type RealtimeServiceParams = RealtimeTranscriberParams;
 
 type RealtimeEvents =
   | "open"
@@ -61,6 +71,8 @@ type RealtimeTokenParams = {
 };
 
 export type {
+  CreateRealtimeTranscriberParams,
+  RealtimeTranscriberParams,
   CreateRealtimeServiceParams,
   RealtimeServiceParams,
   RealtimeEvents,

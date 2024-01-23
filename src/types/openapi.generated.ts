@@ -475,12 +475,21 @@ export type Error = {
  *     "64nygnr62k-405c-4ae8-8a6b-d90b40ff3cce"
  *   ],
  *   "context": "This is an interview about wildfires.",
+ *   "answer_format": "Bullet Points",
  *   "final_model": "default",
  *   "temperature": 0,
  *   "max_output_size": 3000
  * }
  */
-export type LemurActionItemsParams = LemurBaseParams;
+export type LemurActionItemsParams = LemurBaseParams & {
+  /**
+   * @description How you want the action items to be returned. This can be any text.
+   * Defaults to "Bullet Points".
+   *
+   * @default Bullet Points
+   */
+  answer_format?: string;
+};
 
 /**
  * @example {
@@ -930,6 +939,14 @@ export type RedactedAudioResponse = {
  * @enum {string}
  */
 export type RedactedAudioStatus = "redacted_audio_ready";
+
+/**
+ * @description Controls the filetype of the audio created by redact_pii_audio. Currently supports mp3 (default) and wav. See [PII redaction](https://www.assemblyai.com/docs/models/pii-redaction) for more details.
+ * @default mp3
+ * @example mp3
+ * @enum {string}
+ */
+export type RedactPiiAudioQuality = "mp3" | "wav";
 
 /**
  * @example {
@@ -2076,7 +2093,7 @@ export type Transcript = {
    * @description The audio quality of the PII-redacted audio file, if redact_pii_audio is enabled.
    * See [PII redaction](https://www.assemblyai.com/docs/models/pii-redaction) for more information.
    */
-  redact_pii_audio_quality?: string | null;
+  redact_pii_audio_quality?: RedactPiiAudioQuality | null;
   /**
    * @description The list of PII Redaction policies that were enabled, if PII Redaction is enabled.
    * See [PII redaction](https://www.assemblyai.com/docs/models/pii-redaction) for more information.
@@ -2244,7 +2261,7 @@ export type TranscriptList = {
  */
 export type TranscriptListItem = {
   audio_url: string;
-  completed?: Date;
+  completed: Date | null;
   created: Date;
   /** Format: uuid */
   id: string;
@@ -2346,7 +2363,7 @@ export type TranscriptOptionalParams = {
    * @description Controls the filetype of the audio created by redact_pii_audio. Currently supports mp3 (default) and wav. See [PII redaction](https://www.assemblyai.com/docs/models/pii-redaction) for more details.
    * @default mp3
    */
-  redact_pii_audio_quality?: string;
+  redact_pii_audio_quality?: RedactPiiAudioQuality;
   /** @description The list of PII Redaction policies to enable. See [PII redaction](https://www.assemblyai.com/docs/models/pii-redaction) for more details. */
   redact_pii_policies?: PiiPolicy[];
   /** @description The replacement logic for detected PII, can be "entity_type" or "hash". See [PII redaction](https://www.assemblyai.com/docs/models/pii-redaction) for more details. */
