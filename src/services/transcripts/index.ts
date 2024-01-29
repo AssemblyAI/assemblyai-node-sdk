@@ -21,6 +21,7 @@ import {
   SubmitParams,
 } from "../..";
 import { FileService } from "../files";
+import { getPath } from "../../utils/path";
 
 export class TranscriptService
   extends BaseService
@@ -247,16 +248,5 @@ export class TranscriptService
     return this.fetchJson<RedactedAudioResponse>(
       `/v2/transcript/${id}/redacted-audio`
     );
-  }
-}
-
-function getPath(path: string) {
-  let url: URL;
-  try {
-    url = new URL(path);
-    if (url.protocol === "file:") return url.pathname;
-    else return null;
-  } catch {
-    return path;
   }
 }
