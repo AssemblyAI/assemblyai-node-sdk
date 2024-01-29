@@ -1,11 +1,19 @@
 # Changelog
 
+## [4.2.2] - 2024-01-29
+
+### Changed
+
+- Windows paths passed to `client.transcripts.transcribe` and `client.transcripts.submit` will work as expected.
+
 ## [4.2.1] - 2024-01-23
 
 ### Added
+
 - Add `answer_format` to `LemurActionItemsParams` type
 
 ### Changed
+
 - Rename `RealtimeService` to `RealtimeTranscriber`, `RealtimeServiceFactory` to `RealtimeTranscriberFactory`, `RealtimeTranscriberFactory.createService()` to `RealtimeTranscriberFactory.transcriber()`. Deprecated aliases are provided for all old types and functions for backwards compatibility.
 - Restrict the type for `redact_pii_audio_quality` from `string` to `RedactPiiAudioQuality` an enum string.
 
