@@ -1103,6 +1103,12 @@ export type SeverityScoreSummary = {
 };
 
 /**
+ * @description The speech model to use for the transcription.
+ * @enum {string}
+ */
+export type SpeechModel = "nano";
+
+/**
  * @description The replacement logic for detected PII, can be "entity_type" or "hash". See [PII redaction](https://www.assemblyai.com/docs/models/pii-redaction) for more details.
  * @enum {string}
  */
@@ -1310,6 +1316,7 @@ export type TopicDetectionResult = {
  * @description A transcript object
  * @example {
  *   "id": "9ea68fd3-f953-42c1-9742-976c447fb463",
+ *   "speech_model": null,
  *   "language_model": "assemblyai_default",
  *   "acoustic_model": "assemblyai_default",
  *   "language_code": "en_us",
@@ -2113,6 +2120,11 @@ export type Transcript = {
   /** @description Tell the speaker label model how many speakers it should attempt to identify, up to 10. See [Speaker diarization](https://www.assemblyai.com/docs/models/speaker-diarization) for more details. */
   speakers_expected?: number | null;
   /**
+   * @description The speech model used for the transcription. When `null`, the default model is used.
+   * @default null
+   */
+  speech_model: SpeechModel | null;
+  /**
    * Format: float
    * @description Defaults to null. Reject audio files that contain less than this fraction of speech.
    * Valid values are in the range [0, 1] inclusive.
@@ -2272,6 +2284,7 @@ export type TranscriptListItem = {
 /**
  * @description The parameters for creating a transcript
  * @example {
+ *   "speech_model": null,
  *   "language_code": "en_us",
  *   "punctuate": true,
  *   "format_text": true,
@@ -2377,6 +2390,11 @@ export type TranscriptOptionalParams = {
    * @default null
    */
   speakers_expected?: number | null;
+  /**
+   * @description The speech model to use for the transcription. When `null`, the default model is used.
+   * @default null
+   */
+  speech_model?: SpeechModel | null;
   /**
    * Format: float
    * @description Reject audio files that contain less than this fraction of speech.
