@@ -1,5 +1,19 @@
 # Changelog
 
+## [4.3.0] - 2024-02-15
+
+### Added
+
+- Add `RealtimeTranscriber.configureEndUtteranceSilenceThreshold` function
+- Add `RealtimeTranscriber.forceEndUtterance` function
+- Add `end_utterance_silence_threshold` property to `CreateRealtimeTranscriberParams` and `RealtimeTranscriberParams` types.
+
+## [4.2.3] - 2024-02-13
+
+### Added
+
+- Add `speech_model` field to `TranscriptParams` and add `SpeechModel` type.
+
 ## [4.2.2] - 2024-01-29
 
 ### Changed

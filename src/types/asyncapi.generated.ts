@@ -28,6 +28,12 @@ export type AudioData = ArrayBufferLike;
  */
 export type AudioEncoding = "pcm_s16le" | "pcm_mulaw";
 
+/** @description Configure the threshold for how long to wait before ending an utterance. Default is 700ms. */
+export type ConfigureEndUtteranceSilenceThreshold = {
+  /** @description The duration threshold in milliseconds */
+  end_utterance_silence_threshold: number;
+};
+
 export type FinalTranscript = RealtimeBaseTranscript & {
   /**
    * @description Describes the type of message
@@ -38,6 +44,12 @@ export type FinalTranscript = RealtimeBaseTranscript & {
   punctuated: boolean;
   /** @description Whether the text is formatted, for example Dollar -> $ */
   text_formatted: boolean;
+};
+
+/** @description Manually end an utterance */
+export type ForceEndUtterance = {
+  /** @description A boolean value to communicate that you wish to force the end of the utterance */
+  force_end_utterance: boolean;
 };
 
 /** @enum {string} */

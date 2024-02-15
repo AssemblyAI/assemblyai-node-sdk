@@ -7,15 +7,38 @@ import {
 } from "../asyncapi.generated";
 
 type CreateRealtimeTranscriberParams = {
+  /**
+   * The WebSocket URL that the RealtimeTranscriber connects to
+   */
   realtimeUrl?: string;
+  /**
+   * The sample rate of the streamed audio
+   */
   sampleRate?: number;
+  /**
+   * Add up to 2500 characters of custom vocabulary
+   */
   wordBoost?: string[];
+  /**
+   * The encoding of the audio data
+   */
   encoding?: AudioEncoding;
+  /**
+   * The duration of the end utterance silence threshold in milliseconds
+   */
+  end_utterance_silence_threshold?: number;
 } & (
   | {
+      /**
+       * The API key used to authenticate the RealtimeTranscriber
+       * Using an API key to authenticate the RealtimeTranscriber is not supported in the browser.
+       */
       apiKey?: string;
     }
   | {
+      /**
+       * The temporary token used to authenticate the RealtimeTranscriber
+       */
       token: string;
     }
 );
@@ -26,15 +49,38 @@ type CreateRealtimeTranscriberParams = {
 type CreateRealtimeServiceParams = CreateRealtimeTranscriberParams;
 
 type RealtimeTranscriberParams = {
+  /**
+   * The WebSocket URL that the RealtimeTranscriber connects to
+   */
   realtimeUrl?: string;
+  /**
+   * The sample rate of the streamed audio
+   */
   sampleRate?: number;
+  /**
+   * Add up to 2500 characters of custom vocabulary
+   */
   wordBoost?: string[];
+  /**
+   * The encoding of the audio data
+   */
   encoding?: AudioEncoding;
+  /**
+   * The duration of the end utterance silence threshold in milliseconds
+   */
+  end_utterance_silence_threshold?: number;
 } & (
   | {
+      /**
+       * The API key used to authenticate the RealtimeTranscriber.
+       * Using an API key to authenticate the RealtimeTranscriber is not supported in the browser.
+       */
       apiKey: string;
     }
   | {
+      /**
+       * The temporary token used to authenticate the RealtimeTranscriber
+       */
       token: string;
     }
 );

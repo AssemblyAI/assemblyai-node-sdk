@@ -20,6 +20,26 @@ import {
 } from "../../utils/errors";
 
 const defaultRealtimeUrl = "wss://api.assemblyai.com/v2/realtime/ws";
+const forceEndOfUtteranceMessage = `{"force_end_utterance":true}`;
+const terminateSessionMessage = `{"terminate_session":true}`;
+
+type BufferLike =
+  | string
+  | Buffer
+  | DataView
+  | number
+  | ArrayBufferView
+  | Uint8Array
+  | ArrayBuffer
+  | SharedArrayBuffer
+  | ReadonlyArray<unknown>
+  | ReadonlyArray<number>
+  | { valueOf(): ArrayBuffer }
+  | { valueOf(): SharedArrayBuffer }
+  | { valueOf(): Uint8Array }
+  | { valueOf(): ReadonlyArray<number> }
+  | { valueOf(): string }
+  | { [Symbol.toPrimitive](hint: string): string };
 
 export class RealtimeTranscriber {
   private realtimeUrl: string;
@@ -28,6 +48,7 @@ export class RealtimeTranscriber {
   private encoding?: AudioEncoding;
   private apiKey?: string;
   private token?: string;
+  private end_utterance_silence_threshold?: number;
   private socket?: WebSocket;
   private listeners: RealtimeListeners = {};
   private sessionTerminatedResolve?: () => void;
@@ -37,6 +58,8 @@ export class RealtimeTranscriber {
     this.sampleRate = params.sampleRate ?? 16_000;
     this.wordBoost = params.wordBoost;
     this.encoding = params.encoding;
+    this.end_utterance_silence_threshold =
+      params.end_utterance_silence_threshold;
     if ("token" in params && params.token) this.token = params.token;
     if ("apiKey" in params && params.apiKey) this.apiKey = params.apiKey;
 
@@ -105,6 +128,18 @@ export class RealtimeTranscriber {
       }
       this.socket.binaryType = "arraybuffer";
 
+      this.socket.onopen = () => {
+        if (
+          this.end_utterance_silence_threshold === undefined ||
+          this.end_utterance_silence_threshold === null
+        ) {
+          return;
+        }
+        this.configureEndUtteranceSilenceThreshold(
+          this.end_utterance_silence_threshold
+        );
+      };
+
       this.socket.onclose = ({ code, reason }: CloseEvent) => {
         if (!reason) {
           if (code in RealtimeErrorType) {
@@ -159,10 +194,7 @@ export class RealtimeTranscriber {
   }
 
   sendAudio(audio: AudioData) {
-    if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
-      throw new Error("Socket is not open for communication");
-    }
-    this.socket.send(audio);
+    this.send(audio);
   }
 
   stream(): WritableStream<AudioData> {
@@ -173,10 +205,32 @@ export class RealtimeTranscriber {
     });
   }
 
+  /**
+   * Manually end an utterance
+   */
+  forceEndUtterance() {
+    this.send(forceEndOfUtteranceMessage);
+  }
+
+  /**
+   * Configure the threshold for how long to wait before ending an utterance. Default is 700ms.
+   * @param threshold The duration of the end utterance silence threshold in milliseconds
+   * @format integer
+   */
+  configureEndUtteranceSilenceThreshold(threshold: number) {
+    this.send(`{"end_utterance_silence_threshold":${threshold}}`);
+  }
+
+  private send(data: BufferLike) {
+    if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
+      throw new Error("Socket is not open for communication");
+    }
+    this.socket.send(data);
+  }
+
   async close(waitForSessionTermination = true) {
     if (this.socket) {
       if (this.socket.readyState === WebSocket.OPEN) {
-        const terminateSessionMessage = `{"terminate_session": true}`;
         if (waitForSessionTermination) {
           const sessionTerminatedPromise = new Promise<void>((resolve) => {
             this.sessionTerminatedResolve = resolve;

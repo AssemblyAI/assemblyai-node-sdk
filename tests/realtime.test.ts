@@ -57,6 +57,12 @@ describe("realtime", () => {
     WS.clean();
   }
 
+  it("fails without API key and token", async () => {
+    expect(() => new RealtimeTranscriber({ apiKey: "" })).toThrowError(
+      "API key or temporary token is required."
+    );
+  });
+
   it("fails on redundant connection", async () => {
     await expect(async () => await rt.connect()).rejects.toThrowError(
       "Already connected"
@@ -147,6 +153,34 @@ describe("realtime", () => {
     const data = Buffer.alloc(5_000);
     writer.write(data);
     await expect(server).toReceiveMessage(data);
+  });
+
+  it("creates service with EndUtteranceSilenceThreshold", async () => {
+    const realtimeUrl = "wss://localhost:5678";
+    const server = new WS(realtimeUrl);
+    const aai = createClient();
+    const rt = aai.realtime.transcriber({
+      realtimeUrl,
+      apiKey: "123",
+      end_utterance_silence_threshold: 500,
+    });
+    await connect(rt, server);
+    await expect(server).toReceiveMessage(
+      `{"end_utterance_silence_threshold":500}`
+    );
+    await close(rt, server);
+  });
+
+  it("can set EndUtteranceSilenceThreshold", async () => {
+    rt.configureEndUtteranceSilenceThreshold(500);
+    await expect(server).toReceiveMessage(
+      `{"end_utterance_silence_threshold":500}`
+    );
+  });
+
+  it("can set forceEndUtterance", async () => {
+    rt.forceEndUtterance();
+    await expect(server).toReceiveMessage(`{"force_end_utterance":true}`);
   });
 
   it("can receive transcript", () => {
