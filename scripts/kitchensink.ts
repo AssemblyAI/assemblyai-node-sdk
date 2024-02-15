@@ -26,6 +26,7 @@ const client = new AssemblyAI({
         })
       : undefined,
     encoding: "pcm_s16le",
+    end_utterance_silence_threshold: 500,
   };
   const rt = client.realtime.transcriber(serviceParams);
 
