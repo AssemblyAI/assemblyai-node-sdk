@@ -162,7 +162,7 @@ describe("realtime", () => {
     const rt = aai.realtime.transcriber({
       realtimeUrl,
       apiKey: "123",
-      end_utterance_silence_threshold: 500,
+      endUtteranceSilenceThreshold: 500,
     });
     await connect(rt, server);
     await expect(server).toReceiveMessage(
