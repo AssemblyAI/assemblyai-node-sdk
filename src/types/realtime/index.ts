@@ -26,7 +26,7 @@ type CreateRealtimeTranscriberParams = {
   /**
    * The duration of the end utterance silence threshold in milliseconds
    */
-  end_utterance_silence_threshold?: number;
+  endUtteranceSilenceThreshold?: number;
 } & (
   | {
       /**
@@ -68,7 +68,7 @@ type RealtimeTranscriberParams = {
   /**
    * The duration of the end utterance silence threshold in milliseconds
    */
-  end_utterance_silence_threshold?: number;
+  endUtteranceSilenceThreshold?: number;
 } & (
   | {
       /**

@@ -48,7 +48,7 @@ export class RealtimeTranscriber {
   private encoding?: AudioEncoding;
   private apiKey?: string;
   private token?: string;
-  private end_utterance_silence_threshold?: number;
+  private endUtteranceSilenceThreshold?: number;
   private socket?: WebSocket;
   private listeners: RealtimeListeners = {};
   private sessionTerminatedResolve?: () => void;
@@ -58,8 +58,8 @@ export class RealtimeTranscriber {
     this.sampleRate = params.sampleRate ?? 16_000;
     this.wordBoost = params.wordBoost;
     this.encoding = params.encoding;
-    this.end_utterance_silence_threshold =
-      params.end_utterance_silence_threshold;
+    this.endUtteranceSilenceThreshold =
+      params.endUtteranceSilenceThreshold;
     if ("token" in params && params.token) this.token = params.token;
     if ("apiKey" in params && params.apiKey) this.apiKey = params.apiKey;
 
@@ -130,13 +130,13 @@ export class RealtimeTranscriber {
 
       this.socket.onopen = () => {
         if (
-          this.end_utterance_silence_threshold === undefined ||
-          this.end_utterance_silence_threshold === null
+          this.endUtteranceSilenceThreshold === undefined ||
+          this.endUtteranceSilenceThreshold === null
         ) {
           return;
         }
         this.configureEndUtteranceSilenceThreshold(
-          this.end_utterance_silence_threshold
+          this.endUtteranceSilenceThreshold
         );
       };
 
