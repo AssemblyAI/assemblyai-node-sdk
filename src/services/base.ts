@@ -7,7 +7,7 @@ import { Error as JsonError } from "..";
 export abstract class BaseService {
   /**
    * Create a new service.
-   * @param params The parameters to use for the service.
+   * @param params - The parameters to use for the service.
    */
   constructor(private params: BaseServiceParams) {}
   protected async fetch(

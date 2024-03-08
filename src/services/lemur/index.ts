@@ -52,7 +52,7 @@ export class LemurService extends BaseService {
 
   /**
    * Delete the data for a previously submitted LeMUR request.
-   * @param id ID of the LeMUR request
+   * @param id - ID of the LeMUR request
    */
   purgeRequestData(id: string): Promise<PurgeLemurRequestDataResponse> {
     return this.fetchJson<PurgeLemurRequestDataResponse>(`/lemur/v3/${id}`, {

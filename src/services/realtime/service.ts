@@ -58,8 +58,7 @@ export class RealtimeTranscriber {
     this.sampleRate = params.sampleRate ?? 16_000;
     this.wordBoost = params.wordBoost;
     this.encoding = params.encoding;
-    this.endUtteranceSilenceThreshold =
-      params.endUtteranceSilenceThreshold;
+    this.endUtteranceSilenceThreshold = params.endUtteranceSilenceThreshold;
     if ("token" in params && params.token) this.token = params.token;
     if ("apiKey" in params && params.apiKey) this.apiKey = params.apiKey;
 
@@ -214,8 +213,8 @@ export class RealtimeTranscriber {
 
   /**
    * Configure the threshold for how long to wait before ending an utterance. Default is 700ms.
-   * @param threshold The duration of the end utterance silence threshold in milliseconds
-   * @format integer
+   * @param threshold - The duration of the end utterance silence threshold in milliseconds.
+   * This value must be an integer between 0 and 20_000.
    */
   configureEndUtteranceSilenceThreshold(threshold: number) {
     this.send(`{"end_utterance_silence_threshold":${threshold}}`);

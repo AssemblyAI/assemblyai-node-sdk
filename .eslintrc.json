@@ -5,8 +5,10 @@
   "parserOptions": {
     "project": ["./tsconfig.json"]
   },
-  "plugins": ["@typescript-eslint"],
-  "rules": {},
+  "plugins": ["@typescript-eslint", "eslint-plugin-tsdoc"],
+  "rules": {
+    "tsdoc/syntax": "warn"
+  },
   "ignorePatterns": ["/*.js", "/*.ts", "dist", "node_modules"],
   "overrides": [
     {
@@ -15,7 +17,6 @@
         "project": ["./tsconfig.test.json"]
       }
     },
-
     {
       "files": ["scripts/**/*"],
       "parserOptions": {
