@@ -5,8 +5,8 @@ import { UploadedFile, FileUploadParams, FileUploadData } from "../..";
 export class FileService extends BaseService {
   /**
    * Upload a local file to AssemblyAI.
-   * @param input The local file path to upload, or a stream or buffer of the file to upload.
-   * @return A promise that resolves to the uploaded file URL.
+   * @param input - The local file path to upload, or a stream or buffer of the file to upload.
+   * @returns A promise that resolves to the uploaded file URL.
    */
   async upload(input: FileUploadParams): Promise<string> {
     let fileData: FileUploadData;

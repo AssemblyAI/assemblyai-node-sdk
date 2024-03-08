@@ -60,6 +60,20 @@ describe("transcript", () => {
     expect(transcript.status).not.toBe("complete");
   });
 
+  it("submit create the transcript object with a remote url as audio_url", async () => {
+    fetchMock.doMockOnceIf(
+      requestMatches({ url: "/v2/transcript", method: "POST" }),
+      JSON.stringify({ id: transcriptId, status: "queued" })
+    );
+    const transcript = await assembly.transcripts.submit({
+      audio_url: remoteAudioURL,
+    });
+
+    expect(transcript.status).toBeTruthy();
+    expect(transcript.status).not.toBe("error");
+    expect(transcript.status).not.toBe("complete");
+  });
+
   it("create should create the transcript object with a local file", async () => {
     fetchMock.doMockOnceIf(
       requestMatches({ url: "/v2/upload", method: "POST" }),
@@ -129,6 +143,26 @@ describe("transcript", () => {
         pollingTimeout: 5000,
       }
     );
+
+    expect(transcript.status).toBe("completed");
+  }, 6000);
+
+  it("transcribe should poll the transcript object with audio_url", async () => {
+    fetchMock.doMockOnceIf(
+      requestMatches({ url: "/v2/transcript", method: "POST" }),
+      JSON.stringify({ status: "queued", id: transcriptId })
+    );
+    fetchMock.doMockOnceIf(
+      requestMatches({ url: `/v2/transcript/${transcriptId}`, method: "GET" }),
+      JSON.stringify({ status: "processing" })
+    );
+    fetchMock.doMockOnceIf(
+      requestMatches({ url: `/v2/transcript/${transcriptId}`, method: "GET" }),
+      JSON.stringify({ status: "completed" })
+    );
+    const transcript = await assembly.transcripts.transcribe({
+      audio_url: remoteAudioURL,
+    });
 
     expect(transcript.status).toBe("completed");
   }, 6000);

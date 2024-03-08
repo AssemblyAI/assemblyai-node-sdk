@@ -34,7 +34,7 @@ class AssemblyAI {
 
   /**
    * Create a new AssemblyAI client.
-   * @param params The parameters for the service, including the API key and base URL, if any.
+   * @param params - The parameters for the service, including the API key and base URL, if any.
    */
   constructor(params: BaseServiceParams) {
     params.baseUrl = params.baseUrl || defaultBaseUrl;

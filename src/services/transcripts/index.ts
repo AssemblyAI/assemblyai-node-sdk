@@ -6,10 +6,6 @@ import {
   TranscriptList,
   TranscriptParams,
   CreateTranscriptOptions,
-  Createable,
-  Deletable,
-  Listable,
-  Retrieveable,
   SubtitleFormat,
   RedactedAudioResponse,
   ListTranscriptParams,
@@ -23,22 +19,15 @@ import {
 import { FileService } from "../files";
 import { getPath } from "../../utils/path";
 
-export class TranscriptService
-  extends BaseService
-  implements
-    Createable<Transcript, TranscriptParams, CreateTranscriptOptions>,
-    Retrieveable<Transcript>,
-    Deletable<Transcript>,
-    Listable<TranscriptList>
-{
+export class TranscriptService extends BaseService {
   constructor(params: BaseServiceParams, private files: FileService) {
     super(params);
   }
 
   /**
    * Transcribe an audio file. This will create a transcript and wait until the transcript status is "completed" or "error".
-   * @param params The parameters to transcribe an audio file.
-   * @param options The options to transcribe an audio file.
+   * @param params - The parameters to transcribe an audio file.
+   * @param options - The options to transcribe an audio file.
    * @returns A promise that resolves to the transcript. The transcript status is "completed" or "error".
    */
   async transcribe(
@@ -51,37 +40,43 @@ export class TranscriptService
 
   /**
    * Submits a transcription job for an audio file. This will not wait until the transcript status is "completed" or "error".
-   * @param params The parameters to start the transcription of an audio file.
+   * @param params - The parameters to start the transcription of an audio file.
    * @returns A promise that resolves to the queued transcript.
    */
   async submit(params: SubmitParams): Promise<Transcript> {
-    const { audio, ...createParams } = params;
     let audioUrl;
-    if (typeof audio === "string") {
-      const path = getPath(audio);
-      if (path !== null) {
-        // audio is local path, upload local file
-        audioUrl = await this.files.upload(path);
+    let transcriptParams: TranscriptParams | undefined = undefined;
+    if ("audio" in params) {
+      const { audio, ...audioTranscriptParams } = params;
+      if (typeof audio === "string") {
+        const path = getPath(audio);
+        if (path !== null) {
+          // audio is local path, upload local file
+          audioUrl = await this.files.upload(path);
+        } else {
+          // audio is not a local path, assume it's a URL
+          audioUrl = audio;
+        }
       } else {
-        // audio is not a local path, assume it's a URL
-        audioUrl = audio;
+        // audio is of uploadable type
+        audioUrl = await this.files.upload(audio);
       }
+      transcriptParams = { ...audioTranscriptParams, audio_url: audioUrl };
     } else {
-      // audio is of uploadable type
-      audioUrl = await this.files.upload(audio);
+      transcriptParams = params;
     }
 
     const data = await this.fetchJson<Transcript>("/v2/transcript", {
       method: "POST",
-      body: JSON.stringify({ ...createParams, audio_url: audioUrl }),
+      body: JSON.stringify(transcriptParams),
     });
     return data;
   }
 
   /**
    * Create a transcript.
-   * @param params The parameters to create a transcript.
-   * @param options The options used for creating the new transcript.
+   * @param params - The parameters to create a transcript.
+   * @param options - The options used for creating the new transcript.
    * @returns A promise that resolves to the transcript.
    * @deprecated Use `transcribe` instead to transcribe a audio file that includes polling, or `submit` to transcribe a audio file without polling.
    */
@@ -109,8 +104,8 @@ export class TranscriptService
 
   /**
    * Wait until the transcript ready, either the status is "completed" or "error".
-   * @param transcriptId The ID of the transcript.
-   * @param options The options to wait until the transcript is ready.
+   * @param transcriptId - The ID of the transcript.
+   * @param options - The options to wait until the transcript is ready.
    * @returns A promise that resolves to the transcript. The transcript status is "completed" or "error".
    */
   async waitUntilReady(
@@ -138,7 +133,7 @@ export class TranscriptService
 
   /**
    * Retrieve a transcript.
-   * @param id The identifier of the transcript.
+   * @param id - The identifier of the transcript.
    * @returns A promise that resolves to the transcript.
    */
   get(id: string): Promise<Transcript> {
@@ -147,19 +142,17 @@ export class TranscriptService
 
   /**
    * Retrieves a page of transcript listings.
-   * @param parameters The parameters to filter the transcript list by, or the URL to retrieve the transcript list from.
+   * @param params - The parameters to filter the transcript list by, or the URL to retrieve the transcript list from.
    */
-  async list(
-    parameters?: ListTranscriptParams | string
-  ): Promise<TranscriptList> {
+  async list(params?: ListTranscriptParams | string): Promise<TranscriptList> {
     let url = "/v2/transcript";
-    if (typeof parameters === "string") {
-      url = parameters;
-    } else if (parameters) {
+    if (typeof params === "string") {
+      url = params;
+    } else if (params) {
       url = `${url}?${new URLSearchParams(
-        Object.keys(parameters).map((key) => [
+        Object.keys(params).map((key) => [
           key,
-          parameters[key as keyof ListTranscriptParams]?.toString() || "",
+          params[key as keyof ListTranscriptParams]?.toString() || "",
         ])
       )}`;
     }
@@ -176,7 +169,7 @@ export class TranscriptService
 
   /**
    * Delete a transcript
-   * @param id The identifier of the transcript.
+   * @param id - The identifier of the transcript.
    * @returns A promise that resolves to the transcript.
    */
   delete(id: string): Promise<Transcript> {
@@ -186,9 +179,9 @@ export class TranscriptService
   /**
    * Search through the transcript for a specific set of keywords.
    * You can search for individual words, numbers, or phrases containing up to five words or numbers.
-   * @param id The identifier of the transcript.
-   * @param words Keywords to search for.
-   * @return A promise that resolves to the sentences.
+   * @param id - The identifier of the transcript.
+   * @param words - Keywords to search for.
+   * @returns A promise that resolves to the sentences.
    */
   wordSearch(id: string, words: string[]): Promise<WordSearchResponse> {
     const params = new URLSearchParams({ words: words.join(",") });
@@ -199,8 +192,8 @@ export class TranscriptService
 
   /**
    * Retrieve all sentences of a transcript.
-   * @param id The identifier of the transcript.
-   * @return A promise that resolves to the sentences.
+   * @param id - The identifier of the transcript.
+   * @returns A promise that resolves to the sentences.
    */
   sentences(id: string): Promise<SentencesResponse> {
     return this.fetchJson<SentencesResponse>(`/v2/transcript/${id}/sentences`);
@@ -208,8 +201,8 @@ export class TranscriptService
 
   /**
    * Retrieve all paragraphs of a transcript.
-   * @param id The identifier of the transcript.
-   * @return A promise that resolves to the paragraphs.
+   * @param id - The identifier of the transcript.
+   * @returns A promise that resolves to the paragraphs.
    */
   paragraphs(id: string): Promise<ParagraphsResponse> {
     return this.fetchJson<ParagraphsResponse>(
@@ -219,10 +212,10 @@ export class TranscriptService
 
   /**
    * Retrieve subtitles of a transcript.
-   * @param id The identifier of the transcript.
-   * @param format The format of the subtitles.
-   * @param chars_per_caption The maximum number of characters per caption.
-   * @return A promise that resolves to the subtitles text.
+   * @param id - The identifier of the transcript.
+   * @param format - The format of the subtitles.
+   * @param chars_per_caption - The maximum number of characters per caption.
+   * @returns A promise that resolves to the subtitles text.
    */
   async subtitles(
     id: string,
@@ -241,8 +234,8 @@ export class TranscriptService
 
   /**
    * Retrieve redactions of a transcript.
-   * @param id The identifier of the transcript.
-   * @return A promise that resolves to the subtitles text.
+   * @param id - The identifier of the transcript.
+   * @returns A promise that resolves to the subtitles text.
    */
   redactions(id: string): Promise<RedactedAudioResponse> {
     return this.fetchJson<RedactedAudioResponse>(
