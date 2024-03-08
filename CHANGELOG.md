@@ -1,5 +1,16 @@
 # Changelog
 
+## [4.3.2] - 2024-03-08
+
+### Added
+
+- Add `audio_url` property to `TranscribeParams` in addition to the `audio` property. You can use one or the other. `audio_url` only accepts a URL string.
+
+### Changed
+
+- Update codebase to use TSDoc
+- Update README.md with more samples
+
 ## [4.3.0] - 2024-02-15
 
 ### Added
