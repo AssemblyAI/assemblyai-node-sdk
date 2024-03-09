@@ -5,6 +5,7 @@
 ### Added
 
 - Add `audio_url` property to `TranscribeParams` in addition to the `audio` property. You can use one or the other. `audio_url` only accepts a URL string.
+- Add `TranscriptReadyNotification` type for the transcript webhook body.
 
 ### Changed
 
