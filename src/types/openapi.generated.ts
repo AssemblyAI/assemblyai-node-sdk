@@ -58,7 +58,7 @@ export type AutoHighlightResult = {
 
 /**
  * An array of results for the Key Phrases model, if it is enabled.
- * See [Key phrases](https://www.assemblyai.com/docs/models/key-phrases) for more information.
+ * See {@link https://www.assemblyai.com/docs/models/key-phrases | Key phrases } for more information.
  *
  * @example
  * ```js
@@ -380,7 +380,7 @@ export type ContentSafetyLabelResult = {
 
 /**
  * An array of results for the Content Moderation model, if it is enabled.
- * See [Content moderation](https://www.assemblyai.com/docs/models/content-moderation) for more information.
+ * See {@link https://www.assemblyai.com/docs/models/content-moderation | Content moderation } for more information.
  *
  * @example
  * ```js
@@ -1094,7 +1094,7 @@ export type RedactedAudioResponse = {
 export type RedactedAudioStatus = "redacted_audio_ready";
 
 /**
- * Controls the filetype of the audio created by redact_pii_audio. Currently supports mp3 (default) and wav. See [PII redaction](https://www.assemblyai.com/docs/models/pii-redaction) for more details.
+ * Controls the filetype of the audio created by redact_pii_audio. Currently supports mp3 (default) and wav. See {@link https://www.assemblyai.com/docs/models/pii-redaction | PII redaction } for more details.
  * @defaultValue "mp3"
  * @example "mp3"
  */
@@ -1237,7 +1237,7 @@ export type SentimentAnalysisResult = {
    */
   sentiment: Sentiment;
   /**
-   * The speaker of the sentence if [Speaker Diarization](https://www.assemblyai.com/docs/models/speaker-diarization) is enabled, else null
+   * The speaker of the sentence if {@link https://www.assemblyai.com/docs/models/speaker-diarization | Speaker Diarization } is enabled, else null
    */
   speaker?: string | null;
   /**
@@ -1269,10 +1269,10 @@ export type SeverityScoreSummary = {
 /**
  * The speech model to use for the transcription.
  */
-export type SpeechModel = "nano";
+export type SpeechModel = "nano" | "conformer-2";
 
 /**
- * The replacement logic for detected PII, can be "entity_type" or "hash". See [PII redaction](https://www.assemblyai.com/docs/models/pii-redaction) for more details.
+ * The replacement logic for detected PII, can be "entity_type" or "hash". See {@link https://www.assemblyai.com/docs/models/pii-redaction | PII redaction } for more details.
  */
 export type SubstitutionPolicy = "entity_type" | "hash";
 
@@ -1321,7 +1321,7 @@ export type Timestamp = {
 
 /**
  * The result of the Topic Detection model, if it is enabled.
- * See [Topic Detection](https://www.assemblyai.com/docs/models/topic-detection) for more information.
+ * See {@link https://www.assemblyai.com/docs/models/topic-detection | Topic Detection } for more information.
  *
  * @example
  * ```js
@@ -2206,7 +2206,7 @@ export type Transcript = {
    */
   audio_url: string;
   /**
-   * Whether [Auto Chapters](https://www.assemblyai.com/docs/models/auto-chapters) is enabled, can be true or false
+   * Whether {@link https://www.assemblyai.com/docs/models/auto-chapters | Auto Chapters } is enabled, can be true or false
    */
   auto_chapters?: boolean | null;
   /**
@@ -2215,7 +2215,7 @@ export type Transcript = {
   auto_highlights: boolean;
   /**
    * An array of results for the Key Phrases model, if it is enabled.
-   * See [Key phrases](https://www.assemblyai.com/docs/models/key-phrases) for more information.
+   * See {@link https://www.assemblyai.com/docs/models/key-phrases | Key phrases } for more information.
    */
   auto_highlights_result?: AutoHighlightsResult | null;
   /**
@@ -2231,12 +2231,12 @@ export type Transcript = {
    */
   confidence?: number | null;
   /**
-   * Whether [Content Moderation](https://www.assemblyai.com/docs/models/content-moderation) is enabled, can be true or false
+   * Whether {@link https://www.assemblyai.com/docs/models/content-moderation | Content Moderation } is enabled, can be true or false
    */
   content_safety?: boolean | null;
   /**
    * An array of results for the Content Moderation model, if it is enabled.
-   * See [Content moderation](https://www.assemblyai.com/docs/models/content-moderation) for more information.
+   * See {@link https://www.assemblyai.com/docs/models/content-moderation | Content moderation } for more information.
    */
   content_safety_labels?: ContentSafetyLabelsResult | null;
   /**
@@ -2252,16 +2252,16 @@ export type Transcript = {
    */
   disfluencies?: boolean | null;
   /**
-   * Whether [Dual channel transcription](https://www.assemblyai.com/docs/models/speech-recognition#dual-channel-transcription) was enabled in the transcription request, either true or false
+   * Whether {@link https://www.assemblyai.com/docs/models/speech-recognition#dual-channel-transcription | Dual channel transcription } was enabled in the transcription request, either true or false
    */
   dual_channel?: boolean | null;
   /**
    * An array of results for the Entity Detection model, if it is enabled.
-   * See [Entity detection](https://www.assemblyai.com/docs/models/entity-detection) for more information.
+   * See {@link https://www.assemblyai.com/docs/models/entity-detection | Entity detection } for more information.
    */
   entities?: Entity[] | null;
   /**
-   * Whether [Entity Detection](https://www.assemblyai.com/docs/models/entity-detection) is enabled, can be true or false
+   * Whether {@link https://www.assemblyai.com/docs/models/entity-detection | Entity Detection } is enabled, can be true or false
    */
   entity_detection?: boolean | null;
   /**
@@ -2269,7 +2269,7 @@ export type Transcript = {
    */
   error?: string;
   /**
-   * Whether [Profanity Filtering](https://www.assemblyai.com/docs/models/speech-recognition#profanity-filtering) is enabled, either true or false
+   * Whether {@link https://www.assemblyai.com/docs/models/speech-recognition#profanity-filtering | Profanity Filtering } is enabled, either true or false
    */
   filter_profanity?: boolean | null;
   /**
@@ -2277,12 +2277,12 @@ export type Transcript = {
    */
   format_text?: boolean | null;
   /**
-   * Whether [Topic Detection](https://www.assemblyai.com/docs/models/topic-detection) is enabled, can be true or false
+   * Whether {@link https://www.assemblyai.com/docs/models/topic-detection | Topic Detection } is enabled, can be true or false
    */
   iab_categories?: boolean | null;
   /**
    * The result of the Topic Detection model, if it is enabled.
-   * See [Topic Detection](https://www.assemblyai.com/docs/models/topic-detection) for more information.
+   * See {@link https://www.assemblyai.com/docs/models/topic-detection | Topic Detection } for more information.
    */
   iab_categories_result?: TopicDetectionModelResult | null;
   /**
@@ -2291,12 +2291,12 @@ export type Transcript = {
   id: string;
   /**
    * The language of your audio file.
-   * Possible values are found in [Supported Languages](https://www.assemblyai.com/docs/concepts/supported-languages).
+   * Possible values are found in {@link https://www.assemblyai.com/docs/concepts/supported-languages | Supported Languages }.
    * The default value is 'en_us'.
    */
-  language_code?: TranscriptLanguageCode;
+  language_code?: LiteralUnion<TranscriptLanguageCode, string>;
   /**
-   * Whether [Automatic language detection](https://www.assemblyai.com/docs/models/speech-recognition#automatic-language-detection) is enabled, either true or false
+   * Whether {@link https://www.assemblyai.com/docs/models/speech-recognition#automatic-language-detection | Automatic language detection } is enabled, either true or false
    */
   language_detection?: boolean | null;
   /**
@@ -2309,43 +2309,43 @@ export type Transcript = {
    */
   punctuate?: boolean | null;
   /**
-   * Whether [PII Redaction](https://www.assemblyai.com/docs/models/pii-redaction) is enabled, either true or false
+   * Whether {@link https://www.assemblyai.com/docs/models/pii-redaction | PII Redaction } is enabled, either true or false
    */
   redact_pii: boolean;
   /**
    * Whether a redacted version of the audio file was generated,
-   * either true or false. See [PII redaction](https://www.assemblyai.com/docs/models/pii-redaction) for more information.
+   * either true or false. See {@link https://www.assemblyai.com/docs/models/pii-redaction | PII redaction } for more information.
    */
   redact_pii_audio?: boolean | null;
   /**
    * The audio quality of the PII-redacted audio file, if redact_pii_audio is enabled.
-   * See [PII redaction](https://www.assemblyai.com/docs/models/pii-redaction) for more information.
+   * See {@link https://www.assemblyai.com/docs/models/pii-redaction | PII redaction } for more information.
    */
   redact_pii_audio_quality?: RedactPiiAudioQuality | null;
   /**
    * The list of PII Redaction policies that were enabled, if PII Redaction is enabled.
-   * See [PII redaction](https://www.assemblyai.com/docs/models/pii-redaction) for more information.
+   * See {@link https://www.assemblyai.com/docs/models/pii-redaction | PII redaction } for more information.
    */
   redact_pii_policies?: PiiPolicy[] | null;
   /**
-   * The replacement logic for detected PII, can be "entity_type" or "hash". See [PII redaction](https://www.assemblyai.com/docs/models/pii-redaction) for more details.
+   * The replacement logic for detected PII, can be "entity_type" or "hash". See {@link https://www.assemblyai.com/docs/models/pii-redaction | PII redaction } for more details.
    */
   redact_pii_sub?: SubstitutionPolicy;
   /**
-   * Whether [Sentiment Analysis](https://www.assemblyai.com/docs/models/sentiment-analysis) is enabled, can be true or false
+   * Whether {@link https://www.assemblyai.com/docs/models/sentiment-analysis | Sentiment Analysis } is enabled, can be true or false
    */
   sentiment_analysis?: boolean | null;
   /**
    * An array of results for the Sentiment Analysis model, if it is enabled.
-   * See [Sentiment analysis](https://www.assemblyai.com/docs/models/sentiment-analysis) for more information.
+   * See {@link https://www.assemblyai.com/docs/models/sentiment-analysis | Sentiment analysis } for more information.
    */
   sentiment_analysis_results?: SentimentAnalysisResult[] | null;
   /**
-   * Whether [Speaker diarization](https://www.assemblyai.com/docs/models/speaker-diarization) is enabled, can be true or false
+   * Whether {@link https://www.assemblyai.com/docs/models/speaker-diarization | Speaker diarization } is enabled, can be true or false
    */
   speaker_labels?: boolean | null;
   /**
-   * Tell the speaker label model how many speakers it should attempt to identify, up to 10. See [Speaker diarization](https://www.assemblyai.com/docs/models/speaker-diarization) for more details.
+   * Tell the speaker label model how many speakers it should attempt to identify, up to 10. See {@link https://www.assemblyai.com/docs/models/speaker-diarization | Speaker diarization } for more details.
    */
   speakers_expected?: number | null;
   /**
@@ -2368,20 +2368,20 @@ export type Transcript = {
    */
   status: TranscriptStatus;
   /**
-   * Whether [Summarization](https://www.assemblyai.com/docs/models/summarization) is enabled, either true or false
+   * Whether {@link https://www.assemblyai.com/docs/models/summarization | Summarization } is enabled, either true or false
    */
   summarization: boolean;
   /**
-   * The generated summary of the media file, if [Summarization](https://www.assemblyai.com/docs/models/summarization) is enabled
+   * The generated summary of the media file, if {@link https://www.assemblyai.com/docs/models/summarization | Summarization } is enabled
    */
   summary?: string | null;
   /**
    * The Summarization model used to generate the summary,
-   * if [Summarization](https://www.assemblyai.com/docs/models/summarization) is enabled
+   * if {@link https://www.assemblyai.com/docs/models/summarization | Summarization } is enabled
    */
   summary_model?: string | null;
   /**
-   * The type of summary generated, if [Summarization](https://www.assemblyai.com/docs/models/summarization) is enabled
+   * The type of summary generated, if {@link https://www.assemblyai.com/docs/models/summarization | Summarization } is enabled
    */
   summary_type?: string | null;
   /**
@@ -2398,7 +2398,7 @@ export type Transcript = {
   topics?: string[];
   /**
    * When dual_channel or speaker_labels is enabled, a list of turn-by-turn utterance objects.
-   * See [Speaker diarization](https://www.assemblyai.com/docs/models/speaker-diarization) for more information.
+   * See {@link https://www.assemblyai.com/docs/models/speaker-diarization | Speaker diarization } for more information.
    */
   utterances?: TranscriptUtterance[] | null;
   /**
@@ -2423,7 +2423,7 @@ export type Transcript = {
   word_boost?: string[];
   /**
    * An array of temporally-sequential word objects, one for each word in the transcript.
-   * See [Speech recognition](https://www.assemblyai.com/docs/models/speech-recognition) for more information.
+   * See {@link https://www.assemblyai.com/docs/models/speech-recognition | Speech recognition } for more information.
    */
   words?: TranscriptWord[] | null;
 };
@@ -2457,7 +2457,7 @@ export type TranscriptCustomSpelling = {
 };
 
 /**
- * The language of your audio file. Possible values are found in [Supported Languages](https://www.assemblyai.com/docs/concepts/supported-languages).
+ * The language of your audio file. Possible values are found in {@link https://www.assemblyai.com/docs/concepts/supported-languages | Supported Languages }.
  * The default value is 'en_us'.
  *
  * @defaultValue "en_us
@@ -2603,7 +2603,7 @@ export type TranscriptOptionalParams = {
    */
   audio_start_from?: number;
   /**
-   * Enable [Auto Chapters](https://www.assemblyai.com/docs/models/auto-chapters), can be true or false
+   * Enable {@link https://www.assemblyai.com/docs/models/auto-chapters | Auto Chapters }, can be true or false
    */
   auto_chapters?: boolean;
   /**
@@ -2615,7 +2615,7 @@ export type TranscriptOptionalParams = {
    */
   boost_param?: TranscriptBoostParam;
   /**
-   * Enable [Content Moderation](https://www.assemblyai.com/docs/models/content-moderation), can be true or false
+   * Enable {@link https://www.assemblyai.com/docs/models/content-moderation | Content Moderation }, can be true or false
    */
   content_safety?: boolean;
   /**
@@ -2635,11 +2635,11 @@ export type TranscriptOptionalParams = {
    */
   disfluencies?: boolean;
   /**
-   * Enable [Dual Channel](https://www.assemblyai.com/docs/models/speech-recognition#dual-channel-transcription) transcription, can be true or false.
+   * Enable {@link https://www.assemblyai.com/docs/models/speech-recognition#dual-channel-transcription | Dual Channel } transcription, can be true or false.
    */
   dual_channel?: boolean;
   /**
-   * Enable [Entity Detection](https://www.assemblyai.com/docs/models/entity-detection), can be true or false
+   * Enable {@link https://www.assemblyai.com/docs/models/entity-detection | Entity Detection }, can be true or false
    */
   entity_detection?: boolean;
   /**
@@ -2651,16 +2651,16 @@ export type TranscriptOptionalParams = {
    */
   format_text?: boolean;
   /**
-   * Enable [Topic Detection](https://www.assemblyai.com/docs/models/topic-detection), can be true or false
+   * Enable {@link https://www.assemblyai.com/docs/models/topic-detection | Topic Detection }, can be true or false
    */
   iab_categories?: boolean;
   /**
-   * The language of your audio file. Possible values are found in [Supported Languages](https://www.assemblyai.com/docs/concepts/supported-languages).
+   * The language of your audio file. Possible values are found in {@link https://www.assemblyai.com/docs/concepts/supported-languages | Supported Languages }.
    * The default value is 'en_us'.
    */
-  language_code?: TranscriptLanguageCode | null;
+  language_code?: LiteralUnion<TranscriptLanguageCode, string> | null;
   /**
-   * Whether [Automatic language detection](https://www.assemblyai.com/docs/models/speech-recognition#automatic-language-detection) was enabled in the transcription request, either true or false.
+   * Whether {@link https://www.assemblyai.com/docs/models/speech-recognition#automatic-language-detection | Automatic language detection } was enabled in the transcription request, either true or false.
    */
   language_detection?: boolean;
   /**
@@ -2672,32 +2672,32 @@ export type TranscriptOptionalParams = {
    */
   redact_pii?: boolean;
   /**
-   * Generate a copy of the original media file with spoken PII "beeped" out, can be true or false. See [PII redaction](https://www.assemblyai.com/docs/models/pii-redaction) for more details.
+   * Generate a copy of the original media file with spoken PII "beeped" out, can be true or false. See {@link https://www.assemblyai.com/docs/models/pii-redaction | PII redaction } for more details.
    */
   redact_pii_audio?: boolean;
   /**
-   * Controls the filetype of the audio created by redact_pii_audio. Currently supports mp3 (default) and wav. See [PII redaction](https://www.assemblyai.com/docs/models/pii-redaction) for more details.
+   * Controls the filetype of the audio created by redact_pii_audio. Currently supports mp3 (default) and wav. See {@link https://www.assemblyai.com/docs/models/pii-redaction | PII redaction } for more details.
    * @defaultValue "mp3"
    */
   redact_pii_audio_quality?: RedactPiiAudioQuality;
   /**
-   * The list of PII Redaction policies to enable. See [PII redaction](https://www.assemblyai.com/docs/models/pii-redaction) for more details.
+   * The list of PII Redaction policies to enable. See {@link https://www.assemblyai.com/docs/models/pii-redaction | PII redaction } for more details.
    */
   redact_pii_policies?: PiiPolicy[];
   /**
-   * The replacement logic for detected PII, can be "entity_type" or "hash". See [PII redaction](https://www.assemblyai.com/docs/models/pii-redaction) for more details.
+   * The replacement logic for detected PII, can be "entity_type" or "hash". See {@link https://www.assemblyai.com/docs/models/pii-redaction | PII redaction } for more details.
    */
   redact_pii_sub?: SubstitutionPolicy | null;
   /**
-   * Enable [Sentiment Analysis](https://www.assemblyai.com/docs/models/sentiment-analysis), can be true or false
+   * Enable {@link https://www.assemblyai.com/docs/models/sentiment-analysis | Sentiment Analysis }, can be true or false
    */
   sentiment_analysis?: boolean;
   /**
-   * Enable [Speaker diarization](https://www.assemblyai.com/docs/models/speaker-diarization), can be true or false
+   * Enable {@link https://www.assemblyai.com/docs/models/speaker-diarization | Speaker diarization }, can be true or false
    */
   speaker_labels?: boolean;
   /**
-   * Tells the speaker label model how many speakers it should attempt to identify, up to 10. See [Speaker diarization](https://www.assemblyai.com/docs/models/speaker-diarization) for more details.
+   * Tells the speaker label model how many speakers it should attempt to identify, up to 10. See {@link https://www.assemblyai.com/docs/models/speaker-diarization | Speaker diarization } for more details.
    * @defaultValue "null
    */
   speakers_expected?: number | null;
@@ -2714,7 +2714,7 @@ export type TranscriptOptionalParams = {
    */
   speech_threshold?: number | null;
   /**
-   * Enable [Summarization](https://www.assemblyai.com/docs/models/summarization), can be true or false
+   * Enable {@link https://www.assemblyai.com/docs/models/summarization | Summarization }, can be true or false
    */
   summarization?: boolean;
   /**
@@ -2796,7 +2796,7 @@ export type TranscriptParagraph = {
   confidence: number;
   end: number;
   /**
-   * The speaker of the sentence if [Speaker Diarization](https://www.assemblyai.com/docs/models/speaker-diarization) is enabled, else null
+   * The speaker of the sentence if {@link https://www.assemblyai.com/docs/models/speaker-diarization | Speaker Diarization } is enabled, else null
    */
   speaker?: string | null;
   start: number;
@@ -2886,7 +2886,7 @@ export type TranscriptSentence = {
   confidence: number;
   end: number;
   /**
-   * The speaker of the sentence if [Speaker Diarization](https://www.assemblyai.com/docs/models/speaker-diarization) is enabled, else null
+   * The speaker of the sentence if {@link https://www.assemblyai.com/docs/models/speaker-diarization | Speaker Diarization } is enabled, else null
    */
   speaker?: string | null;
   start: number;
@@ -3061,7 +3061,7 @@ export type TranscriptWord = {
   confidence: number;
   end: number;
   /**
-   * The speaker of the sentence if [Speaker Diarization](https://www.assemblyai.com/docs/models/speaker-diarization) is enabled, else null
+   * The speaker of the sentence if {@link https://www.assemblyai.com/docs/models/speaker-diarization | Speaker Diarization } is enabled, else null
    */
   speaker?: string | null;
   start: number;

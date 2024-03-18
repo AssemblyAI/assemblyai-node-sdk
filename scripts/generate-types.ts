@@ -63,6 +63,10 @@ async function generateTypes(apiSpecPath: string, outputPath: string) {
       /( *\/\*\* *\n)((?:\s|\S)*)\n(\s*\* @description (?:.*))( *\*\/\n)/gm,
       "$1$3$2$4"
     )
+    .replaceAll(
+      /(?:\[(.*)\])(?:\(((?:http)(?:s)?(?::\/\/).*)\))/gm,
+      "{@link $2 | $1 }"
+    )
     // remove description tag
     .replaceAll("@description ", "")
     // remove empty multiline comments

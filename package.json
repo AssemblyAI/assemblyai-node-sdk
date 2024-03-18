@@ -1,6 +1,6 @@
 {
   "name": "assemblyai",
-  "version": "4.3.2",
+  "version": "4.3.3",
   "description": "The AssemblyAI JavaScript SDK provides an easy-to-use interface for interacting with the AssemblyAI API, which supports async and real-time transcription, as well as the latest LeMUR models.",
   "engines": {
     "node": ">=18"
@@ -72,6 +72,7 @@
     "test": "jest --config jest.config.js",
     "format": "prettier '**/*' --write",
     "generate-types": "tsx ./scripts/generate-types.ts && pnpm format",
+    "generate-reference": "typedoc",
     "copybara:dry-run": "./copybara.sh dry_run --init-history",
     "copybara:pr": "./copybara.sh sync_out --init-history"
   },
@@ -125,6 +126,7 @@
     "rollup": "^3.25.1",
     "ts-jest": "^29.1.0",
     "tslib": "^2.5.3",
+    "typedoc": "^0.25.12",
     "typescript": "^5.2.2"
   },
   "dependencies": {

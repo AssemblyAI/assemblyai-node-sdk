@@ -19,3 +19,6 @@ dist
 
 # Ignore Jest directory
 .jest
+
+temp
+temp-docs
