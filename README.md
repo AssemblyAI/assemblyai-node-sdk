@@ -18,7 +18,8 @@ It is written primarily for Node.js in TypeScript with all types exported, but a
 
 ## Documentation
 
-Visit the [AssemblyAI documentation](https://www.assemblyai.com/docs) for step-by-step instructions and a lot more details about our AI models and API.
+Visit the [AssemblyAI documentation](https://www.assemblyai.com/docs) for step-by-step instructions and a lot more details about our AI models and API.   
+Explore the [SDK API reference](https://assemblyai.github.io/assemblyai-node-sdk/) for more details on the SDK types, functions, and classes.
 
 ## Quickstart
 
