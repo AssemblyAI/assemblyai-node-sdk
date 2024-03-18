@@ -1,5 +1,20 @@
 # Changelog
 
+## [4.3.3] - 2024-03-18
+
+### Added
+
+- GitHub action to generate API reference
+- Generate API reference with Typedoc and host on GitHub Pages
+
+### Changed
+
+- Add `conformer-2` to `SpeechModel` type
+- Change `language_code` field to accept any string
+- Move from JSDoc to TSDoc
+- Update `ws` to 8.13.0
+- Update dev dependencies (no public facing changes)
+
 ## [4.3.2] - 2024-03-08
 
 ### Added
