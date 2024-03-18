@@ -19,7 +19,7 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    name: Build and publish to npmjs.com
+    name: Build and publish API reference to GH Pages
     runs-on: ubuntu-latest
     steps:
       - name: Setup Node.js 20
