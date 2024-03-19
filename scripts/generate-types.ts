@@ -65,7 +65,7 @@ async function generateTypes(apiSpecPath: string, outputPath: string) {
     )
     .replaceAll(
       /(?:\[(.*)\])(?:\(((?:http)(?:s)?(?::\/\/).*)\))/gm,
-      "{@link $2 | $1 }"
+      "{@link $2 | $1 }",
     )
     // remove description tag
     .replaceAll("@description ", "")

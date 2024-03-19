@@ -1,0 +1,17 @@
+.vscode
+.npmignore
+coverage
+dist
+node_modules
+**/*.wav
+**/*.png
+**/.DS_Store
+LICENSE
+.gitignore
+.prettierignore
+BUILD.bazel
+copy.bara.sky
+copybara.sh
+.env
+temp
+temp-docs
