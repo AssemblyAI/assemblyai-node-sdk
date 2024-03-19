@@ -17,7 +17,7 @@ async function generateTypes(apiSpecPath: string, outputPath: string) {
     // Remove everything before and after the schemas, as we're only interested in schemas.
     .substring(
       schemasPosition,
-      output.indexOf("\n  };\n  responses", schemasPosition)
+      output.indexOf("\n  };\n  responses", schemasPosition),
     )
     // Turn components["schemas"]["{TYPE_NAME}"] into TYPE_NAME
     .replace(/components\["schemas"]\["(\w*)"\]/gm, "$1")
@@ -50,7 +50,7 @@ async function generateTypes(apiSpecPath: string, outputPath: string) {
     // replace prefix js examples with js code blocks
     .replaceAll(
       /@example (?:({(?:\n|.)*? \* })|(\[(?:\n|.)*? \* \]))/gm,
-      "@example\n * ```js\n * $1$2\n * ```"
+      "@example\n * ```js\n * $1$2\n * ```",
     )
     // put string examples in quotes
     .replaceAll(/@example ([^0-9]+\d*)/g, '@example "$1"')
@@ -61,7 +61,7 @@ async function generateTypes(apiSpecPath: string, outputPath: string) {
     // move description to the beginning of multi-line comments
     .replaceAll(
       /( *\/\*\* *\n)((?:\s|\S)*)\n(\s*\* @description (?:.*))( *\*\/\n)/gm,
-      "$1$3$2$4"
+      "$1$3$2$4",
     )
     .replaceAll(
       /(?:\[(.*)\])(?:\(((?:http)(?:s)?(?::\/\/).*)\))/gm,

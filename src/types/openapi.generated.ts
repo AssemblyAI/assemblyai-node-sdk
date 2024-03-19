@@ -11,8 +11,8 @@ type XOR<T, U> = T | U extends object
 type OneOf<T extends any[]> = T extends [infer Only]
   ? Only
   : T extends [infer A, infer B, ...infer Rest]
-  ? OneOf<[XOR<A, B>, ...Rest]>
-  : never;
+    ? OneOf<[XOR<A, B>, ...Rest]>
+    : never;
 
 /* eslint-enable */
 
@@ -603,7 +603,7 @@ export type LemurBaseParams = {
       string,
       {
         [key: string]: unknown;
-      }
+      },
     ]
   >;
   /**
@@ -686,7 +686,7 @@ export type LemurQuestion = {
       string,
       {
         [key: string]: unknown;
-      }
+      },
     ]
   >;
   /**

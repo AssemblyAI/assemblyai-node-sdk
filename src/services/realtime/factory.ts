@@ -38,7 +38,7 @@ export class RealtimeTranscriberFactory extends BaseService {
       {
         method: "POST",
         body: JSON.stringify(params),
-      }
+      },
     );
     return data.token;
   }

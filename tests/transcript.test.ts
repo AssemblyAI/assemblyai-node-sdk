@@ -30,7 +30,7 @@ describe("transcript", () => {
   it("create should create the transcript object with a remote url", async () => {
     fetchMock.doMockOnceIf(
       requestMatches({ url: "/v2/transcript", method: "POST" }),
-      JSON.stringify({ id: transcriptId, status: "queued" })
+      JSON.stringify({ id: transcriptId, status: "queued" }),
     );
     const transcript = await assembly.transcripts.create(
       {
@@ -38,7 +38,7 @@ describe("transcript", () => {
       },
       {
         poll: false,
-      }
+      },
     );
 
     expect(transcript.status).toBeTruthy();
@@ -49,7 +49,7 @@ describe("transcript", () => {
   it("submit create the transcript object with a remote url", async () => {
     fetchMock.doMockOnceIf(
       requestMatches({ url: "/v2/transcript", method: "POST" }),
-      JSON.stringify({ id: transcriptId, status: "queued" })
+      JSON.stringify({ id: transcriptId, status: "queued" }),
     );
     const transcript = await assembly.transcripts.submit({
       audio: remoteAudioURL,
@@ -63,7 +63,7 @@ describe("transcript", () => {
   it("submit create the transcript object with a remote url as audio_url", async () => {
     fetchMock.doMockOnceIf(
       requestMatches({ url: "/v2/transcript", method: "POST" }),
-      JSON.stringify({ id: transcriptId, status: "queued" })
+      JSON.stringify({ id: transcriptId, status: "queued" }),
     );
     const transcript = await assembly.transcripts.submit({
       audio_url: remoteAudioURL,
@@ -77,11 +77,11 @@ describe("transcript", () => {
   it("create should create the transcript object with a local file", async () => {
     fetchMock.doMockOnceIf(
       requestMatches({ url: "/v2/upload", method: "POST" }),
-      JSON.stringify({ upload_url: "https://example.com" })
+      JSON.stringify({ upload_url: "https://example.com" }),
     );
     fetchMock.doMockOnceIf(
       requestMatches({ url: "/v2/transcript", method: "POST" }),
-      JSON.stringify({ id: transcriptId, status: "queued" })
+      JSON.stringify({ id: transcriptId, status: "queued" }),
     );
     const transcript = await assembly.transcripts.create(
       {
@@ -89,7 +89,7 @@ describe("transcript", () => {
       },
       {
         poll: false,
-      }
+      },
     );
 
     expect(["processing", "queued"]).toContain(transcript.status);
@@ -98,11 +98,11 @@ describe("transcript", () => {
   it("submit should create the transcript object with a local file", async () => {
     fetchMock.doMockOnceIf(
       requestMatches({ url: "/v2/upload", method: "POST" }),
-      JSON.stringify({ upload_url: "https://example.com" })
+      JSON.stringify({ upload_url: "https://example.com" }),
     );
     fetchMock.doMockOnceIf(
       requestMatches({ url: "/v2/transcript", method: "POST" }),
-      JSON.stringify({ id: transcriptId, status: "queued" })
+      JSON.stringify({ id: transcriptId, status: "queued" }),
     );
     const transcript = await assembly.transcripts.submit({
       audio: path.join(testDir, "gore.wav"),
@@ -114,7 +114,7 @@ describe("transcript", () => {
   it("should get the transcript object", async () => {
     fetchMock.doMockOnceIf(
       requestMatches({ url: `/v2/transcript/${transcriptId}`, method: "GET" }),
-      JSON.stringify({ id: transcriptId })
+      JSON.stringify({ id: transcriptId }),
     );
     const fetched = await assembly.transcripts.get(transcriptId);
 
@@ -124,15 +124,15 @@ describe("transcript", () => {
   it("transcribe should poll the transcript object", async () => {
     fetchMock.doMockOnceIf(
       requestMatches({ url: "/v2/transcript", method: "POST" }),
-      JSON.stringify({ status: "queued", id: transcriptId })
+      JSON.stringify({ status: "queued", id: transcriptId }),
     );
     fetchMock.doMockOnceIf(
       requestMatches({ url: `/v2/transcript/${transcriptId}`, method: "GET" }),
-      JSON.stringify({ status: "processing" })
+      JSON.stringify({ status: "processing" }),
     );
     fetchMock.doMockOnceIf(
       requestMatches({ url: `/v2/transcript/${transcriptId}`, method: "GET" }),
-      JSON.stringify({ status: "completed" })
+      JSON.stringify({ status: "completed" }),
     );
     const transcript = await assembly.transcripts.transcribe(
       {
@@ -141,7 +141,7 @@ describe("transcript", () => {
       {
         pollingInterval: 1000,
         pollingTimeout: 5000,
-      }
+      },
     );
 
     expect(transcript.status).toBe("completed");
@@ -150,15 +150,15 @@ describe("transcript", () => {
   it("transcribe should poll the transcript object with audio_url", async () => {
     fetchMock.doMockOnceIf(
       requestMatches({ url: "/v2/transcript", method: "POST" }),
-      JSON.stringify({ status: "queued", id: transcriptId })
+      JSON.stringify({ status: "queued", id: transcriptId }),
     );
     fetchMock.doMockOnceIf(
       requestMatches({ url: `/v2/transcript/${transcriptId}`, method: "GET" }),
-      JSON.stringify({ status: "processing" })
+      JSON.stringify({ status: "processing" }),
     );
     fetchMock.doMockOnceIf(
       requestMatches({ url: `/v2/transcript/${transcriptId}`, method: "GET" }),
-      JSON.stringify({ status: "completed" })
+      JSON.stringify({ status: "completed" }),
     );
     const transcript = await assembly.transcripts.transcribe({
       audio_url: remoteAudioURL,
@@ -170,15 +170,15 @@ describe("transcript", () => {
   it("create should poll the transcript object", async () => {
     fetchMock.doMockOnceIf(
       requestMatches({ url: "/v2/transcript", method: "POST" }),
-      JSON.stringify({ status: "queued", id: transcriptId })
+      JSON.stringify({ status: "queued", id: transcriptId }),
     );
     fetchMock.doMockOnceIf(
       requestMatches({ url: `/v2/transcript/${transcriptId}`, method: "GET" }),
-      JSON.stringify({ status: "processing" })
+      JSON.stringify({ status: "processing" }),
     );
     fetchMock.doMockOnceIf(
       requestMatches({ url: `/v2/transcript/${transcriptId}`, method: "GET" }),
-      JSON.stringify({ status: "completed" })
+      JSON.stringify({ status: "completed" }),
     );
     const transcript = await assembly.transcripts.create(
       {
@@ -187,7 +187,7 @@ describe("transcript", () => {
       {
         pollingInterval: 1000,
         pollingTimeout: 5000,
-      }
+      },
     );
 
     expect(transcript.status).toBe("completed");
@@ -196,15 +196,15 @@ describe("transcript", () => {
   it("should wait on the transcript until ready", async () => {
     fetchMock.doMockOnceIf(
       requestMatches({ url: `/v2/transcript/${transcriptId}`, method: "GET" }),
-      JSON.stringify({ status: "queued", id: transcriptId })
+      JSON.stringify({ status: "queued", id: transcriptId }),
     );
     fetchMock.doMockOnceIf(
       requestMatches({ url: `/v2/transcript/${transcriptId}`, method: "GET" }),
-      JSON.stringify({ status: "processing" })
+      JSON.stringify({ status: "processing" }),
     );
     fetchMock.doMockOnceIf(
       requestMatches({ url: `/v2/transcript/${transcriptId}`, method: "GET" }),
-      JSON.stringify({ status: "completed" })
+      JSON.stringify({ status: "completed" }),
     );
     const transcript = await assembly.transcripts.waitUntilReady(transcriptId, {
       pollingInterval: 1000,
@@ -225,7 +225,7 @@ describe("transcript", () => {
           next_url: `https://api.assemblyai.com/v2/transcript?after_id=${knownTranscriptIds[0]}`,
           previous_url: "https://api.assemblyai.com/v2/transcript",
         },
-      })
+      }),
     );
     const page = await assembly.transcripts.list();
     expect(page.transcripts).toBeInstanceOf(Array);
@@ -238,7 +238,7 @@ describe("transcript", () => {
         url: `/v2/transcript/${transcriptId}`,
         method: "DELETE",
       }),
-      JSON.stringify({ id: transcriptId })
+      JSON.stringify({ id: transcriptId }),
     );
     const deleted = await assembly.transcripts.delete(transcriptId);
 
@@ -250,7 +250,7 @@ describe("transcript", () => {
           "Content-Type": "application/json",
         },
         method: "DELETE",
-      }
+      },
     );
     expect(deleted.id).toBe(transcriptId);
   });
@@ -282,7 +282,7 @@ describe("transcript", () => {
       },
       {
         poll: false,
-      }
+      },
     );
 
     expect(created).toStrictEqual(errorResponse);
@@ -305,7 +305,7 @@ describe("transcript", () => {
       {
         pollingInterval: 1_000,
         pollingTimeout: 1_000,
-      }
+      },
     );
 
     await expect(promise).rejects.toThrow("Polling timeout");
@@ -321,7 +321,7 @@ describe("transcript", () => {
       {
         pollingInterval: 1_000,
         pollingTimeout: 1_000,
-      }
+      },
     );
 
     await expect(promise).rejects.toThrow("Polling timeout");
@@ -334,7 +334,7 @@ describe("transcript", () => {
         url: `/v2/transcript/${transcriptId}/paragraphs`,
         method: "GET",
       }),
-      JSON.stringify({ transcriptId, paragraphs: ["paragraph 1"] })
+      JSON.stringify({ transcriptId, paragraphs: ["paragraph 1"] }),
     );
     const segment = await assembly.transcripts.paragraphs(transcriptId);
 
@@ -348,7 +348,7 @@ describe("transcript", () => {
         url: `/v2/transcript/${transcriptId}/sentences`,
         method: "GET",
       }),
-      JSON.stringify({ transcriptId, sentences: ["sentence 1"] })
+      JSON.stringify({ transcriptId, sentences: ["sentence 1"] }),
     );
     const segment = await assembly.transcripts.sentences(transcriptId);
 
@@ -362,12 +362,12 @@ describe("transcript", () => {
         url: `/v2/transcript/${transcriptId}/srt?chars_per_caption=32`,
         method: "GET",
       }),
-      "Lorem ipsum"
+      "Lorem ipsum",
     );
     const subtitle = await assembly.transcripts.subtitles(
       transcriptId,
       "srt",
-      32
+      32,
     );
 
     expect(subtitle).toBeTruthy();
@@ -379,12 +379,12 @@ describe("transcript", () => {
         url: `/v2/transcript/${transcriptId}/vtt?chars_per_caption=32`,
         method: "GET",
       }),
-      "Lorem ipsum"
+      "Lorem ipsum",
     );
     const subtitle = await assembly.transcripts.subtitles(
       transcriptId,
       "vtt",
-      32
+      32,
     );
 
     expect(subtitle).toBeTruthy();
@@ -399,7 +399,7 @@ describe("transcript", () => {
       JSON.stringify({
         status: "redacted_audio_ready",
         redacted_audio_url: "https://some-url.com",
-      })
+      }),
     );
     const res = await assembly.transcripts.redactions(transcriptId);
     expect(res.status).toBe("redacted_audio_ready");
@@ -412,7 +412,7 @@ describe("transcript", () => {
         id: transcriptId,
         total_count: 1,
         matches: [{}],
-      })
+      }),
     );
     const res = await assembly.transcripts.wordSearch(transcriptId, ["bears"]);
 

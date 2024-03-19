@@ -17,7 +17,7 @@ describe("utils", () => {
     const error = { error: "error" };
     fetchMock.mockResponseOnce(JSON.stringify(error), { status: 500 });
     await expect(() => assembly.transcripts.get("123")).rejects.toThrow(
-      error.error
+      error.error,
     );
   });
   it("should throw HTTP error", async () => {

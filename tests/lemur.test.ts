@@ -23,7 +23,7 @@ describe("lemur", () => {
   it("should generate a summary", async () => {
     fetchMock.doMockOnceIf(
       requestMatches({ method: "POST", url: "/lemur/v3/generate/summary" }),
-      JSON.stringify(lemurResponse)
+      JSON.stringify(lemurResponse),
     );
     const { response } = await assembly.lemur.summary({
       final_model: "basic",
@@ -48,7 +48,7 @@ describe("lemur", () => {
             answer: "answer",
           },
         ],
-      })
+      }),
     );
     const { response } = await assembly.lemur.questionAnswer({
       final_model: "basic",
@@ -71,7 +71,7 @@ describe("lemur", () => {
         method: "POST",
         url: "/lemur/v3/generate/action-items",
       }),
-      JSON.stringify(lemurResponse)
+      JSON.stringify(lemurResponse),
     );
     const { response } = await assembly.lemur.actionItems({
       final_model: "basic",
@@ -84,7 +84,7 @@ describe("lemur", () => {
   it("should generate a task", async () => {
     fetchMock.doMockOnceIf(
       requestMatches({ method: "POST", url: "/lemur/v3/generate/task" }),
-      JSON.stringify(lemurResponse)
+      JSON.stringify(lemurResponse),
     );
     const { response } = await assembly.lemur.task({
       final_model: "basic",
@@ -100,7 +100,7 @@ describe("lemur", () => {
       JSON.stringify({
         error: "each transcript source id must be valid",
       }),
-      { status: 500 }
+      { status: 500 },
     );
     const promise = assembly.lemur.summary({
       final_model: "basic",
@@ -109,7 +109,7 @@ describe("lemur", () => {
     });
 
     await expect(promise).rejects.toThrowError(
-      "each transcript source id must be valid"
+      "each transcript source id must be valid",
     );
   });
 
@@ -123,11 +123,10 @@ describe("lemur", () => {
         deleted: true,
         request_id: purgeRequestId,
         request_id_to_purge: knownLemurRequestId,
-      })
+      }),
     );
-    const deletionRequest = await assembly.lemur.purgeRequestData(
-      knownLemurRequestId
-    );
+    const deletionRequest =
+      await assembly.lemur.purgeRequestData(knownLemurRequestId);
     expect(deletionRequest.deleted).toBeTruthy();
     expect(deletionRequest.request_id_to_purge).toBe(knownLemurRequestId);
     expect(deletionRequest.request_id).toBe(purgeRequestId);

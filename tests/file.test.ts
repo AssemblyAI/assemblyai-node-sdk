@@ -19,10 +19,10 @@ describe("files", () => {
   it("should upload a file from path", async () => {
     fetchMock.doMockIf(
       requestMatches({ method: "POST", url: "/v2/upload" }),
-      JSON.stringify({ upload_url: "https://example.com" })
+      JSON.stringify({ upload_url: "https://example.com" }),
     );
     const uploadUrl = await assembly.files.upload(
-      path.join(testDir, "gore.wav")
+      path.join(testDir, "gore.wav"),
     );
     expect(uploadUrl).toBeTruthy();
   });
@@ -30,7 +30,7 @@ describe("files", () => {
   it("should upload a file from stream", async () => {
     fetchMock.doMockIf(
       requestMatches({ method: "POST", url: "/v2/upload" }),
-      JSON.stringify({ upload_url: "https://example.com" })
+      JSON.stringify({ upload_url: "https://example.com" }),
     );
     const stream = createReadStream(path.join(testDir, "gore.wav"));
     const uploadUrl = await assembly.files.upload(stream);
@@ -40,7 +40,7 @@ describe("files", () => {
   it("should upload a file from buffer", async () => {
     fetchMock.doMockIf(
       requestMatches({ method: "POST", url: "/v2/upload" }),
-      JSON.stringify({ upload_url: "https://example.com" })
+      JSON.stringify({ upload_url: "https://example.com" }),
     );
     const data = await readFile(path.join(testDir, "gore.wav"));
     const uploadUrl = await assembly.files.upload(data);

@@ -12,7 +12,7 @@ export abstract class BaseService {
   constructor(private params: BaseServiceParams) {}
   protected async fetch(
     input: string,
-    init?: RequestInit | undefined
+    init?: RequestInit | undefined,
   ): Promise<Response> {
     init = init ?? {};
     init.headers = init.headers ?? {};
@@ -45,7 +45,7 @@ export abstract class BaseService {
 
   protected async fetchJson<T>(
     input: string,
-    init?: RequestInit | undefined
+    init?: RequestInit | undefined,
   ): Promise<T> {
     const response = await this.fetch(input, init);
     return response.json() as Promise<T>;
