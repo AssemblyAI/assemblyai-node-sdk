@@ -72,6 +72,7 @@
     "test": "jest --config jest.config.js",
     "format": "prettier '**/*' --write",
     "generate-types": "tsx ./scripts/generate-types.ts && pnpm format",
+    "generate-reference": "typedoc",
     "copybara:dry-run": "./copybara.sh dry_run --init-history",
     "copybara:pr": "./copybara.sh sync_out --init-history"
   },
