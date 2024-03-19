@@ -20,26 +20,26 @@ export class LemurService extends BaseService {
   }
 
   questionAnswer(
-    params: LemurQuestionAnswerParams
+    params: LemurQuestionAnswerParams,
   ): Promise<LemurQuestionAnswerResponse> {
     return this.fetchJson<LemurQuestionAnswerResponse>(
       "/lemur/v3/generate/question-answer",
       {
         method: "POST",
         body: JSON.stringify(params),
-      }
+      },
     );
   }
 
   actionItems(
-    params: LemurActionItemsParams
+    params: LemurActionItemsParams,
   ): Promise<LemurActionItemsResponse> {
     return this.fetchJson<LemurActionItemsResponse>(
       "/lemur/v3/generate/action-items",
       {
         method: "POST",
         body: JSON.stringify(params),
-      }
+      },
     );
   }
 

@@ -20,7 +20,10 @@ import { FileService } from "../files";
 import { getPath } from "../../utils/path";
 
 export class TranscriptService extends BaseService {
-  constructor(params: BaseServiceParams, private files: FileService) {
+  constructor(
+    params: BaseServiceParams,
+    private files: FileService,
+  ) {
     super(params);
   }
 
@@ -32,7 +35,7 @@ export class TranscriptService extends BaseService {
    */
   async transcribe(
     params: TranscribeParams,
-    options?: TranscribeOptions
+    options?: TranscribeOptions,
   ): Promise<Transcript> {
     const transcript = await this.submit(params);
     return await this.waitUntilReady(transcript.id, options);
@@ -82,7 +85,7 @@ export class TranscriptService extends BaseService {
    */
   async create(
     params: TranscriptParams,
-    options?: CreateTranscriptOptions
+    options?: CreateTranscriptOptions,
   ): Promise<Transcript> {
     const path = getPath(params.audio_url);
     if (path !== null) {
@@ -110,7 +113,7 @@ export class TranscriptService extends BaseService {
    */
   async waitUntilReady(
     transcriptId: string,
-    options?: PollingOptions
+    options?: PollingOptions,
   ): Promise<Transcript> {
     const pollingInterval = options?.pollingInterval ?? 3_000;
     const pollingTimeout = options?.pollingTimeout ?? -1;
@@ -153,7 +156,7 @@ export class TranscriptService extends BaseService {
         Object.keys(params).map((key) => [
           key,
           params[key as keyof ListTranscriptParams]?.toString() || "",
-        ])
+        ]),
       )}`;
     }
     const data = await this.fetchJson<TranscriptList>(url);
@@ -186,7 +189,7 @@ export class TranscriptService extends BaseService {
   wordSearch(id: string, words: string[]): Promise<WordSearchResponse> {
     const params = new URLSearchParams({ words: words.join(",") });
     return this.fetchJson<WordSearchResponse>(
-      `/v2/transcript/${id}/word-search?${params.toString()}`
+      `/v2/transcript/${id}/word-search?${params.toString()}`,
     );
   }
 
@@ -206,7 +209,7 @@ export class TranscriptService extends BaseService {
    */
   paragraphs(id: string): Promise<ParagraphsResponse> {
     return this.fetchJson<ParagraphsResponse>(
-      `/v2/transcript/${id}/paragraphs`
+      `/v2/transcript/${id}/paragraphs`,
     );
   }
 
@@ -220,7 +223,7 @@ export class TranscriptService extends BaseService {
   async subtitles(
     id: string,
     format: SubtitleFormat = "srt",
-    chars_per_caption?: number
+    chars_per_caption?: number,
   ): Promise<string> {
     let url = `/v2/transcript/${id}/${format}`;
     if (chars_per_caption) {
@@ -239,7 +242,7 @@ export class TranscriptService extends BaseService {
    */
   redactions(id: string): Promise<RedactedAudioResponse> {
     return this.fetchJson<RedactedAudioResponse>(
-      `/v2/transcript/${id}/redacted-audio`
+      `/v2/transcript/${id}/redacted-audio`,
     );
   }
 }

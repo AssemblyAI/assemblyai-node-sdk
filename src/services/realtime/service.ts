@@ -93,15 +93,15 @@ export class RealtimeTranscriber {
   on(event: "open", listener: (event: SessionBeginsEventData) => void): void;
   on(
     event: "transcript",
-    listener: (transcript: RealtimeTranscript) => void
+    listener: (transcript: RealtimeTranscript) => void,
   ): void;
   on(
     event: "transcript.partial",
-    listener: (transcript: PartialTranscript) => void
+    listener: (transcript: PartialTranscript) => void,
   ): void;
   on(
     event: "transcript.final",
-    listener: (transcript: FinalTranscript) => void
+    listener: (transcript: FinalTranscript) => void,
   ): void;
   on(event: "error", listener: (error: Error) => void): void;
   on(event: "close", listener: (code: number, reason: string) => void): void;
@@ -135,7 +135,7 @@ export class RealtimeTranscriber {
           return;
         }
         this.configureEndUtteranceSilenceThreshold(
-          this.endUtteranceSilenceThreshold
+          this.endUtteranceSilenceThreshold,
         );
       };
 

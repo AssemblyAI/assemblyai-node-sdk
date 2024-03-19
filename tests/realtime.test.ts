@@ -59,13 +59,13 @@ describe("realtime", () => {
 
   it("fails without API key and token", async () => {
     expect(() => new RealtimeTranscriber({ apiKey: "" })).toThrowError(
-      "API key or temporary token is required."
+      "API key or temporary token is required.",
     );
   });
 
   it("fails on redundant connection", async () => {
     await expect(async () => await rt.connect()).rejects.toThrowError(
-      "Already connected"
+      "Already connected",
     );
   });
 
@@ -75,14 +75,14 @@ describe("realtime", () => {
       realtimeUrl: "https://api.assemblyai.com",
     });
     await expect(async () => await rt.connect()).rejects.toThrowError(
-      "Invalid protocol, must be wss"
+      "Invalid protocol, must be wss",
     );
   });
 
   it("fails to send audio with closed websocket", async () => {
     await close(rt, server);
     expect(() => rt.sendAudio(new ArrayBuffer(8))).toThrow(
-      "Socket is not open for communication"
+      "Socket is not open for communication",
     );
   });
 
@@ -166,7 +166,7 @@ describe("realtime", () => {
     });
     await connect(rt, server);
     await expect(server).toReceiveMessage(
-      `{"end_utterance_silence_threshold":500}`
+      `{"end_utterance_silence_threshold":500}`,
     );
     await close(rt, server);
   });
@@ -174,7 +174,7 @@ describe("realtime", () => {
   it("can set EndUtteranceSilenceThreshold", async () => {
     rt.configureEndUtteranceSilenceThreshold(500);
     await expect(server).toReceiveMessage(
-      `{"end_utterance_silence_threshold":500}`
+      `{"end_utterance_silence_threshold":500}`,
     );
   });
 
@@ -273,7 +273,7 @@ describe("realtime", () => {
     });
     expect(onClose).toHaveBeenCalledWith(
       RealtimeErrorType.AudioTooLong,
-      RealtimeErrorMessages[RealtimeErrorType.AudioTooLong]
+      RealtimeErrorMessages[RealtimeErrorType.AudioTooLong],
     );
   });
 
@@ -281,7 +281,7 @@ describe("realtime", () => {
     fetchMock.doMock();
     fetchMock.doMockOnceIf(
       requestMatches({ url: "/v2/realtime/token", method: "POST" }),
-      JSON.stringify({ token: "123" })
+      JSON.stringify({ token: "123" }),
     );
     const token = await aai.realtime.createTemporaryToken({ expires_in: 480 });
     expect(token).toEqual("123");
