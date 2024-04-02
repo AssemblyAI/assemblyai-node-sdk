@@ -277,15 +277,16 @@ const transcribeParams: TranscribeParams = {
   return transcript;
 })().then(deleteTranscript);
 
+// paginate using prev_url because transcripts are returned in descending order of creation
 (async function listTranscripts() {
-  let nextPageUrl: string | undefined | null;
+  let previousPageUrl: string | undefined | null;
   do {
     const page = await client.transcripts.list(
-      nextPageUrl as string | undefined,
+      previousPageUrl as string | undefined,
     );
     console.log(page);
-    nextPageUrl = page.page_details.next_url;
-  } while (nextPageUrl);
+    previousPageUrl = page.page_details.prev_url;
+  } while (previousPageUrl);
 })();
 
 async function searchTranscript(transcript: Transcript) {

@@ -1,5 +1,23 @@
 # Changelog
 
+## [4.3.4] - 2024-04-02
+
+### Added
+
+- `SpeechModel.Best` enum
+- `TranscriptListItem.error` property
+
+### Updated
+
+- Make `PageDetails.prev_url` nullable
+- Rename Realtime to Streaming inside code documentation
+- More inline code documentation
+
+### Fixed
+
+- Rename `SubstitutionPolicy` literal "entity_type" to "entity_name"
+- Fix the pagination example in "List transcripts" sample on README
+
 ## [4.3.3] - 2024-03-18
 
 ### Added
