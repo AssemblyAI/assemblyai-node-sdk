@@ -149,7 +149,7 @@ export type SessionTerminated = RealtimeBaseMessage & {
 
 export type TerminateSession = {
   /**
-   * Set to true to end your real-time session forever
+   * Set to true to end your streaming session forever
    */
   terminate_session: boolean;
 };

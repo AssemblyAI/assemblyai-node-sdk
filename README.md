@@ -19,7 +19,6 @@ It is written primarily for Node.js in TypeScript with all types exported, but a
 ## Documentation
 
 Visit the [AssemblyAI documentation](https://www.assemblyai.com/docs) for step-by-step instructions and a lot more details about our AI models and API.
-Explore the [SDK API reference](https://assemblyai.github.io/assemblyai-node-sdk/) for more details on the SDK types, functions, and classes.
 
 ## Quickstart
 
@@ -185,12 +184,17 @@ const page = await client.transcripts.list();
 You can also paginate over all pages.
 
 ```typescript
-let nextPageUrl: string | null = null;
+let previousPageUrl: string | null = null;
 do {
-  const page = await client.transcripts.list(nextPageUrl);
-  nextPageUrl = page.page_details.next_url;
-} while (nextPageUrl !== null);
+  const page = await client.transcripts.list(previousPageUrl);
+  previousPageUrl = page.page_details.prev_url;
+} while (previousPageUrl !== null);
 ```
+
+> [!NOTE]
+> To paginate over all pages, you need to use the `page.page_details.prev_url`
+> because the transcripts are returned in descending order by creation date and time.
+> The first page is are the most recent transcript, and each "previous" page are older transcripts.
 
 </details>
 
@@ -241,9 +245,9 @@ You can configure the following events.
 ```typescript
 rt.on("open", ({ sessionId, expiresAt }) => console.log('Session ID:', sessionId, 'Expires at:', expiresAt));
 rt.on("close", (code: number, reason: string) => console.log('Closed', code, reason));
-rt.on("transcript", (transcript: RealtimeTranscript) => console.log('Transcript:', transcript));
-rt.on("transcript.partial", (transcript: PartialTranscript) => console.log('Partial transcript:', transcript));
-rt.on("transcript.final", (transcript: FinalTranscript) => console.log('Final transcript:', transcript));
+rt.on("transcript", (transcript: TranscriptMessage) => console.log('Transcript:', transcript));
+rt.on("transcript.partial", (transcript: PartialTranscriptMessage) => console.log('Partial transcript:', transcript));
+rt.on("transcript.final", (transcript: FinalTranscriptMessage) => console.log('Final transcript:', transcript));
 rt.on("error", (error: Error) => console.error('Error', error));
 ```
 
