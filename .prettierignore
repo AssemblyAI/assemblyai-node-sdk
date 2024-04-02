@@ -1,8 +1,10 @@
 .vscode
+.npmignore
 coverage
 dist
 node_modules
 **/*.wav
+**/*.png
 **/.DS_Store
 LICENSE
 .gitignore

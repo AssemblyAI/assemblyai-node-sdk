@@ -71,7 +71,8 @@
     "lint": "eslint -c .eslintrc.json '{src,tests}/**/*.{js,ts}' && publint && tsc --noEmit -p tsconfig.json",
     "test": "jest --config jest.config.js",
     "format": "prettier '**/*' --write",
-    "generate-types": "tsx ./scripts/generate-types.ts && pnpm format",
+    "generate:types": "tsx ./scripts/generate-types.ts && pnpm format",
+    "generate:reference": "typedoc",
     "copybara:dry-run": "./copybara.sh dry_run --init-history",
     "copybara:pr": "./copybara.sh sync_out --init-history"
   },
@@ -125,7 +126,8 @@
     "ts-jest": "^29.1.2",
     "tslib": "^2.5.3",
     "typescript": "^5.4.2",
-    "typedoc": "^0.25.12"
+    "typedoc": "^0.25.12",
+    "typedoc-plugin-extras": "^3.0.0"
   },
   "dependencies": {
     "ws": "^8.16.0"

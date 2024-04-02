@@ -1,5 +1,22 @@
 {
   "entryPoints": ["src/index.ts"],
+  "plugin": ["typedoc-plugin-extras"],
   "out": "temp-docs",
-  "hideGenerator": true
+  "hideGenerator": true,
+  "name": "AssemblyAI JS SDK Reference",
+  "customTitle": "AssemblyAI JS SDK Reference",
+  "customDescription": "The API reference for the AssemblyAI JavaScript SDK.",
+  "favicon": "https://www.assemblyai.com/favicon.png",
+  "navigationLinks": {
+    "NPM": "https://www.npmjs.com/package/assemblyai",
+    "GitHub": "https://github.com/AssemblyAI/assemblyai-node-sdk",
+    "Docs": "https://www.assemblyai.com/docs/",
+    "Discord": "https://assemblyai.com/discord",
+    "Status": "https://status.assemblyai.com/",
+    "Playground": "https://www.assemblyai.com/playground",
+    "Dashboard": "https://www.assemblyai.com/app"
+  },
+  "sidebarLinks": {
+    "README": "/assemblyai-node-sdk/index.html"
+  }
 }
