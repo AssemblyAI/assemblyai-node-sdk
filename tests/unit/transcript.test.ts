@@ -116,9 +116,9 @@ describe("transcript", () => {
       requestMatches({ url: `/v2/transcript/${transcriptId}`, method: "GET" }),
       JSON.stringify({ id: transcriptId }),
     );
-    const fetched = await assembly.transcripts.get(transcriptId);
+    const transcript = await assembly.transcripts.get(transcriptId);
 
-    expect(fetched.id).toBeTruthy();
+    expect(transcript.id).toBeTruthy();
   });
 
   it("transcribe should poll the transcript object", async () => {
@@ -240,7 +240,7 @@ describe("transcript", () => {
       }),
       JSON.stringify({ id: transcriptId }),
     );
-    const deleted = await assembly.transcripts.delete(transcriptId);
+    const transcript = await assembly.transcripts.delete(transcriptId);
 
     expect(fetch).toHaveBeenLastCalledWith(
       `${defaultBaseUrl}/v2/transcript/${transcriptId}`,
@@ -252,17 +252,17 @@ describe("transcript", () => {
         method: "DELETE",
       },
     );
-    expect(deleted.id).toBe(transcriptId);
+    expect(transcript.id).toBe(transcriptId);
   });
 
   it("submit should fail to create the transcript object", async () => {
     const errorResponse = { status: "error" };
     fetchMock.mockResponseOnce(JSON.stringify(errorResponse));
-    const created = await assembly.transcripts.submit({
+    const transcript = await assembly.transcripts.submit({
       audio: badRemoteAudioURL,
     });
 
-    expect(created).toStrictEqual(errorResponse);
+    expect(transcript).toStrictEqual(errorResponse);
     expect(fetch).toHaveBeenLastCalledWith(`${defaultBaseUrl}/v2/transcript`, {
       body: JSON.stringify({ audio_url: badRemoteAudioURL }),
       headers: {
@@ -276,7 +276,7 @@ describe("transcript", () => {
   it("create should fail to create the transcript object", async () => {
     const errorResponse = { status: "error" };
     fetchMock.mockResponseOnce(JSON.stringify(errorResponse));
-    const created = await assembly.transcripts.create(
+    const transcript = await assembly.transcripts.create(
       {
         audio_url: badRemoteAudioURL,
       },
@@ -285,7 +285,7 @@ describe("transcript", () => {
       },
     );
 
-    expect(created).toStrictEqual(errorResponse);
+    expect(transcript).toStrictEqual(errorResponse);
     expect(fetch).toHaveBeenLastCalledWith(`${defaultBaseUrl}/v2/transcript`, {
       body: JSON.stringify({ audio_url: badRemoteAudioURL }),
       headers: {
@@ -336,10 +336,11 @@ describe("transcript", () => {
       }),
       JSON.stringify({ transcriptId, paragraphs: ["paragraph 1"] }),
     );
-    const segment = await assembly.transcripts.paragraphs(transcriptId);
+    const paragraphsResponse =
+      await assembly.transcripts.paragraphs(transcriptId);
 
-    expect(segment.paragraphs).toBeInstanceOf(Array);
-    expect(segment.paragraphs.length).toBeGreaterThan(0);
+    expect(paragraphsResponse.paragraphs).toBeInstanceOf(Array);
+    expect(paragraphsResponse.paragraphs.length).toBeGreaterThan(0);
   });
 
   it("should get sentences", async () => {
@@ -350,10 +351,11 @@ describe("transcript", () => {
       }),
       JSON.stringify({ transcriptId, sentences: ["sentence 1"] }),
     );
-    const segment = await assembly.transcripts.sentences(transcriptId);
+    const sentencesResponse =
+      await assembly.transcripts.sentences(transcriptId);
 
-    expect(segment.sentences).toBeInstanceOf(Array);
-    expect(segment.sentences.length).toBeGreaterThan(0);
+    expect(sentencesResponse.sentences).toBeInstanceOf(Array);
+    expect(sentencesResponse.sentences.length).toBeGreaterThan(0);
   });
 
   it("should get srt subtitles", async () => {
@@ -401,9 +403,10 @@ describe("transcript", () => {
         redacted_audio_url: "https://some-url.com",
       }),
     );
-    const res = await assembly.transcripts.redactions(transcriptId);
-    expect(res.status).toBe("redacted_audio_ready");
-    expect(res.redacted_audio_url).toBeTruthy();
+    const redactedAudioResponse =
+      await assembly.transcripts.redactions(transcriptId);
+    expect(redactedAudioResponse.status).toBe("redacted_audio_ready");
+    expect(redactedAudioResponse.redacted_audio_url).toBeTruthy();
   });
 
   it("should word search", async () => {
@@ -414,10 +417,12 @@ describe("transcript", () => {
         matches: [{}],
       }),
     );
-    const res = await assembly.transcripts.wordSearch(transcriptId, ["bears"]);
+    const searchResponse = await assembly.transcripts.wordSearch(transcriptId, [
+      "bears",
+    ]);
 
-    expect(res.id).toBe(transcriptId);
-    expect(res.total_count).toBe(1);
-    expect(res.matches).toBeInstanceOf(Array);
+    expect(searchResponse.id).toBe(transcriptId);
+    expect(searchResponse.total_count).toBe(1);
+    expect(searchResponse.matches).toBeInstanceOf(Array);
   });
 });

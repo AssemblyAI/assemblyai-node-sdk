@@ -37,6 +37,9 @@ export type ConfigureEndUtteranceSilenceThreshold = {
   end_utterance_silence_threshold: number;
 };
 
+/**
+ * Transcript text at the end of an utterance with punctuation and casing.
+ */
 export type FinalTranscript = RealtimeBaseTranscript & {
   /**
    * Describes the type of message
@@ -66,8 +69,12 @@ export type MessageType =
   | "SessionBegins"
   | "PartialTranscript"
   | "FinalTranscript"
+  | "SessionInformation"
   | "SessionTerminated";
 
+/**
+ * As you send audio data to the API, the API immediately starts responding with Partial Transcript results.
+ */
 export type PartialTranscript = RealtimeBaseTranscript & {
   /**
    * Describes the type of message
@@ -110,6 +117,9 @@ export type RealtimeBaseTranscript = {
   words: Word[];
 };
 
+/**
+ * Error message
+ */
 export type RealtimeError = {
   error: string;
 };
@@ -118,6 +128,7 @@ export type RealtimeMessage =
   | SessionBegins
   | PartialTranscript
   | FinalTranscript
+  | SessionInformation
   | SessionTerminated
   | RealtimeError;
 
@@ -125,6 +136,9 @@ export type RealtimeTranscript = PartialTranscript | FinalTranscript;
 
 export type RealtimeTranscriptType = "PartialTranscript" | "FinalTranscript";
 
+/**
+ * Session start
+ */
 export type SessionBegins = RealtimeBaseMessage & {
   /**
    * Timestamp when this session will expire
@@ -140,6 +154,25 @@ export type SessionBegins = RealtimeBaseMessage & {
   session_id: string;
 };
 
+/**
+ * Information about the session
+ * Information about the session that is concluding.
+ * This message is sent at the end of the session, before the SessionTerminated message.
+ */
+export type SessionInformation = RealtimeBaseMessage & {
+  /**
+   * The total duration of the audio in seconds
+   */
+  audio_duration_seconds: number;
+  /**
+   * Describes the type of the message
+   */
+  message_type: "SessionInformation";
+};
+
+/**
+ * Session terminated
+ */
 export type SessionTerminated = RealtimeBaseMessage & {
   /**
    * Describes the type of the message
@@ -147,6 +180,9 @@ export type SessionTerminated = RealtimeBaseMessage & {
   message_type: "SessionTerminated";
 };
 
+/**
+ * Terminate session
+ */
 export type TerminateSession = {
   /**
    * Set to true to end your streaming session forever

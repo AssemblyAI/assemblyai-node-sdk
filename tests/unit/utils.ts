@@ -1,4 +1,4 @@
-import { AssemblyAI } from "../src";
+import { AssemblyAI } from "../../src";
 
 export const defaultBaseUrl = "http://localhost:1234";
 export const defaultApiKey = "apikey_123";

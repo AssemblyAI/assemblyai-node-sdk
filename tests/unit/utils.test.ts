@@ -1,6 +1,6 @@
 import fetchMock from "jest-fetch-mock";
-import { AssemblyAI } from "../src";
-import { getPath } from "../src/utils/path";
+import { AssemblyAI } from "../../src";
+import { getPath } from "../../src/utils/path";
 
 fetchMock.enableMocks();
 

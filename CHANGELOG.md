@@ -1,5 +1,21 @@
 # Changelog
 
+## [4.4.0] - 2024-04-12
+
+### Added
+
+- Add `disablePartialTranscripts` parameter to `CreateRealtimeTranscriberParams`
+- Add `enableExtraSessionInformation` parameter to `CreateRealtimeTranscriberParams`
+- Add `session_information` event to `RealtimeTranscriber.on()`
+
+### Updated
+
+- ⚠️ Deprecate `conformer-2` literal for `TranscriptParams.speech_model` property
+
+### Fixed
+
+- Add missing `status` property to `AutoHighlightsResult`
+
 ## [4.3.4] - 2024-04-02
 
 ### Added

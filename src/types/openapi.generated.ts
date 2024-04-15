@@ -271,6 +271,10 @@ export type AutoHighlightsResult = {
    * A temporally-sequential array of Key Phrases
    */
   results: AutoHighlightResult[];
+  /**
+   * The status of the Key Phrases model. Either success, or unavailable in the rare case that the model failed.
+   */
+  status: AudioIntelligenceModelStatus;
 };
 
 /**
