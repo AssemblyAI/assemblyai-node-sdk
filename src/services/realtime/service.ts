@@ -12,6 +12,7 @@ import {
   SessionBeginsEventData,
   AudioEncoding,
   AudioData,
+  SessionInformation,
 } from "../..";
 import {
   RealtimeError,
@@ -49,6 +50,9 @@ export class RealtimeTranscriber {
   private apiKey?: string;
   private token?: string;
   private endUtteranceSilenceThreshold?: number;
+  private enableExtraSessionInformation?: boolean;
+  private disablePartialTranscripts?: boolean;
+
   private socket?: WebSocket;
   private listeners: RealtimeListeners = {};
   private sessionTerminatedResolve?: () => void;
@@ -59,6 +63,8 @@ export class RealtimeTranscriber {
     this.wordBoost = params.wordBoost;
     this.encoding = params.encoding;
     this.endUtteranceSilenceThreshold = params.endUtteranceSilenceThreshold;
+    this.enableExtraSessionInformation = params.enableExtraSessionInformation;
+    this.disablePartialTranscripts = params.disablePartialTranscripts;
     if ("token" in params && params.token) this.token = params.token;
     if ("apiKey" in params && params.apiKey) this.apiKey = params.apiKey;
 
@@ -85,6 +91,18 @@ export class RealtimeTranscriber {
     if (this.encoding) {
       searchParams.set("encoding", this.encoding);
     }
+    if (this.enableExtraSessionInformation) {
+      searchParams.set(
+        "enable_extra_session_information",
+        this.enableExtraSessionInformation.toString(),
+      );
+    }
+    if (this.disablePartialTranscripts) {
+      searchParams.set(
+        "disable_partial_transcripts",
+        this.disablePartialTranscripts.toString(),
+      );
+    }
     url.search = searchParams.toString();
 
     return url;
@@ -102,6 +120,10 @@ export class RealtimeTranscriber {
   on(
     event: "transcript.final",
     listener: (transcript: FinalTranscript) => void,
+  ): void;
+  on(
+    event: "session_information",
+    listener: (info: SessionInformation) => void,
   ): void;
   on(event: "error", listener: (error: Error) => void): void;
   on(event: "close", listener: (code: number, reason: string) => void): void;
@@ -181,6 +203,10 @@ export class RealtimeTranscriber {
             message.created = new Date(message.created);
             this.listeners.transcript?.(message);
             this.listeners["transcript.final"]?.(message);
+            break;
+          }
+          case "SessionInformation": {
+            this.listeners.session_information?.(message);
             break;
           }
           case "SessionTerminated": {

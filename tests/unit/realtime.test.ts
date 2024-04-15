@@ -1,12 +1,13 @@
 import { TransformStream } from "stream/web";
+jest.mock("ws", () => require("./mocks/ws"));
 import WS from "jest-websocket-mock";
 import fetchMock from "jest-fetch-mock";
-import { AssemblyAI, RealtimeTranscriber } from "../src";
+import { AssemblyAI, RealtimeTranscriber } from "../../src";
 import {
   RealtimeError,
   RealtimeErrorType,
   RealtimeErrorMessages,
-} from "../src/utils/errors/realtime";
+} from "../../src/utils/errors/realtime";
 
 import { createClient, defaultApiKey, requestMatches } from "./utils";
 
@@ -19,6 +20,10 @@ const sessionBeginsMessage = {
   message_type: "SessionBegins",
   session_id: "123",
   expires_at: "2023-09-14T03:37:11.516967",
+};
+const sessionInformationMessage = {
+  message_type: "SessionInformation",
+  audio_duration_seconds: 232.192,
 };
 const sessionTerminatedMessage = {
   message_type: "SessionTerminated",
@@ -275,6 +280,16 @@ describe("realtime", () => {
       RealtimeErrorType.AudioTooLong,
       RealtimeErrorMessages[RealtimeErrorType.AudioTooLong],
     );
+  });
+
+  it("can receive session information", async () => {
+    const onSessionInformation = jest.fn();
+    rt.on("session_information", onSessionInformation);
+    server.send(JSON.stringify(sessionInformationMessage));
+    expect(onSessionInformation).toHaveBeenCalledWith({
+      message_type: sessionInformationMessage.message_type,
+      audio_duration_seconds: sessionInformationMessage.audio_duration_seconds,
+    });
   });
 
   it("can create a token", async () => {

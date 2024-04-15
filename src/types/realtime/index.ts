@@ -4,6 +4,7 @@ import {
   PartialTranscript,
   RealtimeTranscript,
   RealtimeTranscriptType,
+  SessionInformation,
 } from "../asyncapi.generated";
 
 type CreateRealtimeTranscriberParams = {
@@ -27,6 +28,18 @@ type CreateRealtimeTranscriberParams = {
    * The duration of the end utterance silence threshold in milliseconds
    */
   endUtteranceSilenceThreshold?: number;
+  /**
+   * Disable partial transcripts.
+   * Set to `true` to not receive partial transcripts. Defaults to `false`.
+   * @defaultValue false
+   */
+  disablePartialTranscripts?: boolean;
+  /**
+   * Enable extra session information.
+   * Set to `true` to receive the `session_information` message before the session ends. Defaults to `false`.
+   * @defaultValue false
+   */
+  enableExtraSessionInformation?: boolean;
 } & (
   | {
       /**
@@ -69,6 +82,18 @@ type RealtimeTranscriberParams = {
    * The duration of the end utterance silence threshold in milliseconds
    */
   endUtteranceSilenceThreshold?: number;
+  /**
+   * Disable partial transcripts.
+   * Set to `true` to not receive partial transcripts. Defaults to `false`.
+   * @defaultValue false
+   */
+  disablePartialTranscripts?: boolean;
+  /**
+   * Enable extra session information.
+   * Set to `true` to receive the `session_information` message before the session ends. Defaults to `false`.
+   * @defaultValue false
+   */
+  enableExtraSessionInformation?: boolean;
 } & (
   | {
       /**
@@ -96,6 +121,7 @@ type RealtimeEvents =
   | "transcript"
   | "transcript.partial"
   | "transcript.final"
+  | "session_information"
   | "error";
 
 type SessionBeginsEventData = {
@@ -109,6 +135,7 @@ type RealtimeListeners = {
   transcript?: (transcript: RealtimeTranscript) => void;
   "transcript.partial"?: (transcript: PartialTranscript) => void;
   "transcript.final"?: (transcript: FinalTranscript) => void;
+  session_information?: (info: SessionInformation) => void;
   error?: (error: Error) => void;
 };
 
