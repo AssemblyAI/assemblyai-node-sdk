@@ -37,7 +37,8 @@ type CreateRealtimeTranscriberParams = {
   /**
    * Enable extra session information.
    * Set to `true` to receive the `session_information` message before the session ends. Defaults to `false`.
-   * @defaultValue false
+   * @defaultValue true
+   * @deprecated This parameter is now ignored and will be removed. Session information will always be sent.
    */
   enableExtraSessionInformation?: boolean;
 } & (
@@ -91,7 +92,8 @@ type RealtimeTranscriberParams = {
   /**
    * Enable extra session information.
    * Set to `true` to receive the `session_information` message before the session ends. Defaults to `false`.
-   * @defaultValue false
+   * @defaultValue true
+   * @deprecated This parameter is now ignored and will be removed. Session information will always be sent.
    */
   enableExtraSessionInformation?: boolean;
 } & (

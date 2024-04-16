@@ -1,5 +1,11 @@
 # Changelog
 
+## [4.4.1] - 2024-04-16
+
+### Changed
+
+- Deprecate `enableExtraSessionInformation` parameter in `CreateRealtimeTranscriberParams` type
+
 ## [4.4.0] - 2024-04-12
 
 ### Added
@@ -8,7 +14,7 @@
 - Add `enableExtraSessionInformation` parameter to `CreateRealtimeTranscriberParams`
 - Add `session_information` event to `RealtimeTranscriber.on()`
 
-### Updated
+### Changed
 
 - ⚠️ Deprecate `conformer-2` literal for `TranscriptParams.speech_model` property
 
@@ -23,7 +29,7 @@
 - `SpeechModel.Best` enum
 - `TranscriptListItem.error` property
 
-### Updated
+### Changed
 
 - Make `PageDetails.prev_url` nullable
 - Rename Realtime to Streaming inside code documentation
