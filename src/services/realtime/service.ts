@@ -50,7 +50,6 @@ export class RealtimeTranscriber {
   private apiKey?: string;
   private token?: string;
   private endUtteranceSilenceThreshold?: number;
-  private enableExtraSessionInformation?: boolean;
   private disablePartialTranscripts?: boolean;
 
   private socket?: WebSocket;
@@ -63,7 +62,6 @@ export class RealtimeTranscriber {
     this.wordBoost = params.wordBoost;
     this.encoding = params.encoding;
     this.endUtteranceSilenceThreshold = params.endUtteranceSilenceThreshold;
-    this.enableExtraSessionInformation = params.enableExtraSessionInformation;
     this.disablePartialTranscripts = params.disablePartialTranscripts;
     if ("token" in params && params.token) this.token = params.token;
     if ("apiKey" in params && params.apiKey) this.apiKey = params.apiKey;
@@ -91,12 +89,9 @@ export class RealtimeTranscriber {
     if (this.encoding) {
       searchParams.set("encoding", this.encoding);
     }
-    if (this.enableExtraSessionInformation) {
-      searchParams.set(
-        "enable_extra_session_information",
-        this.enableExtraSessionInformation.toString(),
-      );
-    }
+
+    searchParams.set("enable_extra_session_information", "true");
+
     if (this.disablePartialTranscripts) {
       searchParams.set(
         "disable_partial_transcripts",
