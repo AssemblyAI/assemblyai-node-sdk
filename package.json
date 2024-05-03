@@ -1,6 +1,6 @@
 {
   "name": "assemblyai",
-  "version": "4.4.1",
+  "version": "4.4.2",
   "description": "The AssemblyAI JavaScript SDK provides an easy-to-use interface for interacting with the AssemblyAI API, which supports async and real-time transcription, as well as the latest LeMUR models.",
   "engines": {
     "node": ">=18"
@@ -17,7 +17,7 @@
         "default": "./dist/deno.mjs"
       },
       "workerd": "./dist/index.mjs",
-      "browser": "./dist/index.mjs",
+      "browser": "./dist/browser.mjs",
       "node": {
         "types": "./dist/index.d.ts",
         "import": "./dist/node.mjs",
@@ -40,14 +40,10 @@
       "node": "./src/polyfills/streams/node.ts",
       "default": "./src/polyfills/streams/index.ts"
     },
-    "#ws": {
-      "types": "./src/polyfills/ws/index.d.ts",
-      "browser": "./src/polyfills/ws/browser.mjs",
-      "default": {
-        "types": "./src/polyfills/ws/index.d.ts",
-        "import": "./src/polyfills/ws/index.mjs",
-        "require": "./src/polyfills/ws/index.cjs"
-      }
+    "#websocket": {
+      "browser": "./src/polyfills/websocket/browser.ts",
+      "node": "./src/polyfills/websocket/default.ts",
+      "default": "./src/polyfills/websocket/default.ts"
     }
   },
   "type": "commonjs",
@@ -70,7 +66,7 @@
     "clean": "rimraf dist/* && rimraf temp/* && rimraf temp-docs/*",
     "lint": "eslint -c .eslintrc.json '{src,tests}/**/*.{js,ts}' && publint && tsc --noEmit -p tsconfig.json",
     "test": "pnpm run test:unit && pnpm run test:integration",
-    "test:unit": "jest --config jest.unit.config.js",
+    "test:unit": "jest --config jest.unit.config.js --testTimeout 1000",
     "test:integration": "jest --config jest.integration.config.js --testTimeout 360000",
     "format": "prettier '**/*' --write",
     "generate:types": "tsx ./scripts/generate-types.ts && prettier 'src/types/*.generated.ts' --write",

@@ -6,10 +6,11 @@ import {
   defaultBaseUrl,
   requestMatches,
 } from "./utils";
+import { readFile } from "fs/promises";
 
 fetchMock.enableMocks();
 
-const testDir = process.env["TESTDATA_DIR"] ?? ".";
+const testDir = process.env["TESTDATA_DIR"] ?? "tests/static";
 
 const assembly = createClient();
 
@@ -106,6 +107,26 @@ describe("transcript", () => {
     );
     const transcript = await assembly.transcripts.submit({
       audio: path.join(testDir, "gore.wav"),
+    });
+
+    expect(["processing", "queued"]).toContain(transcript.status);
+  });
+
+  it("submit should create the transcript object from data URI", async () => {
+    fetchMock.doMockOnceIf(
+      requestMatches({ url: "/v2/upload", method: "POST" }),
+      JSON.stringify({ upload_url: "https://example.com" }),
+    );
+    fetchMock.doMockOnceIf(
+      requestMatches({ url: "/v2/transcript", method: "POST" }),
+      JSON.stringify({ id: transcriptId, status: "queued" }),
+    );
+    const dataUri = `data:audio/wav;base64,${await readFile(
+      path.join(testDir, "gore.wav"),
+      "base64",
+    )}`;
+    const transcript = await assembly.transcripts.submit({
+      audio: dataUri,
     });
 
     expect(["processing", "queued"]).toContain(transcript.status);
@@ -245,6 +266,7 @@ describe("transcript", () => {
     expect(fetch).toHaveBeenLastCalledWith(
       `${defaultBaseUrl}/v2/transcript/${transcriptId}`,
       {
+        cache: "no-store",
         headers: {
           Authorization: defaultApiKey,
           "Content-Type": "application/json",
@@ -265,6 +287,7 @@ describe("transcript", () => {
     expect(transcript).toStrictEqual(errorResponse);
     expect(fetch).toHaveBeenLastCalledWith(`${defaultBaseUrl}/v2/transcript`, {
       body: JSON.stringify({ audio_url: badRemoteAudioURL }),
+      cache: "no-store",
       headers: {
         Authorization: defaultApiKey,
         "Content-Type": "application/json",
@@ -288,6 +311,7 @@ describe("transcript", () => {
     expect(transcript).toStrictEqual(errorResponse);
     expect(fetch).toHaveBeenLastCalledWith(`${defaultBaseUrl}/v2/transcript`, {
       body: JSON.stringify({ audio_url: badRemoteAudioURL }),
+      cache: "no-store",
       headers: {
         Authorization: defaultApiKey,
         "Content-Type": "application/json",
@@ -310,7 +334,7 @@ describe("transcript", () => {
 
     await expect(promise).rejects.toThrow("Polling timeout");
     fetchMock.resetMocks();
-  });
+  }, 5000);
 
   it("create should fail to poll", async () => {
     fetchMock.mockResponse(JSON.stringify({ status: "queued" }));
@@ -326,7 +350,7 @@ describe("transcript", () => {
 
     await expect(promise).rejects.toThrow("Polling timeout");
     fetchMock.resetMocks();
-  });
+  }, 5000);
 
   it("should get paragraphs", async () => {
     fetchMock.doMockOnceIf(

@@ -8,7 +8,7 @@ import {
   PartialTranscript,
 } from "../../src";
 
-const testDir = process.env["TESTDATA_DIR"] ?? ".";
+const testDir = process.env["TESTDATA_DIR"] ?? "tests/static";
 const client = new AssemblyAI({
   apiKey: process.env.ASSEMBLYAI_API_KEY!,
 });

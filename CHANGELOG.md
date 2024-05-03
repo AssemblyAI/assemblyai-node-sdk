@@ -1,5 +1,14 @@
 # Changelog
 
+## [4.4.2]
+
+### Changed
+
+- Caching is disabled for all HTTP request made by the SDK
+- Change how the WebSocket libraries are imported for better compatibility across frameworks and runtimes.
+  The library no longer relies on a internal `#ws` import, and instead compiles the imports into the dist bundles.
+  Browser builds will use the native `WebSocket`, other builds will use the `ws` package.
+
 ## [4.4.1] - 2024-04-16
 
 ### Changed

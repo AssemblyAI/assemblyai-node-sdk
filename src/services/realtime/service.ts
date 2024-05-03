@@ -1,5 +1,8 @@
 import { WritableStream } from "#streams";
-import WebSocket from "#ws";
+import {
+  PolyfillWebSocket,
+  factory as polyfillWebSocketFactory,
+} from "#websocket";
 import { ErrorEvent, MessageEvent, CloseEvent } from "ws";
 import {
   RealtimeEvents,
@@ -52,7 +55,7 @@ export class RealtimeTranscriber {
   private endUtteranceSilenceThreshold?: number;
   private disablePartialTranscripts?: boolean;
 
-  private socket?: WebSocket;
+  private socket?: PolyfillWebSocket;
   private listeners: RealtimeListeners = {};
   private sessionTerminatedResolve?: () => void;
 
@@ -136,15 +139,15 @@ export class RealtimeTranscriber {
       const url = this.connectionUrl();
 
       if (this.token) {
-        this.socket = new WebSocket(url.toString());
+        this.socket = polyfillWebSocketFactory(url.toString());
       } else {
-        this.socket = new WebSocket(url.toString(), {
+        this.socket = polyfillWebSocketFactory(url.toString(), {
           headers: { Authorization: this.apiKey },
         });
       }
-      this.socket.binaryType = "arraybuffer";
+      this.socket!.binaryType = "arraybuffer";
 
-      this.socket.onopen = () => {
+      this.socket!.onopen = () => {
         if (
           this.endUtteranceSilenceThreshold === undefined ||
           this.endUtteranceSilenceThreshold === null
@@ -156,7 +159,7 @@ export class RealtimeTranscriber {
         );
       };
 
-      this.socket.onclose = ({ code, reason }: CloseEvent) => {
+      this.socket!.onclose = ({ code, reason }: CloseEvent) => {
         if (!reason) {
           if (code in RealtimeErrorType) {
             reason = RealtimeErrorMessages[code as RealtimeErrorType];
@@ -165,12 +168,12 @@ export class RealtimeTranscriber {
         this.listeners.close?.(code, reason);
       };
 
-      this.socket.onerror = (event: ErrorEvent) => {
+      this.socket!.onerror = (event: ErrorEvent) => {
         if (event.error) this.listeners.error?.(event.error as Error);
         else this.listeners.error?.(new Error(event.message));
       };
 
-      this.socket.onmessage = ({ data }: MessageEvent) => {
+      this.socket!.onmessage = ({ data }: MessageEvent) => {
         const message = JSON.parse(data.toString()) as RealtimeMessage;
         if ("error" in message) {
           this.listeners.error?.(new RealtimeError(message.error));
@@ -242,7 +245,7 @@ export class RealtimeTranscriber {
   }
 
   private send(data: BufferLike) {
-    if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
+    if (!this.socket || this.socket.readyState !== this.socket.OPEN) {
       throw new Error("Socket is not open for communication");
     }
     this.socket.send(data);
@@ -250,7 +253,7 @@ export class RealtimeTranscriber {
 
   async close(waitForSessionTermination = true) {
     if (this.socket) {
-      if (this.socket.readyState === WebSocket.OPEN) {
+      if (this.socket.readyState === this.socket.OPEN) {
         if (waitForSessionTermination) {
           const sessionTerminatedPromise = new Promise<void>((resolve) => {
             this.sessionTerminatedResolve = resolve;
@@ -261,7 +264,7 @@ export class RealtimeTranscriber {
           this.socket.send(terminateSessionMessage);
         }
       }
-      if ("removeAllListeners" in this.socket) this.socket.removeAllListeners();
+      if (this.socket?.removeAllListeners) this.socket.removeAllListeners();
       this.socket.close();
     }
 

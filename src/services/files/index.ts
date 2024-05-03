@@ -10,8 +10,13 @@ export class FileService extends BaseService {
    */
   async upload(input: FileUploadParams): Promise<string> {
     let fileData: FileUploadData;
-    if (typeof input === "string") fileData = await readFile(input);
-    else fileData = input;
+    if (typeof input === "string") {
+      if (input.startsWith("data:")) {
+        fileData = dataUrlToBlob(input);
+      } else {
+        fileData = await readFile(input);
+      }
+    } else fileData = input;
 
     const data = await this.fetchJson<UploadedFile>("/v2/upload", {
       method: "POST",
@@ -23,4 +28,16 @@ export class FileService extends BaseService {
     } as RequestInit);
     return data.upload_url;
   }
+}
+
+function dataUrlToBlob(dataUrl: string) {
+  const arr = dataUrl.split(",");
+  const mime = arr[0].match(/:(.*?);/)![1];
+  const bstr = atob(arr[1]);
+  let n = bstr.length;
+  const u8arr = new Uint8Array(n);
+  while (n--) {
+    u8arr[n] = bstr.charCodeAt(n);
+  }
+  return new Blob([u8arr], { type: mime });
 }

@@ -6,7 +6,7 @@ import { createClient, requestMatches } from "./utils";
 
 fetchMock.enableMocks();
 
-const testDir = process.env["TESTDATA_DIR"] ?? ".";
+const testDir = process.env["TESTDATA_DIR"] ?? "tests/static";
 
 const assembly = createClient();
 
@@ -24,6 +24,19 @@ describe("files", () => {
     const uploadUrl = await assembly.files.upload(
       path.join(testDir, "gore.wav"),
     );
+    expect(uploadUrl).toBeTruthy();
+  });
+
+  it("should upload a file from data URI", async () => {
+    fetchMock.doMockIf(
+      requestMatches({ method: "POST", url: "/v2/upload" }),
+      JSON.stringify({ upload_url: "https://example.com" }),
+    );
+    const dataUri = `data:audio/wav;base64,${await readFile(
+      path.join(testDir, "gore.wav"),
+      "base64",
+    )}`;
+    const uploadUrl = await assembly.files.upload(dataUri);
     expect(uploadUrl).toBeTruthy();
   });
 

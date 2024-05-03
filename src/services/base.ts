@@ -21,6 +21,7 @@ export abstract class BaseService {
       "Content-Type": "application/json",
       ...init.headers,
     };
+    init.cache = "no-store";
     if (!input.startsWith("http")) input = this.params.baseUrl + input;
 
     const response = await fetch(input, init);

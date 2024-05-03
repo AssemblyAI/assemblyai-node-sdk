@@ -60,8 +60,12 @@ export class TranscriptService extends BaseService {
           // audio is local path, upload local file
           audioUrl = await this.files.upload(path);
         } else {
-          // audio is not a local path, assume it's a URL
-          audioUrl = audio;
+          if (audio.startsWith("data:")) {
+            audioUrl = await this.files.upload(audio);
+          } else {
+            // audio is not a local path, and not a data-URI, assume it's a normal URL
+            audioUrl = audio;
+          }
         }
       } else {
         // audio is of uploadable type
