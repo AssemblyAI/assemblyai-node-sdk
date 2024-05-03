@@ -21,7 +21,7 @@ module.exports = [
       // so we compile to es2015 for maximum compatibility.
       ts({ compilerOptions: { target: "ES2015" } }),
     ],
-    external: ["#ws"],
+    external: ["ws"],
     output: [
       {
         file: `./dist/index.mjs`,
@@ -38,7 +38,7 @@ module.exports = [
   {
     input: "src/index.ts",
     plugins: [ts({ compilerOptions: { customConditions: ["node"] } })],
-    external: ["fs", "stream", "stream/web", "#ws"],
+    external: ["fs", "stream", "stream/web", "ws"],
     output: [
       {
         file: `./dist/node.mjs`,
@@ -55,7 +55,7 @@ module.exports = [
   {
     input: "src/index.ts",
     plugins: [ts({ compilerOptions: { customConditions: ["deno"] } })],
-    external: ["#ws"],
+    external: ["ws"],
     output: [
       {
         file: `./dist/deno.mjs`,
@@ -67,10 +67,22 @@ module.exports = [
   {
     input: "src/index.ts",
     plugins: [ts({ compilerOptions: { customConditions: ["bun"] } })],
-    external: ["#ws"],
+    external: ["ws"],
     output: [
       {
         file: `./dist/bun.mjs`,
+        format: "es",
+        exports: "named",
+      },
+    ],
+  },
+  // Browser ESM build
+  {
+    input: "src/index.ts",
+    plugins: [ts({ compilerOptions: { customConditions: ["browser"] } })],
+    output: [
+      {
+        file: `./dist/browser.mjs`,
         format: "es",
         exports: "named",
       },

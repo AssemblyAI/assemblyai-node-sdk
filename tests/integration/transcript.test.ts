@@ -1,8 +1,9 @@
 import path from "path";
 import "dotenv/config";
 import { AssemblyAI } from "../../src";
+import { readFile } from "fs/promises";
 
-const testDir = process.env["TESTDATA_DIR"] ?? ".";
+const testDir = process.env["TESTDATA_DIR"] ?? "tests/static";
 const remoteAudioUrl =
   "https://storage.googleapis.com/aai-web-samples/espn-bears.m4a";
 const badRemoteAudioURL =
@@ -28,6 +29,18 @@ describe("transcript", () => {
   it("submit should create the transcript object with a local file", async () => {
     const transcript = await client.transcripts.submit({
       audio: path.join(testDir, "gore.wav"),
+    });
+
+    expect(["processing", "queued"]).toContain(transcript.status);
+  });
+
+  it("submit should create the transcript object from data URI", async () => {
+    const dataUri = `data:audio/wav;base64,${await readFile(
+      path.join(testDir, "gore.wav"),
+      "base64",
+    )}`;
+    const transcript = await client.transcripts.submit({
+      audio: dataUri,
     });
 
     expect(["processing", "queued"]).toContain(transcript.status);

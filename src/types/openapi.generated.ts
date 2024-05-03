@@ -789,7 +789,7 @@ export type LemurQuestionAnswerResponse = LemurBaseResponse & {
  * ```js
  * {
  *   "transcript_ids": [
- *     "64nygnr62k-405c-4ae8-8a6b-d90b40ff3cce"
+ *     "47b95ba5-8889-44d8-bc80-5de38306e582"
  *   ],
  *   "context": "This is an interview about wildfires.",
  *   "final_model": "default",
@@ -901,7 +901,6 @@ export type ListTranscriptParams = {
 };
 
 /**
- * Details of the transcript page.
  * Details of the transcript page. Transcripts are sorted from newest to oldest. The previous URL always points to a page with older transcripts.
  * @example
  * ```js
@@ -924,12 +923,10 @@ export type PageDetails = {
    */
   limit: number;
   /**
-   * The URL to the next page of transcripts
    * The URL to the next page of transcripts. The next URL always points to a page with newer transcripts.
    */
   next_url: string | null;
   /**
-   * The URL to the previous page of transcripts
    * The URL to the next page of transcripts. The previous URL always points to a page with older transcripts.
    */
   prev_url: string | null;
@@ -1234,7 +1231,7 @@ export type SentencesResponse = {
 export type Sentiment = "POSITIVE" | "NEUTRAL" | "NEGATIVE";
 
 /**
- * The result of the sentiment analysis model
+ * The result of the Sentiment Analysis model
  * @example
  * ```js
  * {
@@ -2239,7 +2236,7 @@ export type Transcript = {
   auto_highlights: boolean;
   /**
    * An array of results for the Key Phrases model, if it is enabled.
-   * See {@link https://www.assemblyai.com/docs/models/key-phrases | Key phrases } for more information.
+   * See {@link https://www.assemblyai.com/docs/models/key-phrases | Key Phrases } for more information.
    */
   auto_highlights_result?: AutoHighlightsResult | null;
   /**
@@ -2361,7 +2358,7 @@ export type Transcript = {
   sentiment_analysis?: boolean | null;
   /**
    * An array of results for the Sentiment Analysis model, if it is enabled.
-   * See {@link https://www.assemblyai.com/docs/models/sentiment-analysis | Sentiment analysis } for more information.
+   * See {@link https://www.assemblyai.com/docs/models/sentiment-analysis | Sentiment Analysis } for more information.
    */
   sentiment_analysis_results?: SentimentAnalysisResult[] | null;
   /**
@@ -2438,7 +2435,7 @@ export type Transcript = {
    */
   webhook_status_code?: number | null;
   /**
-   * The URL to which we send webhooks upon trancription completion
+   * The URL to which we send webhooks upon transcription completion
    */
   webhook_url?: string | null;
   /**
@@ -2497,19 +2494,100 @@ export type TranscriptLanguageCode =
   | "it"
   | "pt"
   | "nl"
-  | "hi"
-  | "ja"
+  | "af"
+  | "sq"
+  | "am"
+  | "ar"
+  | "hy"
+  | "as"
+  | "az"
+  | "ba"
+  | "eu"
+  | "be"
+  | "bn"
+  | "bs"
+  | "br"
+  | "bg"
+  | "my"
+  | "ca"
   | "zh"
+  | "hr"
+  | "cs"
+  | "da"
+  | "et"
+  | "fo"
   | "fi"
+  | "gl"
+  | "ka"
+  | "el"
+  | "gu"
+  | "ht"
+  | "ha"
+  | "haw"
+  | "he"
+  | "hi"
+  | "hu"
+  | "is"
+  | "id"
+  | "ja"
+  | "jw"
+  | "kn"
+  | "kk"
+  | "km"
   | "ko"
+  | "lo"
+  | "la"
+  | "lv"
+  | "ln"
+  | "lt"
+  | "lb"
+  | "mk"
+  | "mg"
+  | "ms"
+  | "ml"
+  | "mt"
+  | "mi"
+  | "mr"
+  | "mn"
+  | "ne"
+  | "no"
+  | "nn"
+  | "oc"
+  | "pa"
+  | "ps"
+  | "fa"
   | "pl"
+  | "ro"
   | "ru"
+  | "sa"
+  | "sr"
+  | "sn"
+  | "sd"
+  | "si"
+  | "sk"
+  | "sl"
+  | "so"
+  | "su"
+  | "sw"
+  | "sv"
+  | "tl"
+  | "tg"
+  | "ta"
+  | "tt"
+  | "te"
+  | "th"
+  | "bo"
   | "tr"
+  | "tk"
   | "uk"
-  | "vi";
+  | "ur"
+  | "uz"
+  | "vi"
+  | "cy"
+  | "yi"
+  | "yo";
 
 /**
- * A list of transcripts
  * A list of transcripts. Transcripts are sorted from newest to oldest. The previous URL always points to a page with older transcripts.
  * @example
  * ```js
@@ -2649,7 +2727,7 @@ export type TranscriptOptionalParams = {
    */
   auto_chapters?: boolean;
   /**
-   * Whether Key Phrases is enabled, either true or false
+   * Enable Key Phrases, either true or false
    */
   auto_highlights?: boolean;
   /**
@@ -2661,7 +2739,7 @@ export type TranscriptOptionalParams = {
    */
   content_safety?: boolean;
   /**
-   * The confidence threshold for content moderation. Values must be between 25 and 100.
+   * The confidence threshold for the Content Moderation model. Values must be between 25 and 100.
    */
   content_safety_confidence?: number;
   /**
@@ -2669,7 +2747,7 @@ export type TranscriptOptionalParams = {
    */
   custom_spelling?: TranscriptCustomSpelling[];
   /**
-   * Whether custom topics is enabled, either true or false
+   * Enable custom topics, either true or false
    */
   custom_topics?: boolean;
   /**
@@ -2702,7 +2780,7 @@ export type TranscriptOptionalParams = {
    */
   language_code?: LiteralUnion<TranscriptLanguageCode, string> | null;
   /**
-   * Whether {@link https://www.assemblyai.com/docs/models/speech-recognition#automatic-language-detection | Automatic language detection } was enabled in the transcription request, either true or false.
+   * Enable {@link https://www.assemblyai.com/docs/models/speech-recognition#automatic-language-detection | Automatic language detection }, either true or false.
    */
   language_detection?: boolean;
   /**
@@ -2770,7 +2848,7 @@ export type TranscriptOptionalParams = {
    */
   summary_type?: SummaryType;
   /**
-   * The list of custom topics provided, if custom topics is enabled
+   * The list of custom topics
    */
   topics?: string[];
   /**
@@ -2784,7 +2862,7 @@ export type TranscriptOptionalParams = {
    */
   webhook_auth_header_value?: string | null;
   /**
-   * The URL to which AssemblyAI send webhooks upon trancription completion
+   * The URL to which AssemblyAI send webhooks upon transcription completion
    */
   webhook_url?: string;
   /**
