@@ -227,18 +227,25 @@ const rt = client.realtime.transcriber({
 });
 ```
 
-You can also generate a temporary auth token for real-time.
-
-```typescript
-const token = await client.realtime.createTemporaryToken({ expires_in = 60 });
-const rt = client.realtime.transcriber({
-  token: token,
-});
-```
-
 > [!WARNING]
 > Storing your API key in client-facing applications exposes your API key.
-> Generate a temporary auth token on the server and pass it to your client.
+> Generate a temporary auth token on the server and pass it to your client.  
+> _Server code_: 
+> ```typescript
+> const token = await client.realtime.createTemporaryToken({ expires_in = 60 });
+> // TODO: return token to client
+> ```
+>
+> _Client code_:
+> ```typescript
+> import { RealtimeTranscriber } from "assemblyai";
+> // TODO: implement getToken to retrieve token from server
+> const token = await getToken();
+> const rt = new RealtimeTranscriber({
+>   token
+> });
+> ```
+
 
 You can configure the following events.
 
