@@ -1,10 +1,15 @@
 # Changelog
 
-## [4.4.2]
+## [4.4.3] - 2024-05-09
+
+- Add react-native exports that resolve to the browser version of the library.
+
+## [4.4.2] - 2024-05-03
 
 ### Changed
 
 - Caching is disabled for all HTTP request made by the SDK
+- Accept data-URIs in `client.files.upload(dataUri)`, `client.transcripts.submit(audio: dataUri)`, `client.transcripts.transcribe(audio: dataUri)`.
 - Change how the WebSocket libraries are imported for better compatibility across frameworks and runtimes.
   The library no longer relies on a internal `#ws` import, and instead compiles the imports into the dist bundles.
   Browser builds will use the native `WebSocket`, other builds will use the `ws` package.

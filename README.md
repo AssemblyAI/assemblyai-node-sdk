@@ -53,6 +53,30 @@ const client = new AssemblyAI({
 
 You can now use the `client` object to interact with the AssemblyAI API.
 
+### Using a CDN
+
+You can use automatic CDNs like [UNPKG](https://unpkg.com/) to load the library from a script tag.
+
+- Replace `:version` with the desired version or `latest`.
+- Remove `.min` to load the non-minified version.
+
+```html
+<script src="https://www.unpkg.com/assemblyai@:version/dist/assemblyai.umd.min.js"></script>
+```
+
+The script creates a global `assemblyai` variable containing all the services.
+Here's how you create a `RealtimeTranscriber` object.
+
+```js
+const { RealtimeTranscriber } = assemblyai;
+const transcriber = new RealtimeTranscriber({
+  token: "[GENERATE TEMPORARY AUTH TOKEN IN YOUR API]",
+  ...
+});
+```
+
+For type support in your IDE, see [Reference types from JavaScript](./docs/reference-types-from-js.md).
+
 ## Speech-To-Text
 
 ### Transcribe audio and video files
@@ -229,23 +253,24 @@ const rt = client.realtime.transcriber({
 
 > [!WARNING]
 > Storing your API key in client-facing applications exposes your API key.
-> Generate a temporary auth token on the server and pass it to your client.  
-> _Server code_: 
+> Generate a temporary auth token on the server and pass it to your client.
+> _Server code_:
+>
 > ```typescript
 > const token = await client.realtime.createTemporaryToken({ expires_in = 60 });
 > // TODO: return token to client
 > ```
 >
 > _Client code_:
+>
 > ```typescript
 > import { RealtimeTranscriber } from "assemblyai";
 > // TODO: implement getToken to retrieve token from server
 > const token = await getToken();
 > const rt = new RealtimeTranscriber({
->   token
+>   token,
 > });
 > ```
-
 
 You can configure the following events.
 
@@ -351,3 +376,7 @@ const response = await client.lemur.purgeRequestData(lemurResponse.request_id);
 ```
 
 </details>
+
+## Contributing
+
+If you want to contribute to the JavaScript SDK, follow the guidelines in [CONTRIBUTING.md](./CONTRIBUTING.md).

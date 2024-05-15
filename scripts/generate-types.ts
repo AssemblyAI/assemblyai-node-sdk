@@ -1,7 +1,15 @@
 import openapiTS from "openapi-typescript";
 import fs from "fs";
+import "dotenv/config";
 
-async function generateTypes(apiSpecPath: string, outputPath: string) {
+async function generateTypes(
+  apiSpecPath: string | undefined,
+  outputPath: string,
+) {
+  if (!apiSpecPath) {
+    throw new Error("API spec path not provided.");
+  }
+
   const localPath = new URL(apiSpecPath, import.meta.url);
   let output = await openapiTS(localPath, {
     alphabetize: true,
@@ -90,5 +98,5 @@ type OneOf<T extends any[]> = T extends [infer Only] ? Only : T extends [infer A
   fs.writeFileSync(outputPath, output);
 }
 
-generateTypes("../../spec/openapi.yml", "./src/types/openapi.generated.ts");
-generateTypes("../../spec/asyncapi.yml", "./src/types/asyncapi.generated.ts");
+generateTypes(process.env.OPENAPI_SPEC, "./src/types/openapi.generated.ts");
+generateTypes(process.env.ASYNCAPI_SPEC, "./src/types/asyncapi.generated.ts");
