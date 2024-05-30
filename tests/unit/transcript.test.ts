@@ -270,6 +270,7 @@ describe("transcript", () => {
         headers: {
           Authorization: defaultApiKey,
           "Content-Type": "application/json",
+          "User-Agent": expect.any(String),
         },
         method: "DELETE",
       },
@@ -291,6 +292,7 @@ describe("transcript", () => {
       headers: {
         Authorization: defaultApiKey,
         "Content-Type": "application/json",
+        "User-Agent": expect.any(String),
       },
       method: "POST",
     });
@@ -315,6 +317,7 @@ describe("transcript", () => {
       headers: {
         Authorization: defaultApiKey,
         "Content-Type": "application/json",
+        "User-Agent": expect.any(String),
       },
       method: "POST",
     });

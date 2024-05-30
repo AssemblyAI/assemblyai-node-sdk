@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.4.4]
+
+- Add an export that only includes the Streaming STT code. You can use the export
+  - by importing `assemblyai/streaming`,
+  - or by loading the `assemblyai.streaming.umd.js` file, or `assemblyai.streaming.umd.min.js` file in a script-tag.
+- Add new `EntityType` enum values
+
 ## [4.4.3] - 2024-05-09
 
 - Add react-native exports that resolve to the browser version of the library.

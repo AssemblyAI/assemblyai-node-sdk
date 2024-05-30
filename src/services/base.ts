@@ -1,26 +1,45 @@
 import { BaseServiceParams } from "..";
 import { Error as JsonError } from "..";
+import { buildUserAgent } from "../utils/userAgent";
 
 /**
  * Base class for services that communicate with the API.
  */
 export abstract class BaseService {
+  private userAgent: string | undefined;
   /**
    * Create a new service.
    * @param params - The parameters to use for the service.
    */
-  constructor(private params: BaseServiceParams) {}
+  constructor(private params: BaseServiceParams) {
+    if (params.userAgent === false) {
+      this.userAgent = undefined;
+    } else {
+      this.userAgent = buildUserAgent(params.userAgent || {});
+    }
+  }
   protected async fetch(
     input: string,
     init?: RequestInit | undefined,
   ): Promise<Response> {
     init = init ?? {};
-    init.headers = init.headers ?? {};
-    init.headers = {
+    let headers = init.headers ?? {};
+    headers = {
       Authorization: this.params.apiKey,
       "Content-Type": "application/json",
       ...init.headers,
     };
+
+    if (this.userAgent) {
+      (headers as Record<string, string>)["User-Agent"] = this.userAgent;
+      // chromium browsers have a bug where the user agent can't be modified
+      if (typeof window !== "undefined" && "chrome" in window) {
+        (headers as Record<string, string>)["AssemblyAI-Agent"] =
+          this.userAgent;
+      }
+    }
+    init.headers = headers;
+
     init.cache = "no-store";
     if (!input.startsWith("http")) input = this.params.baseUrl + input;
 

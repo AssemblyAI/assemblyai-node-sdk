@@ -1,6 +1,7 @@
 import fetchMock from "jest-fetch-mock";
 import { AssemblyAI } from "../../src";
 import { getPath } from "../../src/utils/path";
+import { buildUserAgent } from "../../src/utils/userAgent";
 
 fetchMock.enableMocks();
 
@@ -51,5 +52,72 @@ describe("utils", () => {
     for (const [input, output] of dict) {
       expect(getPath(input as string)).toEqual(output);
     }
+  });
+
+  it("should build a user-agent", () => {
+    const userAgent = buildUserAgent({});
+    expect(userAgent).toContain("AssemblyAI/1.0 (");
+    expect(userAgent).toContain("sdk=JavaScript/__SDK_VERSION__");
+    expect(userAgent).toContain("runtime_env=Node/");
+  });
+
+  it("should build a user-agent with extras", () => {
+    const userAgent = buildUserAgent({
+      integration: { name: "Zapier", version: "1.0.0" },
+    });
+    expect(userAgent).toContain("AssemblyAI/1.0 (");
+    expect(userAgent).toContain("sdk=JavaScript/__SDK_VERSION__");
+    expect(userAgent).toContain("runtime_env=Node/");
+    expect(userAgent).toContain("integration=Zapier/1.0.0");
+  });
+
+  it("should build a user-agent without AssemblyAI product", () => {
+    const userAgent = buildUserAgent(false);
+    expect(userAgent).not.toContain("AssemblyAI/1.0 (");
+    expect(userAgent).not.toContain("sdk=JavaScript/__SDK_VERSION__");
+    expect(userAgent).not.toContain("runtime_env=Node/");
+    expect(userAgent).not.toContain("integration=Zapier/1.0.0");
+  });
+
+  it("should build a user-agent with override", () => {
+    const userAgent = buildUserAgent({
+      sdk: {
+        name: "TS",
+        version: "1.0",
+      },
+      os: undefined,
+    });
+    expect(userAgent).toContain("AssemblyAI/1.0 (");
+    expect(userAgent).toContain("sdk=TS/1.0");
+    expect(userAgent).toContain("runtime_env=Node/");
+    expect(userAgent).not.toContain("os=");
+  });
+
+  it("should make request with user agent", async () => {
+    fetchMock.enableMocks();
+    fetchMock.resetMocks();
+    fetchMock.doMock();
+    fetchMock.mockResponseOnce((req) => {
+      expect(req.headers.has("User-Agent")).toBeTruthy();
+      return Promise.resolve(JSON.stringify({}));
+    });
+    const service = new AssemblyAI({
+      apiKey: "test",
+    });
+    await service.files.upload(new Blob());
+  });
+  it("should make request without user agent", async () => {
+    fetchMock.enableMocks();
+    fetchMock.resetMocks();
+    fetchMock.doMock();
+    fetchMock.mockResponseOnce((req) => {
+      expect(req.headers.has("User-Agent")).toBeFalsy();
+      return Promise.resolve(JSON.stringify({}));
+    });
+    const service = new AssemblyAI({
+      apiKey: "test",
+      userAgent: false,
+    });
+    await service.files.upload(new Blob());
   });
 });

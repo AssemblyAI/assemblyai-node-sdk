@@ -38,8 +38,9 @@ class AssemblyAI {
    */
   constructor(params: BaseServiceParams) {
     params.baseUrl = params.baseUrl || defaultBaseUrl;
-    if (params.baseUrl && params.baseUrl.endsWith("/"))
+    if (params.baseUrl && params.baseUrl.endsWith("/")) {
       params.baseUrl = params.baseUrl.slice(0, -1);
+    }
     this.files = new FileService(params);
     this.transcripts = new TranscriptService(params, this.files);
     this.lemur = new LemurService(params);

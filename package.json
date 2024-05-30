@@ -7,26 +7,33 @@
   },
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
+      "types": "./dist/exports/index.d.ts",
       "bun": {
-        "types": "./dist/index.d.ts",
+        "types": "./dist/exports/index.d.ts",
         "default": "./dist/bun.mjs"
       },
       "deno": {
-        "types": "./dist/index.d.ts",
+        "types": "./dist/exports/index.d.ts",
         "default": "./dist/deno.mjs"
       },
       "workerd": "./dist/index.mjs",
       "browser": "./dist/browser.mjs",
       "react-native": "./dist/browser.mjs",
       "node": {
-        "types": "./dist/index.d.ts",
+        "types": "./dist/exports/index.d.ts",
         "import": "./dist/node.mjs",
         "require": "./dist/node.cjs"
       },
       "import": "./dist/index.mjs",
       "require": "./dist/index.cjs",
       "default": "./dist/index.cjs"
+    },
+    "./streaming": {
+      "types": "./dist/exports/streaming.d.ts",
+      "browser": "./dist/streaming.browser.mjs",
+      "import": "./dist/streaming.mjs",
+      "require": "./dist/streaming.cjs",
+      "default": "./dist/streaming.cjs"
     },
     "./package.json": "./package.json"
   },
@@ -67,11 +74,15 @@
   "scripts": {
     "build": "pnpm clean && pnpm rollup -c",
     "clean": "rimraf dist/* && rimraf temp/* && rimraf temp-docs/*",
-    "lint": "eslint -c .eslintrc.json '{src,tests}/**/*.{js,ts}' && publint && tsc --noEmit -p tsconfig.json",
-    "test": "pnpm run test:unit && pnpm run test:integration",
+    "lint": "pnpm lint:eslint && pnpm lint:tsc && pnpm lint:format && pnpm lint:publint",
+    "lint:eslint": "eslint -c .eslintrc.json '{src,tests}/**/*.{js,ts}'",
+    "lint:tsc": "tsc --noEmit -p tsconfig.json",
+    "lint:format": "prettier  --check --no-error-on-unmatched-pattern {*,**/*}",
+    "lint:publint": "publint",
+    "test": "pnpm test:unit && pnpm test:integration",
     "test:unit": "jest --config jest.unit.config.js --testTimeout 1000",
     "test:integration": "jest --config jest.integration.config.js --testTimeout 360000",
-    "format": "prettier {*,**/*} --write --no-error-on-unmatched-pattern",
+    "format": "prettier --write --no-error-on-unmatched-pattern {*,**/*}",
     "generate:types": "tsx ./scripts/generate-types.ts && prettier 'src/types/*.generated.ts' --write",
     "generate:reference": "typedoc",
     "copybara:dry-run": "./copybara.sh dry_run --init-history",
@@ -103,6 +114,7 @@
     "@babel/preset-env": "^7.24.5",
     "@babel/preset-typescript": "^7.24.1",
     "@rollup/plugin-node-resolve": "^15.2.3",
+    "@rollup/plugin-replace": "^5.0.5",
     "@rollup/plugin-terser": "^0.4.4",
     "@rollup/plugin-typescript": "^11.1.6",
     "@types/jest": "^29.5.12",
@@ -118,6 +130,7 @@
     "jest-fetch-mock": "^3.0.3",
     "jest-junit": "^16.0.0",
     "jest-websocket-mock": "^2.5.0",
+    "jsr": "^0.12.4",
     "mock-socket": "^9.3.1",
     "openapi-typescript": "^6.7.5",
     "prettier": "^3.2.5",
