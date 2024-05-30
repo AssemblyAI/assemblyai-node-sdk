@@ -59,9 +59,17 @@ You can use automatic CDNs like [UNPKG](https://unpkg.com/) to load the library 
 
 - Replace `:version` with the desired version or `latest`.
 - Remove `.min` to load the non-minified version.
+- Remove `.streaming` to load the entire SDK. Keep `.streaming` to load the Streaming STT specific version.
 
 ```html
+<!-- Unminified full SDK -->
+<script src="https://www.unpkg.com/assemblyai@:version/dist/assemblyai.umd.js"></script>
+<!-- Minified full SDK -->
 <script src="https://www.unpkg.com/assemblyai@:version/dist/assemblyai.umd.min.js"></script>
+<!-- Unminified Streaming STT only -->
+<script src="https://www.unpkg.com/assemblyai@:version/dist/assemblyai.streaming.umd.js"></script>
+<!-- Minified Streaming STT only -->
+<script src="https://www.unpkg.com/assemblyai@:version/dist/assemblyai.streaming.umd.min.js"></script>
 ```
 
 The script creates a global `assemblyai` variable containing all the services.
@@ -264,7 +272,7 @@ const rt = client.realtime.transcriber({
 > _Client code_:
 >
 > ```typescript
-> import { RealtimeTranscriber } from "assemblyai";
+> import { RealtimeTranscriber } from "assemblyai"; // or "assemblyai/streaming"
 > // TODO: implement getToken to retrieve token from server
 > const token = await getToken();
 > const rt = new RealtimeTranscriber({

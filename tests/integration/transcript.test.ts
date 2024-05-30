@@ -20,7 +20,6 @@ describe("transcript", () => {
       audio: remoteAudioUrl,
     });
 
-    console.log(transcript);
     expect(transcript.status).toBeTruthy();
     expect(transcript.status).not.toBe("error");
     expect(transcript.status).not.toBe("complete");

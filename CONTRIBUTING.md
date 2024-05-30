@@ -55,11 +55,11 @@ TEST_TRANSCRIPT_IDS=...
 ## Generate types from OpenAPI and AsyncAPI spec
 
 1. Configure the location of the OpenAPI and AsyncAPI spec as environment variables:
-  - `OPENAPI_SPEC`: Path or URL to the AssemblyAI OpenAPI spec
-  - `ASYNCAPI_SPEC`: Path or URL to the AssemblyAI AsyncAPI spec
+
+   - `OPENAPI_SPEC`: Path or URL to the AssemblyAI OpenAPI spec
+   - `ASYNCAPI_SPEC`: Path or URL to the AssemblyAI AsyncAPI spec
 
 2. Generate the types using `pnpm generate:types`.
-
 
 ## Notes about the JavaScript SDK
 
@@ -67,6 +67,7 @@ TEST_TRANSCRIPT_IDS=...
 
 We use Rollup to build the JavaScript SDK.
 Our Rollup configuration generates the following versions:
+
 - node.{cjs,mjs}: The Node runtime version using CommonJS and ESModule syntax.
 - bun.mjs: The Bun runtime version.
 - deno.mjs: The Deno runtime version.
@@ -83,7 +84,7 @@ Our Rollup configuration generates the following versions:
 When a user uses the SDK, the users' runtime will automatically choose the runtime-specific version
 if defined in the package.json `exports` object, or fall back to the default version.
 
-For example, Bun will use *bun.mjs* and Cloudflare Workers (workerd) will use *index.mjs*.
+For example, Bun will use _bun.mjs_ and Cloudflare Workers (workerd) will use _index.mjs_.
 
 ### Package.json imports
 
