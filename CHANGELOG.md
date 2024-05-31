@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.4.5]
+
+- Add new `PiiPolicy` enum values
+
 ## [4.4.4]
 
 - Add an export that only includes the Streaming STT code. You can use the export
