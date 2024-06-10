@@ -69,7 +69,10 @@ module.exports = [
   },
   {
     input: "src/exports/index.ts",
-    plugins: [ts({ compilerOptions: { customConditions: ["node"] } })],
+    plugins: [
+      replacePlugin,
+      ts({ compilerOptions: { customConditions: ["node"] } }),
+    ],
     external: ["fs", "stream", "stream/web", "ws"],
     output: [
       {
@@ -86,7 +89,10 @@ module.exports = [
   },
   {
     input: "src/exports/index.ts",
-    plugins: [ts({ compilerOptions: { customConditions: ["deno"] } })],
+    plugins: [
+      replacePlugin,
+      ts({ compilerOptions: { customConditions: ["deno"] } }),
+    ],
     external: ["ws"],
     output: [
       {
@@ -98,7 +104,10 @@ module.exports = [
   },
   {
     input: "src/exports/index.ts",
-    plugins: [ts({ compilerOptions: { customConditions: ["bun"] } })],
+    plugins: [
+      replacePlugin,
+      ts({ compilerOptions: { customConditions: ["bun"] } }),
+    ],
     external: ["ws"],
     output: [
       {
@@ -111,7 +120,10 @@ module.exports = [
   // Browser ESM build
   {
     input: "src/exports/index.ts",
-    plugins: [ts({ compilerOptions: { customConditions: ["browser"] } })],
+    plugins: [
+      replacePlugin,
+      ts({ compilerOptions: { customConditions: ["browser"] } }),
+    ],
     output: [
       {
         file: `./dist/browser.mjs`,
@@ -122,7 +134,10 @@ module.exports = [
   },
   {
     input: "src/exports/streaming.ts",
-    plugins: [ts({ compilerOptions: { customConditions: ["browser"] } })],
+    plugins: [
+      replacePlugin,
+      ts({ compilerOptions: { customConditions: ["browser"] } }),
+    ],
     output: [
       {
         file: `./dist/streaming.browser.mjs`,
