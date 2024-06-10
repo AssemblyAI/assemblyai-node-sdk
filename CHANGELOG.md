@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.4.6]
+
+- Fix Rollup exports so \_\_SDK_VERSION\_\_ is properly replaced with the version of the SDK.
+
 ## [4.4.5]
 
 - Add new `PiiPolicy` enum values
