@@ -1,6 +1,6 @@
 {
   "name": "assemblyai",
-  "version": "4.4.6",
+  "version": "4.4.7",
   "description": "The AssemblyAI JavaScript SDK provides an easy-to-use interface for interacting with the AssemblyAI API, which supports async and real-time transcription, as well as the latest LeMUR models.",
   "engines": {
     "node": ">=18"
@@ -16,7 +16,7 @@
         "types": "./dist/exports/index.d.ts",
         "default": "./dist/deno.mjs"
       },
-      "workerd": "./dist/index.mjs",
+      "workerd": "./dist/workerd.mjs",
       "browser": "./dist/browser.mjs",
       "react-native": "./dist/browser.mjs",
       "node": {
@@ -38,6 +38,10 @@
     "./package.json": "./package.json"
   },
   "imports": {
+    "#fetch": {
+      "workerd": "./src/polyfills/fetch/workerd.ts",
+      "default": "./src/polyfills/fetch/default.ts"
+    },
     "#fs": {
       "node": "./src/polyfills/fs/node.ts",
       "bun": "./src/polyfills/fs/bun.ts",

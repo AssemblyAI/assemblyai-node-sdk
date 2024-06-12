@@ -54,3 +54,13 @@ export type SubmitParams = TranscribeParams;
  * The options to transcribe an audio file, including polling options.
  */
 export type TranscribeOptions = PollingOptions;
+
+/**
+ * The PII redacted audio file, transmitted over the network.
+ */
+export type RedactedAudioFile = {
+  arrayBuffer: () => Promise<ArrayBuffer>;
+  blob: () => Promise<Blob>;
+  body: ReadableStream<Uint8Array> | null;
+  bodyUsed: boolean;
+};

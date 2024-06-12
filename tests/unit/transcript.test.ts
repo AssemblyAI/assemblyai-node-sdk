@@ -419,7 +419,7 @@ describe("transcript", () => {
     expect(subtitle).toBeTruthy();
   });
 
-  it("should get redactions", async () => {
+  it("should get redacted audio", async () => {
     fetchMock.doMockOnceIf(
       requestMatches({
         url: `/v2/transcript/${transcriptId}/redacted-audio`,
@@ -431,9 +431,26 @@ describe("transcript", () => {
       }),
     );
     const redactedAudioResponse =
-      await assembly.transcripts.redactions(transcriptId);
+      await assembly.transcripts.redactedAudio(transcriptId);
     expect(redactedAudioResponse.status).toBe("redacted_audio_ready");
     expect(redactedAudioResponse.redacted_audio_url).toBeTruthy();
+  });
+
+  it("should get redacted audio file", async () => {
+    fetchMock.doMockOnceIf(
+      requestMatches({
+        url: `/v2/transcript/${transcriptId}/redacted-audio`,
+        method: "GET",
+      }),
+      JSON.stringify({
+        status: "redacted_audio_ready",
+        redacted_audio_url: "https://some-url.com",
+      }),
+    );
+    fetchMock.doMockOnceIf("https://some-url.com/", "audio data");
+    const redactedAudioResponse =
+      await assembly.transcripts.redactedAudioFile(transcriptId);
+    expect(redactedAudioResponse).toBeTruthy();
   });
 
   it("should word search", async () => {

@@ -1,5 +1,11 @@
 # Changelog
 
+## [4.4.7]
+
+- Rename `TranscriptService.redactions` function to `TranscriptService.redactedAudio`.
+- Add `TranscriptService.redactedAudioFile` function.
+- Add `workerd` export to fix `cache` issue with `fetch` on Cloudflare Workers.
+
 ## [4.4.6]
 
 - Fix Rollup exports so \_\_SDK_VERSION\_\_ is properly replaced with the version of the SDK.
