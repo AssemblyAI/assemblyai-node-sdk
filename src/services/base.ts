@@ -1,5 +1,5 @@
-import { BaseServiceParams } from "..";
-import { Error as JsonError } from "..";
+import { DEFAULT_FETCH_INIT } from "#fetch";
+import { BaseServiceParams, Error as JsonError } from "..";
 import { buildUserAgent } from "../utils/userAgent";
 
 /**
@@ -22,13 +22,14 @@ export abstract class BaseService {
     input: string,
     init?: RequestInit | undefined,
   ): Promise<Response> {
-    init = init ?? {};
-    let headers = init.headers ?? {};
-    headers = {
+    init = { ...DEFAULT_FETCH_INIT, ...init };
+    let headers = {
       Authorization: this.params.apiKey,
       "Content-Type": "application/json",
-      ...init.headers,
     };
+    if (DEFAULT_FETCH_INIT?.headers)
+      headers = { ...headers, ...DEFAULT_FETCH_INIT.headers };
+    if (init?.headers) headers = { ...headers, ...init.headers };
 
     if (this.userAgent) {
       (headers as Record<string, string>)["User-Agent"] = this.userAgent;
@@ -40,7 +41,6 @@ export abstract class BaseService {
     }
     init.headers = headers;
 
-    init.cache = "no-store";
     if (!input.startsWith("http")) input = this.params.baseUrl + input;
 
     const response = await fetch(input, init);

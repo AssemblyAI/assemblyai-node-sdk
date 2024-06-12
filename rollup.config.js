@@ -117,6 +117,21 @@ module.exports = [
       },
     ],
   },
+  {
+    input: "src/exports/index.ts",
+    plugins: [
+      replacePlugin,
+      ts({ compilerOptions: { customConditions: ["workerd"] } }),
+    ],
+    external: ["ws"],
+    output: [
+      {
+        file: `./dist/workerd.mjs`,
+        format: "es",
+        exports: "named",
+      },
+    ],
+  },
   // Browser ESM build
   {
     input: "src/exports/index.ts",

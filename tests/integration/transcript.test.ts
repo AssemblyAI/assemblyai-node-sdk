@@ -123,7 +123,7 @@ describe("transcript", () => {
     expect(subtitle).toBeTruthy();
   });
 
-  it("should get redactions", async () => {
+  it("should get redacted audio", async () => {
     const transcript = await client.transcripts.transcribe({
       audio: remoteAudioUrl,
       redact_pii: true,
@@ -132,19 +132,33 @@ describe("transcript", () => {
       redact_pii_policies: ["medical_condition"],
       redact_pii_sub: "hash",
     });
-    const redactedAudioResponse = await client.transcripts.redactions(
+    const redactedAudioResponse = await client.transcripts.redactedAudio(
       transcript.id,
     );
     expect(redactedAudioResponse.status).toBe("redacted_audio_ready");
     expect(redactedAudioResponse.redacted_audio_url).toBeTruthy();
-  });
+  }, 30_000);
+
+  it("should get redacted audio file", async () => {
+    const transcript = await client.transcripts.transcribe({
+      audio: remoteAudioUrl,
+      redact_pii: true,
+      redact_pii_audio: true,
+      redact_pii_audio_quality: "wav",
+      redact_pii_policies: ["medical_condition"],
+      redact_pii_sub: "hash",
+    });
+    const redactedAudioResponse = await client.transcripts.redactedAudioFile(
+      transcript.id,
+    );
+    expect((await redactedAudioResponse.blob()).size).toBeGreaterThan(0);
+  }, 60_000);
 
   it("should word search", async () => {
     const searchResponse = await client.transcripts.wordSearch(
       knownTranscriptId,
       ["Giants"],
     );
-    console.log(searchResponse);
     expect(searchResponse.id).toBe(knownTranscriptId);
     expect(searchResponse.total_count).toBeGreaterThan(0);
     expect(Array.isArray(searchResponse.matches)).toBeTruthy();

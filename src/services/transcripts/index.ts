@@ -16,6 +16,7 @@ import {
   TranscribeOptions,
   SubmitParams,
   SpeechModel,
+  RedactedAudioFile,
 } from "../..";
 import { FileService } from "../files";
 import { getPath } from "../../utils/path";
@@ -244,14 +245,46 @@ export class TranscriptService extends BaseService {
   }
 
   /**
-   * Retrieve redactions of a transcript.
+   * Retrieve the redacted audio URL of a transcript.
    * @param id - The identifier of the transcript.
-   * @returns A promise that resolves to the subtitles text.
+   * @returns A promise that resolves to the details of the redacted audio.
+   * @deprecated Use `redactedAudio` instead.
    */
   redactions(id: string): Promise<RedactedAudioResponse> {
+    return this.redactedAudio(id);
+  }
+
+  /**
+   * Retrieve the redacted audio URL of a transcript.
+   * @param id - The identifier of the transcript.
+   * @returns A promise that resolves to the details of the redacted audio.
+   */
+  redactedAudio(id: string): Promise<RedactedAudioResponse> {
     return this.fetchJson<RedactedAudioResponse>(
       `/v2/transcript/${id}/redacted-audio`,
     );
+  }
+
+  /**
+   * Retrieve the redacted audio file of a transcript.
+   * @param id - The identifier of the transcript.
+   * @returns A promise that resolves to the fetch HTTP response of the redacted audio file.
+   */
+  async redactedAudioFile(id: string): Promise<RedactedAudioFile> {
+    const { redacted_audio_url, status } = await this.redactedAudio(id);
+    if (status !== "redacted_audio_ready") {
+      throw new Error(`Redacted audio status is ${status}`);
+    }
+    const response = await fetch(redacted_audio_url);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch redacted audio: ${response.statusText}`);
+    }
+    return {
+      arrayBuffer: response.arrayBuffer.bind(response),
+      blob: response.blob.bind(response),
+      body: response.body,
+      bodyUsed: response.bodyUsed,
+    };
   }
 }
 
