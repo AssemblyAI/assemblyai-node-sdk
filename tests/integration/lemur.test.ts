@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { AssemblyAI } from "../../src";
+import { AssemblyAI, LemurTaskResponse } from "../../src";
 
 const client = new AssemblyAI({
   apiKey: process.env.ASSEMBLYAI_API_KEY!,
@@ -62,6 +62,32 @@ describe("lemur", () => {
     await expect(promise).rejects.toThrowError(
       "each transcript source id must be valid",
     );
+  });
+
+  it("should return response", async () => {
+    const taskResponse = await client.lemur.task({
+      final_model: "basic",
+      transcript_ids: knownTranscriptIds,
+      prompt: "Write a haiku about this conversation.",
+    });
+
+    const taskResponse2 = await client.lemur.getResponse(
+      taskResponse.request_id,
+    );
+    expect(taskResponse).toStrictEqual(taskResponse2);
+  });
+
+  it("should return response with generic", async () => {
+    const taskResponse = await client.lemur.task({
+      final_model: "basic",
+      transcript_ids: knownTranscriptIds,
+      prompt: "Write a haiku about this conversation.",
+    });
+
+    const taskResponse2 = await client.lemur.getResponse<LemurTaskResponse>(
+      taskResponse.request_id,
+    );
+    expect(taskResponse).toStrictEqual(taskResponse2);
   });
 
   it("should purge request data", async () => {

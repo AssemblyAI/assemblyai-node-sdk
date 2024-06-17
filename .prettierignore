@@ -10,6 +10,8 @@ node_modules
 LICENSE
 .gitignore
 .prettierignore
+.pnpm-store
+pnpm-lock.yaml
 BUILD.bazel
 copy.bara.sky
 copybara.sh

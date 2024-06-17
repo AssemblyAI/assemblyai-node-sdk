@@ -8,6 +8,7 @@ import {
   LemurActionItemsResponse,
   LemurTaskResponse,
   PurgeLemurRequestDataResponse,
+  LemurResponse,
 } from "../..";
 import { BaseService } from "../base";
 
@@ -48,6 +49,17 @@ export class LemurService extends BaseService {
       method: "POST",
       body: JSON.stringify(params),
     });
+  }
+
+  /**
+   * Retrieve a LeMUR response that was previously generated.
+   * @param id - The ID of the LeMUR request you previously made. This would be found in the response of the original request.
+   * @returns The LeMUR response.
+   */
+  getResponse<T extends LemurResponse>(id: string): Promise<T>;
+  getResponse(id: string): Promise<LemurResponse>;
+  getResponse(id: string): Promise<LemurResponse> {
+    return this.fetchJson<LemurResponse>(`/lemur/v3/${id}`);
   }
 
   /**

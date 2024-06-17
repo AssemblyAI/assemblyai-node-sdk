@@ -588,7 +588,11 @@ export type LemurActionItemsParams = LemurBaseParams & {
  * ```js
  * {
  *   "request_id": "5"e1b27c2-691f-4414-8bc5-f14678442f9e",
- *   "response": "Here are some potential action items based on the transcript:\n\n- Monitor air quality levels in affected areas and issue warnings as needed.\n\n- Advise vulnerable populations like children, the elderly, and those with respiratory conditions to limit time outdoors.\n\n- Have schools cancel outdoor activities when air quality is poor.\n\n- Educate the public on health impacts of smoke inhalation and precautions to take.\n\n- Track progression of smoke plumes using weather and air quality monitoring systems.\n\n- Coordinate cross-regionally to manage smoke exposure as air masses shift.\n\n- Plan for likely increase in such events due to climate change. Expand monitoring and forecasting capabilities.\n\n- Conduct research to better understand health impacts of wildfire smoke and mitigation strategies.\n\n- Develop strategies to prevent and manage wildfires to limit air quality impacts.\n"
+ *   "response": "Here are some potential action items based on the transcript:\n\n- Monitor air quality levels in affected areas and issue warnings as needed.\n\n- Advise vulnerable populations like children, the elderly, and those with respiratory conditions to limit time outdoors.\n\n- Have schools cancel outdoor activities when air quality is poor.\n\n- Educate the public on health impacts of smoke inhalation and precautions to take.\n\n- Track progression of smoke plumes using weather and air quality monitoring systems.\n\n- Coordinate cross-regionally to manage smoke exposure as air masses shift.\n\n- Plan for likely increase in such events due to climate change. Expand monitoring and forecasting capabilities.\n\n- Conduct research to better understand health impacts of wildfire smoke and mitigation strategies.\n\n- Develop strategies to prevent and manage wildfires to limit air quality impacts.\n",
+ *   "usage": {
+ *     "input_tokens": 27,
+ *     "output_tokens": 3
+ *   }
  * }
  * ```
  */
@@ -659,7 +663,11 @@ export type LemurBaseParams = {
  * @example
  * ```js
  * {
- *   "request_id": "5e1b27c2-691f-4414-8bc5-f14678442f9e"
+ *   "request_id": "5e1b27c2-691f-4414-8bc5-f14678442f9e",
+ *   "usage": {
+ *     "input_tokens": 27,
+ *     "output_tokens": 3
+ *   }
  * }
  * ```
  */
@@ -668,6 +676,10 @@ export type LemurBaseResponse = {
    * The ID of the LeMUR request
    */
   request_id: string;
+  /**
+   * The usage numbers for the LeMUR request
+   */
+  usage: LemurUsage;
 };
 
 /**
@@ -788,7 +800,11 @@ export type LemurQuestionAnswerParams = LemurBaseParams & {
  *       "answer": "yes",
  *       "question": "Is global warming affecting wildfires?"
  *     }
- *   ]
+ *   ],
+ *   "usage": {
+ *     "input_tokens": 27,
+ *     "output_tokens": 3
+ *   }
  * }
  * ```
  */
@@ -798,6 +814,12 @@ export type LemurQuestionAnswerResponse = LemurBaseResponse & {
    */
   response: LemurQuestionAnswer[];
 };
+
+export type LemurResponse =
+  | LemurTaskResponse
+  | LemurSummaryResponse
+  | LemurQuestionAnswerResponse
+  | LemurActionItemsResponse;
 
 /**
  * @example
@@ -825,7 +847,11 @@ export type LemurSummaryParams = LemurBaseParams & {
  * ```js
  * {
  *   "request_id": "5e1b27c2-691f-4414-8bc5-f14678442f9e",
- *   "response": "- Wildfires in Canada are sending smoke and air pollution across parts of the US, triggering air quality alerts from Maine to Minnesota. Concentrations of particulate matter have exceeded safety levels.\n\n- Weather systems are channeling the smoke through Pennsylvania into the Mid-Atlantic and Northeast regions. New York City has canceled outdoor activities to keep children and vulnerable groups indoors.\n\n- Very small particulate matter can enter the lungs and impact respiratory, cardiovascular and neurological health. Young children, the elderly and those with preexisting conditions are most at risk.\n\n- The conditions causing the poor air quality could get worse or shift to different areas in coming days depending on weather patterns. More wildfires may also contribute to higher concentrations.\n\n- Climate change is leading to longer and more severe fire seasons. Events of smoke traveling long distances and affecting air quality over wide areas will likely become more common in the future.\"\n"
+ *   "response": "- Wildfires in Canada are sending smoke and air pollution across parts of the US, triggering air quality alerts from Maine to Minnesota. Concentrations of particulate matter have exceeded safety levels.\n\n- Weather systems are channeling the smoke through Pennsylvania into the Mid-Atlantic and Northeast regions. New York City has canceled outdoor activities to keep children and vulnerable groups indoors.\n\n- Very small particulate matter can enter the lungs and impact respiratory, cardiovascular and neurological health. Young children, the elderly and those with preexisting conditions are most at risk.\n\n- The conditions causing the poor air quality could get worse or shift to different areas in coming days depending on weather patterns. More wildfires may also contribute to higher concentrations.\n\n- Climate change is leading to longer and more severe fire seasons. Events of smoke traveling long distances and affecting air quality over wide areas will likely become more common in the future.\"\n",
+ *   "usage": {
+ *     "input_tokens": 27,
+ *     "output_tokens": 3
+ *   }
  * }
  * ```
  */
@@ -863,7 +889,11 @@ export type LemurTaskParams = {
  * ```js
  * {
  *   "request_id": "5e1b27c2-691f-4414-8bc5-f14678442f9e",
- *   "response": "Based on the transcript, the following locations were mentioned as being affected by wildfire smoke from Canada:\n\n- Maine\n- Maryland\n- Minnesota\n- Mid Atlantic region\n- Northeast region\n- New York City\n- Baltimore\n"
+ *   "response": "Based on the transcript, the following locations were mentioned as being affected by wildfire smoke from Canada:\n\n- Maine\n- Maryland\n- Minnesota\n- Mid Atlantic region\n- Northeast region\n- New York City\n- Baltimore\n",
+ *   "usage": {
+ *     "input_tokens": 27,
+ *     "output_tokens": 3
+ *   }
  * }
  * ```
  */
@@ -873,6 +903,20 @@ export type LemurTaskResponse = {
    */
   response: string;
 } & LemurBaseResponse;
+
+/**
+ * The usage numbers for the LeMUR request
+ */
+export type LemurUsage = {
+  /**
+   * The number of input tokens used by the model
+   */
+  input_tokens: number;
+  /**
+   * The number of output tokens generated by the model
+   */
+  output_tokens: number;
+};
 
 /**
  * @example
