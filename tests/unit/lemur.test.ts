@@ -1,5 +1,6 @@
 import fetchMock from "jest-fetch-mock";
 import { createClient, requestMatches } from "./utils";
+import { LemurTaskResponse } from "../../src";
 
 const knownTranscriptIds = ["transcript_123"];
 const knownLemurRequestId = "lemur_123";
@@ -111,6 +112,41 @@ describe("lemur", () => {
     await expect(promise).rejects.toThrowError(
       "each transcript source id must be valid",
     );
+  });
+
+  it("should return response", async () => {
+    fetchMock.doMockOnceIf(
+      requestMatches({
+        method: "GET",
+        url: `/lemur/v3/${knownLemurRequestId}`,
+      }),
+      JSON.stringify({
+        request_id: knownLemurRequestId,
+        response: "some response",
+      }),
+    );
+    const response = await assembly.lemur.getResponse(knownLemurRequestId);
+    expect(response).toBeTruthy();
+    expect(response.request_id).toBe(knownLemurRequestId);
+    expect(response.response).toBe("some response");
+  });
+
+  it("should return response with generic", async () => {
+    fetchMock.doMockOnceIf(
+      requestMatches({
+        method: "GET",
+        url: `/lemur/v3/${knownLemurRequestId}`,
+      }),
+      JSON.stringify({
+        request_id: knownLemurRequestId,
+        response: "some response",
+      }),
+    );
+    const response =
+      await assembly.lemur.getResponse<LemurTaskResponse>(knownLemurRequestId);
+    expect(response).toBeTruthy();
+    expect(response.request_id).toBe(knownLemurRequestId);
+    expect(response.response).toBe("some response");
   });
 
   it("should purge request data", async () => {

@@ -1,5 +1,10 @@
 # Changelog
 
+## [4.5.0]
+
+- You can now retrieve previous LeMUR responses using `client.lemur.getResponse<LemurTask>("YOUR_REQUEST_ID")`.
+- LeMUR functions now return `usage` with the number of `input_tokens` and `output_tokens`.
+
 ## [4.4.7]
 
 - Rename `TranscriptService.redactions` function to `TranscriptService.redactedAudio`.
