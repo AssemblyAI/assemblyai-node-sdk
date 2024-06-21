@@ -9,7 +9,7 @@
   "rules": {
     "tsdoc/syntax": "warn"
   },
-  "ignorePatterns": ["/*.js", "/*.ts", "dist", "node_modules"],
+  "ignorePatterns": ["/*.js", "/*.ts", "samples", "dist", "node_modules"],
   "overrides": [
     {
       "files": ["tests/**/*"],
