@@ -1,16 +1,16 @@
 // This code is a simplified and typed version adapted from the 'node-record-lpcm16' project by Gilles De Mey.
 // Original source code: https://github.com/gillesdemey/node-record-lpcm16
-import { ok as assert } from "assert";
-import { spawn } from "child_process";
-import { Readable } from "stream";
+import { ok as assert } from "assert"
+import { spawn } from "child_process"
+import { Readable } from "stream"
 const debug =
   !!process.env.DEBUG && process.env.DEBUG.indexOf("record") !== -1
     ? console.debug
-    : () => {};
+    : () => {}
 export class SoxRecording {
-  options;
-  process;
-  soxStream;
+  options
+  process
+  soxStream
   constructor(options = {}) {
     const defaults = {
       sampleRate: 16000,
@@ -21,14 +21,14 @@ export class SoxRecording {
       recorder: "sox",
       endOnSilence: false,
       audioType: "wav",
-    };
-    this.options = Object.assign(defaults, options);
-    debug("Started recording");
-    debug(this.options);
-    return this.start();
+    }
+    this.options = Object.assign(defaults, options)
+    debug("Started recording")
+    debug(this.options)
+    return this.start()
   }
   start() {
-    const cmd = "sox";
+    const cmd = "sox"
     const args = [
       "--default-device",
       "--no-show-progress",
@@ -43,58 +43,57 @@ export class SoxRecording {
       "--type",
       this.options.audioType,
       "-", // pipe
-    ];
-    debug(` ${cmd} ${args.join(" ")}`);
+    ]
+    debug(` ${cmd} ${args.join(" ")}`)
     const cp = spawn(cmd, args, {
-      encoding: "binary",
       stdio: "pipe",
-    });
-    const rec = cp.stdout;
-    const err = cp.stderr;
-    this.process = cp; // expose child process
-    this.soxStream = cp.stdout; // expose output stream
+    })
+    const rec = cp.stdout
+    const err = cp.stderr
+    this.process = cp // expose child process
+    this.soxStream = cp.stdout // expose output stream
     cp.on("close", (code) => {
-      if (code === 0) return;
+      if (code === 0) return
       rec?.emit(
         "error",
         `${cmd} has exited with error code ${code}.
 
 Enable debugging with the environment variable debug=record.`,
-      );
-    });
+      )
+    })
     err?.on("data", (chunk) => {
-      debug(`STDERR: ${chunk}`);
-    });
+      debug(`STDERR: ${chunk}`)
+    })
     rec?.on("data", (chunk) => {
-      debug(`Recording ${chunk.length} bytes`);
-    });
+      debug(`Recording ${chunk.length} bytes`)
+    })
     rec?.on("end", () => {
-      debug("Recording ended");
-    });
-    return this;
+      debug("Recording ended")
+    })
+    return this
   }
   stop() {
-    assert(this.process, "Recording not yet started");
-    this.process.kill();
+    assert(this.process, "Recording not yet started")
+    this.process.kill()
   }
   pause() {
-    assert(this.process, "Recording not yet started");
-    this.process.kill("SIGSTOP");
-    this.soxStream?.pause();
-    debug("Paused recording");
+    assert(this.process, "Recording not yet started")
+    this.process.kill("SIGSTOP")
+    this.soxStream?.pause()
+    debug("Paused recording")
   }
   resume() {
-    assert(this.process, "Recording not yet started");
-    this.process.kill("SIGCONT");
-    this.soxStream?.resume();
-    debug("Resumed recording");
+    assert(this.process, "Recording not yet started")
+    this.process.kill("SIGCONT")
+    this.soxStream?.resume()
+    debug("Resumed recording")
   }
   isPaused() {
-    assert(this.process, "Recording not yet started");
-    return this.soxStream?.isPaused();
+    assert(this.process, "Recording not yet started")
+    return this.soxStream?.isPaused()
   }
   stream() {
-    assert(this?.soxStream, "Recording not yet started");
-    return Readable.toWeb(this?.soxStream);
+    assert(this?.soxStream, "Recording not yet started")
+    return Readable.toWeb(this?.soxStream)
   }
 }
