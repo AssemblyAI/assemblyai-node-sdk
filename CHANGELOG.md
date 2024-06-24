@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.5.1]
+
+- Add more TSDoc comments for `RealtimeService` documentation
+
 ## [4.5.0]
 
 - You can now retrieve previous LeMUR responses using `client.lemur.getResponse<LemurTask>("YOUR_REQUEST_ID")`.
