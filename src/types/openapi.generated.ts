@@ -632,7 +632,6 @@ export type LemurBaseParams = {
   >;
   /**
    * The model that is used for the final prompt after compression is performed.
-   * Defaults to "default".
    *
    * @defaultValue "default
    */
@@ -687,10 +686,16 @@ export type LemurBaseResponse = {
  *
  */
 export type LemurModel =
+  | "anthropic/claude-3-5-sonnet"
+  | "anthropic/claude-3-opus"
+  | "anthropic/claude-3-haiku"
+  | "anthropic/claude-3-sonnet"
+  | "anthropic/claude-2-1"
+  | "anthropic/claude-2"
   | "default"
+  | "anthropic/claude-instant-1-2"
   | "basic"
-  | "assemblyai/mistral-7b"
-  | "anthropic/claude-2-1";
+  | "assemblyai/mistral-7b";
 
 /**
  * @example
@@ -1167,6 +1172,11 @@ export type RealtimeTemporaryTokenResponse = {
    */
   token: string;
 };
+
+/**
+ * The notification when the redacted audio is ready.
+ */
+export type RedactedAudioNotification = RedactedAudioResponse;
 
 /**
  * @example
@@ -2506,15 +2516,17 @@ export type Transcript = {
    */
   webhook_auth: boolean;
   /**
-   * The header name which should be sent back with webhook calls
+   * The header name to be sent with the transcript completed or failed webhook requests
    */
   webhook_auth_header_name?: string | null;
   /**
-   * The status code we received from your server when delivering your webhook, if a webhook URL was provided
+   * The status code we received from your server when delivering the transcript completed or failed webhook request, if a webhook URL was provided
    */
   webhook_status_code?: number | null;
   /**
-   * The URL to which we send webhooks upon transcription completion
+   * The URL to which we send webhook requests.
+   * We sends two different types of webhook requests.
+   * One request when a transcript is completed or failed, and one request when the redacted audio is ready if redact_pii_audio is enabled.
    */
   webhook_url?: string | null;
   /**
@@ -2931,17 +2943,17 @@ export type TranscriptOptionalParams = {
    */
   topics?: string[];
   /**
-   * The header name which should be sent back with webhook calls
+   * The header name to be sent with the transcript completed or failed webhook requests
    * @defaultValue null
    */
   webhook_auth_header_name?: string | null;
   /**
-   * Specify a header name and value to send back with a webhook call for added security
+   * The header value to send back with the transcript completed or failed webhook requests for added security
    * @defaultValue null
    */
   webhook_auth_header_value?: string | null;
   /**
-   * The URL to which AssemblyAI send webhooks upon transcription completion
+   * The URL to which we send webhook requests. We sends two different types of webhook requests. One request when a transcript is completed or failed, and one request when the redacted audio is ready if redact_pii_audio is enabled.
    */
   webhook_url?: string;
   /**
@@ -3291,6 +3303,13 @@ export type TranscriptUtterance = {
    */
   words: TranscriptWord[];
 };
+
+/**
+ * The notifications sent to the webhook URL.
+ */
+export type TranscriptWebhookNotification =
+  | TranscriptReadyNotification
+  | RedactedAudioNotification;
 
 /**
  * @example

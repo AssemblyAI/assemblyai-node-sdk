@@ -1,8 +1,11 @@
 # Changelog
 
-## [4.5.1]
+## [4.6.0]
 
 - Add more TSDoc comments for `RealtimeService` documentation
+- Add new LeMUR models
+- Add `TranscriptWebhookNotification` which is a union of `TranscriptReadyNotification` or `RedactedAudioNotification`
+- Add `RedactedAudioNotification` which represents the body of the PII redacted audio webhook notification.
 
 ## [4.5.0]
 
