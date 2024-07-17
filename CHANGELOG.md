@@ -1,5 +1,10 @@
 # Changelog
 
+## [4.6.1]
+
+- Remove `conformer-2` from `SpeechModel` union type.
+- Remove conformer-2 deprecation warning
+
 ## [4.6.0]
 
 - Add more TSDoc comments for `RealtimeService` documentation
