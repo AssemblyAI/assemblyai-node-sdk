@@ -15,7 +15,6 @@ import {
   TranscribeParams,
   TranscribeOptions,
   SubmitParams,
-  SpeechModel,
   RedactedAudioFile,
 } from "../..";
 import { FileService } from "../files";
@@ -39,7 +38,6 @@ export class TranscriptService extends BaseService {
     params: TranscribeParams,
     options?: TranscribeOptions,
   ): Promise<Transcript> {
-    deprecateConformer2(params);
     const transcript = await this.submit(params);
     return await this.waitUntilReady(transcript.id, options);
   }
@@ -50,7 +48,6 @@ export class TranscriptService extends BaseService {
    * @returns A promise that resolves to the queued transcript.
    */
   async submit(params: SubmitParams): Promise<Transcript> {
-    deprecateConformer2(params);
     let audioUrl;
     let transcriptParams: TranscriptParams | undefined = undefined;
     if ("audio" in params) {
@@ -95,7 +92,6 @@ export class TranscriptService extends BaseService {
     params: TranscriptParams,
     options?: CreateTranscriptOptions,
   ): Promise<Transcript> {
-    deprecateConformer2(params);
     const path = getPath(params.audio_url);
     if (path !== null) {
       const uploadUrl = await this.files.upload(path);
@@ -285,14 +281,5 @@ export class TranscriptService extends BaseService {
       body: response.body,
       bodyUsed: response.bodyUsed,
     };
-  }
-}
-
-function deprecateConformer2(params: { speech_model?: SpeechModel | null }) {
-  if (!params) return;
-  if (params.speech_model === "conformer-2") {
-    console.warn(
-      "The speech_model conformer-2 option is deprecated and will stop working in the near future. Use best or nano instead.",
-    );
   }
 }
