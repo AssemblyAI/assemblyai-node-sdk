@@ -1,5 +1,22 @@
 # Changelog
 
+## [4.7.0]
+
+- Add `language_confidence_threshold` to `Transcript`, `TranscriptParams`, and `TranscriptOptionalParams`.
+  > The confidence threshold for the automatically detected language.
+  > An error will be returned if the langauge confidence is below this threshold.
+- Add `language_confidence` to `Transcript`
+  > The confidence score for the detected language, between 0.0 (low confidence) and 1.0 (high confidence)
+
+Using these new fields you can determine the confidence of the language detection model (enable by setting `language_detection` to `true`), and fail the transcript if it doesn't meet your desired threshold.
+
+[Learn more about the new automatic language detection model and feature improvements on our blog.](https://www.assemblyai.com/blog/ald-improvements)
+
+## [4.6.2]
+
+- Change `RealtimeErrorType` from enum to const object.
+- Add `RealtimeErrorTypeCodes` which is a union of `RealtimeErrorType` values
+
 ## [4.6.1]
 
 - Remove `conformer-2` from `SpeechModel` union type.

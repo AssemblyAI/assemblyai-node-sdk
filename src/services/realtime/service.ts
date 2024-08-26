@@ -17,11 +17,8 @@ import {
   AudioData,
   SessionInformation,
 } from "../..";
-import {
-  RealtimeError,
-  RealtimeErrorMessages,
-  RealtimeErrorType,
-} from "../../utils/errors";
+import { RealtimeError, RealtimeErrorMessages } from "../../utils/errors";
+import { RealtimeErrorTypeCodes } from "../../utils/errors/realtime";
 
 const defaultRealtimeUrl = "wss://api.assemblyai.com/v2/realtime/ws";
 const forceEndOfUtteranceMessage = `{"force_end_utterance":true}`;
@@ -213,8 +210,8 @@ export class RealtimeTranscriber {
 
       this.socket!.onclose = ({ code, reason }: CloseEvent) => {
         if (!reason) {
-          if (code in RealtimeErrorType) {
-            reason = RealtimeErrorMessages[code as RealtimeErrorType];
+          if (code in RealtimeErrorMessages) {
+            reason = RealtimeErrorMessages[code as RealtimeErrorTypeCodes];
           }
         }
         this.listeners.close?.(code, reason);

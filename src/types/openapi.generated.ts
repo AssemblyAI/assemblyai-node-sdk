@@ -2407,6 +2407,16 @@ export type Transcript = {
    */
   language_code?: LiteralUnion<TranscriptLanguageCode, string>;
   /**
+   * The confidence score for the detected language, between 0.0 (low confidence) and 1.0 (high confidence)
+   */
+  language_confidence: number | null;
+  /**
+   * The confidence threshold for the automatically detected language.
+   * An error will be returned if the langauge confidence is below this threshold.
+   * Defaults to 0.
+   */
+  language_confidence_threshold: number | null;
+  /**
    * Whether {@link https://www.assemblyai.com/docs/models/speech-recognition#automatic-language-detection | Automatic language detection } is enabled, either true or false
    */
   language_detection?: boolean | null;
@@ -2542,7 +2552,7 @@ export type Transcript = {
 };
 
 /**
- * The word boost parameter value
+ * How much to boost specified words
  */
 export type TranscriptBoostParam = "low" | "default" | "high";
 
@@ -2823,7 +2833,7 @@ export type TranscriptOptionalParams = {
    */
   auto_highlights?: boolean;
   /**
-   * The word boost parameter value
+   * How much to boost specified words
    */
   boost_param?: TranscriptBoostParam;
   /**
@@ -2872,6 +2882,12 @@ export type TranscriptOptionalParams = {
    */
   language_code?: LiteralUnion<TranscriptLanguageCode, string> | null;
   /**
+   * The confidence threshold for the automatically detected language.
+   * An error will be returned if the langauge confidence is below this threshold.
+   * Defaults to 0.
+   */
+  language_confidence_threshold?: number;
+  /**
    * Enable {@link https://www.assemblyai.com/docs/models/speech-recognition#automatic-language-detection | Automatic language detection }, either true or false.
    */
   language_detection?: boolean;
@@ -2914,7 +2930,7 @@ export type TranscriptOptionalParams = {
    */
   speakers_expected?: number | null;
   /**
-   * The speech model to use for the transcription. When `null`, the default model is used.
+   * The speech model to use for the transcription. When `null`, the "best" model is used.
    * @defaultValue null
    */
   speech_model?: SpeechModel | null;
