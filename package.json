@@ -56,6 +56,15 @@
       "browser": "./src/polyfills/websocket/browser.ts",
       "node": "./src/polyfills/websocket/default.ts",
       "default": "./src/polyfills/websocket/default.ts"
+    },
+    "#conditions": {
+      "bun": "./src/utils/conditions/bun.ts",
+      "deno": "./src/utils/conditions/deno.ts",
+      "workerd": "./src/utils/conditions/workerd.ts",
+      "react-native": "./src/utils/conditions/react-native.ts",
+      "browser": "./src/utils/conditions/browser.ts",
+      "node": "./src/utils/conditions/node.ts",
+      "default": "./src/utils/conditions/default.ts"
     }
   },
   "type": "commonjs",
@@ -115,19 +124,19 @@
     "docs"
   ],
   "devDependencies": {
-    "@babel/preset-env": "^7.24.7",
+    "@babel/preset-env": "^7.25.4",
     "@babel/preset-typescript": "^7.24.7",
-    "@rollup/plugin-node-resolve": "^15.2.3",
-    "@rollup/plugin-replace": "^5.0.7",
+    "@rollup/plugin-node-resolve": "^15.3.0",
+    "@rollup/plugin-replace": "^6.0.1",
     "@rollup/plugin-terser": "^0.4.4",
-    "@rollup/plugin-typescript": "^11.1.6",
-    "@types/jest": "^29.5.12",
-    "@types/node": "^18.19.38",
+    "@rollup/plugin-typescript": "^12.1.0",
+    "@types/jest": "^29.5.13",
+    "@types/node": "^18.19.53",
     "@types/websocket": "^1.0.10",
-    "@types/ws": "^8.5.10",
-    "@typescript-eslint/eslint-plugin": "^7.13.1",
+    "@types/ws": "^8.5.12",
+    "@typescript-eslint/eslint-plugin": "^7.18.0",
     "dotenv": "^16.4.5",
-    "eslint": "^8.57.0",
+    "eslint": "^8.57.1",
     "eslint-plugin-tsdoc": "^0.3.0",
     "jest": "^29.7.0",
     "jest-cli": "^29.7.0",
@@ -135,31 +144,33 @@
     "jest-junit": "^16.0.0",
     "jest-websocket-mock": "^2.5.0",
     "mock-socket": "^9.3.1",
-    "openapi-typescript": "^6.7.5",
-    "prettier": "^3.3.2",
-    "publint": "^0.2.8",
-    "rimraf": "^5.0.7",
-    "rollup": "^4.18.0",
-    "ts-jest": "^29.1.5",
-    "tslib": "^2.6.3",
-    "typedoc": "^0.25.13",
-    "typedoc-plugin-extras": "^3.0.0",
+    "openapi-typescript": "^6.7.6",
+    "prettier": "^3.3.3",
+    "publint": "^0.2.11",
+    "rimraf": "^6.0.1",
+    "rollup": "^4.22.4",
+    "ts-jest": "^29.2.5",
+    "tslib": "^2.7.0",
+    "typedoc": "^0.26.7",
+    "typedoc-plugin-extras": "^3.1.0",
     "typescript": "^5.4.5"
   },
   "dependencies": {
-    "ws": "^8.17.1"
+    "ws": "^8.18.0"
   },
   "pnpm": {
     "packageExtensions": {
       "ws": {
         "peerDependencies": {
-          "@types/ws": "^8.5.10"
+          "@types/ws": "^8.5.12"
         }
       }
     },
     "overrides": {
       "undici@<5.28.4": ">=5.28.4",
-      "braces@<3.0.3": ">=3.0.3"
+      "braces@<3.0.3": ">=3.0.3",
+      "micromatch@<4.0.8": ">=4.0.8",
+      "rollup@<2.79.2": ">=2.79.2"
     }
   }
 }

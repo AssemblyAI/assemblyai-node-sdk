@@ -16,8 +16,7 @@ const assembly = createClient();
 
 const knownTranscriptIds = ["transcript_123"];
 const transcriptId = knownTranscriptIds[0];
-const remoteAudioURL =
-  "https://storage.googleapis.com/aai-web-samples/espn-bears.m4a";
+const remoteAudioURL = "https://assembly.ai/espn.m4a";
 const badRemoteAudioURL =
   "https://storage.googleapis.com/aai-web-samples/does-not-exist.m4a";
 

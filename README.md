@@ -8,7 +8,7 @@
 [![AssemblyAI Twitter](https://img.shields.io/twitter/follow/AssemblyAI?label=%40AssemblyAI&style=social)](https://twitter.com/AssemblyAI)
 [![AssemblyAI YouTube](https://img.shields.io/youtube/channel/subscribers/UCtatfZMf-8EkIwASXM4ts0A)](https://www.youtube.com/@AssemblyAI)
 [![Discord](https://img.shields.io/discord/875120158014853141?logo=discord&label=Discord&link=https%3A%2F%2Fdiscord.com%2Fchannels%2F875120158014853141&style=social)
-](https://assemblyai.com/discord)
+](https://assembly.ai/discord)
 
 # AssemblyAI JavaScript SDK
 
@@ -97,7 +97,7 @@ When you create a transcript, you can either pass in a URL to an audio file or u
 ```js
 // Transcribe file at remote URL
 let transcript = await client.transcripts.transcribe({
-  audio: "https://storage.googleapis.com/aai-web-samples/espn-bears.m4a",
+  audio: "https://assembly.ai/espn.m4a",
 });
 ```
 
@@ -110,7 +110,7 @@ If you don't want to wait until the transcript is ready, you can use `submit`:
 
 ```js
 let transcript = await client.transcripts.submit({
-  audio: "https://storage.googleapis.com/aai-web-samples/espn-bears.m4a",
+  audio: "https://assembly.ai/espn.m4a",
 });
 ```
 
@@ -151,7 +151,7 @@ For example, here's how to enable [Speaker diarization](https://www.assemblyai.c
 
 ```js
 let transcript = await client.transcripts.transcribe({
-  audio: "https://storage.googleapis.com/aai-web-samples/espn-bears.m4a",
+  audio: "https://assembly.ai/espn.m4a",
   speaker_labels: true,
 });
 for (let utterance of transcript.utterances) {

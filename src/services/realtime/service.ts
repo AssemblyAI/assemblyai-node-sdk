@@ -1,4 +1,5 @@
 import { WritableStream } from "#streams";
+import { conditions } from "#conditions";
 import {
   PolyfillWebSocket,
   factory as polyfillWebSocketFactory,
@@ -190,6 +191,13 @@ export class RealtimeTranscriber {
       if (this.token) {
         this.socket = polyfillWebSocketFactory(url.toString());
       } else {
+        if (conditions.browser) {
+          console.warn(
+            `API key authentication is not supported for the RealtimeTranscriber in browser environment. Use temporary token authentication instead.
+Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/compat.md#browser-compatibility.`,
+          );
+        }
+
         this.socket = polyfillWebSocketFactory(url.toString(), {
           headers: { Authorization: this.apiKey },
         });

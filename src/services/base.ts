@@ -1,3 +1,4 @@
+import { conditions } from "#conditions";
 import { DEFAULT_FETCH_INIT } from "#fetch";
 import { BaseServiceParams, Error as JsonError } from "..";
 import { buildUserAgent } from "../utils/userAgent";
@@ -33,10 +34,12 @@ export abstract class BaseService {
 
     if (this.userAgent) {
       (headers as Record<string, string>)["User-Agent"] = this.userAgent;
-      // chromium browsers have a bug where the user agent can't be modified
-      if (typeof window !== "undefined" && "chrome" in window) {
-        (headers as Record<string, string>)["AssemblyAI-Agent"] =
-          this.userAgent;
+      if (conditions.browser || conditions.default) {
+        // chromium browsers have a bug where the user agent can't be modified
+        if (typeof window !== "undefined" && "chrome" in window) {
+          (headers as Record<string, string>)["AssemblyAI-Agent"] =
+            this.userAgent;
+        }
       }
     }
     init.headers = headers;
