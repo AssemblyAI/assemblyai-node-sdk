@@ -2,9 +2,9 @@
 
 ## [4.7.1]
 
-* Log a warning when a user tries to use API key authentication in the browser to connect to the real-time Streaming STT API.
-* Update dependencies
-* Use assembly.ai short URL for sample files
+- Log a warning when a user tries to use API key authentication in the browser to connect to the real-time Streaming STT API.
+- Update dependencies
+- Use assembly.ai short URL for sample files
 
 ## [4.7.0]
 
