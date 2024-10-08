@@ -4,8 +4,7 @@ import { AssemblyAI } from "../../src";
 import { readFile } from "fs/promises";
 
 const testDir = process.env["TESTDATA_DIR"] ?? "tests/static";
-const remoteAudioUrl =
-  "https://storage.googleapis.com/aai-web-samples/espn-bears.m4a";
+const remoteAudioUrl = "https://assembly.ai/espn.m4a";
 const badRemoteAudioURL =
   "https://storage.googleapis.com/aai-web-samples/does-not-exist.m4a";
 const knownTranscriptId = process.env.TEST_TRANSCRIPT_ID!;
