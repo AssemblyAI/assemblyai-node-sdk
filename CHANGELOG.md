@@ -1,5 +1,11 @@
 # Changelog
 
+## [4.8.0]
+
+- Add `multichannel` property to `TranscriptParams`
+- Add `multichannel` and `audio_channels` property to `Transcript`
+- Add `channel` property to `TranscriptWord`, `TranscriptUtterance`, `TranscriptSentence`, and `SentimentAnalysisResult`
+
 ## [4.7.1]
 
 - Log a warning when a user tries to use API key authentication in the browser to connect to the real-time Streaming STT API.

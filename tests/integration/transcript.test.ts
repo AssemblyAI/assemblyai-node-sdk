@@ -59,6 +59,44 @@ describe("transcript", () => {
     expect(transcript.status).toBe("completed");
   });
 
+  it("should transcribe multichannel audio", async () => {
+    const transcript = await client.transcripts.transcribe({
+      audio:
+        "https://assemblyai-test.s3.us-west-2.amazonaws.com/e2e_tests/en_7dot1_audio_channels.wav",
+      multichannel: true,
+    });
+
+    const expectedOutput = [
+      "One.",
+      "Two.",
+      "Three.",
+      "Four.",
+      "Five.",
+      "Six.",
+      "Seven.",
+      "Eight.",
+    ];
+    expect(transcript.multichannel).toBe(true);
+    expect(transcript.words!.length).toBe(expectedOutput.length);
+    expect(transcript.utterances!.length).toBe(expectedOutput.length);
+    const words = transcript.words!;
+    const utterances = transcript.utterances!;
+    for (let i = 0; i < expectedOutput.length; i++) {
+      const channelString = String(i + 1);
+      const expectedWord = expectedOutput[i];
+      expect(words[i].text).toBe(expectedWord);
+      expect(words[i].speaker).toBe(channelString);
+      expect(words[i].channel).toBe(channelString);
+      expect(utterances[i].text).toBe(expectedWord);
+      expect(utterances[i].speaker).toBe(channelString);
+      expect(utterances[i].channel).toBe(channelString);
+      expect(utterances[i].words.length).toBe(1);
+      expect(utterances[i].words[0].text).toBe(expectedWord);
+      expect(utterances[i].words[0].speaker).toBe(channelString);
+      expect(utterances[i].words[0].channel).toBe(channelString);
+    }
+  }, 20_000);
+
   it("should wait on the transcript until ready", async () => {
     let transcript = await client.transcripts.submit({
       audio: remoteAudioUrl,
