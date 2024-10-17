@@ -1,6 +1,6 @@
 {
   "name": "assemblyai",
-  "version": "4.7.1",
+  "version": "4.8.0",
   "description": "The AssemblyAI JavaScript SDK provides an easy-to-use interface for interacting with the AssemblyAI API, which supports async and real-time transcription, as well as the latest LeMUR models.",
   "engines": {
     "node": ">=18"
@@ -99,7 +99,9 @@
     "generate:types": "tsx ./scripts/generate-types.ts && prettier 'src/types/*.generated.ts' --write",
     "generate:reference": "typedoc",
     "copybara:dry-run": "./copybara.sh dry_run --init-history",
-    "copybara:pr": "./copybara.sh sync_out --init-history"
+    "copybara:pr": "./copybara.sh sync_out --init-history",
+    "copybara:dry-run-in": "./copybara.sh dry_run_in --init-history",
+    "copybara:pr-in": "./copybara.sh sync_in --init-history"
   },
   "keywords": [
     "AssemblyAI",

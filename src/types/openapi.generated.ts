@@ -428,6 +428,9 @@ export type ContentSafetyLabelResult = {
  * ```
  */
 export type ContentSafetyLabelsResult = {
+  /**
+   * An array of results for the Content Moderation model
+   */
   results: ContentSafetyLabelResult[];
   /**
    * A summary of the Content Moderation severity results for the entire audio file
@@ -556,6 +559,7 @@ export type Error = {
    */
   error: string;
   status?: "error";
+  [key: string]: unknown;
 };
 
 /**
@@ -567,7 +571,7 @@ export type Error = {
  *   ],
  *   "context": "This is an interview about wildfires.",
  *   "answer_format": "Bullet Points",
- *   "final_model": "default",
+ *   "final_model": "anthropic/claude-3-5-sonnet",
  *   "temperature": 0,
  *   "max_output_size": 3000
  * }
@@ -607,7 +611,7 @@ export type LemurActionItemsResponse = LemurStringResponse;
  *     "7c3acd18-df4d-4432-88f5-1e89f8827eea"
  *   ],
  *   "context": "This is an interview about wildfires.",
- *   "final_model": "default",
+ *   "final_model": "anthropic/claude-3-5-sonnet",
  *   "temperature": 0,
  *   "max_output_size": 3000
  * }
@@ -638,12 +642,15 @@ export type LemurBaseParams = {
   input_text?: string;
   /**
    * Max output size in tokens, up to 4000
+   * @defaultValue 2000
    */
   max_output_size?: number;
   /**
    * The temperature to use for the model.
    * Higher values result in answers that are more creative, lower values are more conservative.
    * Can be any value between 0.0 and 1.0 inclusive.
+   *
+   * @defaultValue 0
    */
   temperature?: number;
   /**
@@ -773,7 +780,7 @@ export type LemurQuestionAnswer = {
  *       ]
  *     }
  *   ],
- *   "final_model": "default",
+ *   "final_model": "anthropic/claude-3-5-sonnet",
  *   "temperature": 0,
  *   "max_output_size": 3000
  * }
@@ -845,7 +852,7 @@ export type LemurStringResponse = {
  *     "47b95ba5-8889-44d8-bc80-5de38306e582"
  *   ],
  *   "context": "This is an interview about wildfires.",
- *   "final_model": "default",
+ *   "final_model": "anthropic/claude-3-5-sonnet",
  *   "temperature": 0,
  *   "max_output_size": 3000
  * }
@@ -882,7 +889,7 @@ export type LemurSummaryResponse = LemurStringResponse;
  *   ],
  *   "prompt": "List all the locations affected by wildfires.",
  *   "context": "This is an interview about wildfires.",
- *   "final_model": "default",
+ *   "final_model": "anthropic/claude-3-5-sonnet",
  *   "temperature": 0,
  *   "max_output_size": 3000
  * }
@@ -961,6 +968,7 @@ export type ListTranscriptParams = {
   status?: TranscriptStatus;
   /**
    * Only get throttled transcripts, overrides the status filter
+   * @defaultValue false
    */
   throttled_only?: boolean;
 };
@@ -1079,9 +1087,21 @@ export type PageDetails = {
  * ```
  */
 export type ParagraphsResponse = {
+  /**
+   * The duration of the audio file in seconds
+   */
   audio_duration: number;
+  /**
+   * The confidence score for the transcript
+   */
   confidence: number;
+  /**
+   * The unique identifier of your transcript
+   */
   id: string;
+  /**
+   * An array of paragraphs in the transcript
+   */
   paragraphs: TranscriptParagraph[];
 };
 
@@ -1183,7 +1203,7 @@ export type RedactedAudioNotification = RedactedAudioResponse;
  * @example
  * ```js
  * {
- *   "redacted_audio_url": "https://s3.us-west-2.amazonaws.com/api.assembly.ai.usw2/redacted-audio/785efd9e-0e20-45e1-967b-3db17770ed9f.wav?AWSAccessKeyId=ASIAVASQFLPGLUP5JD7Y&Signature=z1r2MOA46esiiAmk%2FreBkL8rl6g%3D&x-amz-security-token=IQoJb3JpZ2luX2VjEPv%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaCXVzLXdlc3QtMiJHMEUCIHxKoUJdd5P%2Fdy4WlfvRNppQtauTy7OuAb5azR2OIoYSAiEA8iPx4xAx0pbZztT4e7fGnzPS4phvNCnYKflIijUoxDsq%2BwMIMxAEGgwzNDQ4MzkyNDg4NDQiDJxsCgo0cDg789FV0CrYAwPK3CHbRHoNPFiQ%2FO6EdHZ4OSFRcS%2FDvDyHQRNnYNSwG4JB2mUMWEVw808JWTya%2But4wEcmPiUCVJMTvh70cxhILAxP84CBTuWGM%2Fszbj4tn1thjVsqovf9YZmP17OCFa77Bc9%2F9RwtRaABEqJ2eb6%2Bsir7w0MMzhe1z%2F%2B1PUKxicJAZasBv3Ova%2BTY2eNkPZHQ4Njie4X5sh05b%2BrKnz58E7GTQ1sHZQDYHZecwb5fP0B3LR0vuqNtK%2BdpMAxw5H7BinQ4rdccLmsLLMQeVn8jdRDZNEvsdmoeQL0y0qD%2BUcyGMJoAjMT4FnXhBhVxc3bgkVUbHlZMn48FNCYcmzM8UB9wGmSnr6iQoqEaFElfQVbvAzsW7lnlfLROZxMvGXyliobPYPSaYZlVYgHcIxeWuOAXRtEtmL2jbaX4ghCVgJBVO3BBzTgub2jB0KPU6lYZLLM4kf%2B8hKX8iyxSRc6ZVEefTcyruoDppjB028pA9q75hLH1CZwhfLoM%2F3z5f0aFCl05zQnaa10nbcKj0hERELf4FXqS8yWbSutlRcd7Rr9o8jN31QGUscpsuIvl%2FpyJcZmItX8nO%2FF0s1QjrIi11DLYD9YoOh7eVkN8eKKn5w4cHldVI2sw4NCPqgY6pQE%2BM9va2ad1%2BNrXeQ9t8K41lojTN0BFmM8ERD5fF77xcTlW8VdV%2FiJeLLHDvnYYWVKcga9hSROlmsqvMyn3Tmhz7KQbIepSAOKhcHM%2FyUaLfErvCtjXGwo8nsKForL7SKiGkaRCBmwfQtkSVP6m4tGT50YdGxakh54f8uyC55SbkElknRbpl5haiZ%2F82UddFBkdPcM3t0s7vwbEy%2BbilYyetOr6htc%3D&Expires=1698966551",
+ *   "redacted_audio_url": "https://s3.us-west-2.amazonaws.com/api.assembly.ai.usw2/redacted-audio/785efd9e-0e20-45e1-967b-3db17770ed9f.wav?AWSAccessKeyId=aws-access-key0id&Signature=signature&x-amz-security-token=security-token&Expires=1698966551",
  *   "status": "redacted_audio_ready"
  * }
  * ```
@@ -1206,7 +1226,6 @@ export type RedactedAudioStatus = "redacted_audio_ready";
 
 /**
  * Controls the filetype of the audio created by redact_pii_audio. Currently supports mp3 (default) and wav. See {@link https://www.assemblyai.com/docs/models/pii-redaction | PII redaction } for more details.
- * @defaultValue "mp3"
  * @example "mp3"
  */
 export type RedactPiiAudioQuality = "mp3" | "wav";
@@ -1312,9 +1331,21 @@ export type RedactPiiAudioQuality = "mp3" | "wav";
  * ```
  */
 export type SentencesResponse = {
+  /**
+   * The duration of the audio file in seconds
+   */
   audio_duration: number;
+  /**
+   * The confidence score for the transcript
+   */
   confidence: number;
+  /**
+   * The unique identifier for the transcript
+   */
   id: string;
+  /**
+   * An array of sentences in the transcript
+   */
   sentences: TranscriptSentence[];
 };
 
@@ -1336,6 +1367,10 @@ export type Sentiment = "POSITIVE" | "NEUTRAL" | "NEGATIVE";
  */
 export type SentimentAnalysisResult = {
   /**
+   * The channel of this utterance. The left and right channels are channels 1 and 2. Additional channels increment the channel number sequentially.
+   */
+  channel?: string | null;
+  /**
    * The confidence score for the detected sentiment of the sentence, from 0 to 1
    */
   confidence: number;
@@ -1350,7 +1385,7 @@ export type SentimentAnalysisResult = {
   /**
    * The speaker of the sentence if {@link https://www.assemblyai.com/docs/models/speaker-diarization | Speaker Diarization } is enabled, else null
    */
-  speaker?: string | null;
+  speaker: string | null;
   /**
    * The starting time, in milliseconds, of the sentence
    */
@@ -1394,13 +1429,11 @@ export type SubtitleFormat = "srt" | "vtt";
 
 /**
  * The model to summarize the transcript
- * @defaultValue "informative
  */
 export type SummaryModel = "informative" | "conversational" | "catchy";
 
 /**
  * The type of summary
- * @defaultValue bullets
  */
 export type SummaryType =
   | "bullets"
@@ -1414,7 +1447,7 @@ export type SummaryType =
  * @example
  * ```js
  * {
- *   "start": 3978",
+ *   "start": 3978,
  *   "end": 5114
  * }
  * ```
@@ -1587,6 +1620,9 @@ export type TopicDetectionModelResult = {
  * ```
  */
 export type TopicDetectionResult = {
+  /**
+   * An array of detected topics in the text
+   */
   labels?: {
     /**
      * The IAB taxonomical label for the label of the detected topic, where &gt; denotes supertopic/subtopic relationship
@@ -1614,6 +1650,9 @@ export type TopicDetectionResult = {
  *   "language_model": "assemblyai_default",
  *   "acoustic_model": "assemblyai_default",
  *   "language_code": "en_us",
+ *   "language_detection": true,
+ *   "language_confidence_threshold": 0.7,
+ *   "language_confidence": 0.9959,
  *   "status": "completed",
  *   "audio_url": "https://assembly.ai/wildfires.mp3",
  *   "text": "Smoke from hundreds of wildfires in Canada is triggering air quality alerts throughout the US. Skylines from Maine to Maryland to Minnesota are gray and smoggy. And in some places, the air quality warnings include the warning to stay inside. We wanted to better understand what's happening here and why, so we called Peter de Carlo, an associate professor in the Department of Environmental Health and Engineering at Johns Hopkins University Varsity. Good morning, professor. Good morning. What is it about the conditions right now that have caused this round of wildfires to affect so many people so far away? Well, there's a couple of things. The season has been pretty dry already. And then the fact that we're getting hit in the US. Is because there's a couple of weather systems that are essentially channeling the smoke from those Canadian wildfires through Pennsylvania into the Mid Atlantic and the Northeast and kind of just dropping the smoke there. So what is it in this haze that makes it harmful? And I'm assuming it is harmful. It is. The levels outside right now in Baltimore are considered unhealthy. And most of that is due to what's called particulate matter, which are tiny particles, microscopic smaller than the width of your hair that can get into your lungs and impact your respiratory system, your cardiovascular system, and even your neurological your brain. What makes this particularly harmful? Is it the volume of particulant? Is it something in particular? What is it exactly? Can you just drill down on that a little bit more? Yeah. So the concentration of particulate matter I was looking at some of the monitors that we have was reaching levels of what are, in science, big 150 micrograms per meter cubed, which is more than ten times what the annual average should be and about four times higher than what you're supposed to have on a 24 hours average. And so the concentrations of these particles in the air are just much, much higher than we typically see. And exposure to those high levels can lead to a host of health problems. And who is most vulnerable? I noticed that in New York City, for example, they're canceling outdoor activities. And so here it is in the early days of summer, and they have to keep all the kids inside. So who tends to be vulnerable in a situation like this? It's the youngest. So children, obviously, whose bodies are still developing. The elderly, who are their bodies are more in decline and they're more susceptible to the health impacts of breathing, the poor air quality. And then people who have preexisting health conditions, people with respiratory conditions or heart conditions can be triggered by high levels of air pollution. Could this get worse? That's a good question. In some areas, it's much worse than others. And it just depends on kind of where the smoke is concentrated. I think New York has some of the higher concentrations right now, but that's going to change as that air moves away from the New York area. But over the course of the next few days, we will see different areas being hit at different times with the highest concentrations. I was going to ask you about more fires start burning. I don't expect the concentrations to go up too much higher. I was going to ask you how and you started to answer this, but how much longer could this last? Or forgive me if I'm asking you to speculate, but what do you think? Well, I think the fires are going to burn for a little bit longer, but the key for us in the US. Is the weather system changing. And so right now, it's kind of the weather systems that are pulling that air into our mid Atlantic and Northeast region. As those weather systems change and shift, we'll see that smoke going elsewhere and not impact us in this region as much. And so I think that's going to be the defining factor. And I think the next couple of days we're going to see a shift in that weather pattern and start to push the smoke away from where we are. And finally, with the impacts of climate change, we are seeing more wildfires. Will we be seeing more of these kinds of wide ranging air quality consequences or circumstances? I mean, that is one of the predictions for climate change. Looking into the future, the fire season is starting earlier and lasting longer, and we're seeing more frequent fires. So, yeah, this is probably something that we'll be seeing more frequently. This tends to be much more of an issue in the Western US. So the eastern US. Getting hit right now is a little bit new. But yeah, I think with climate change moving forward, this is something that is going to happen more frequently. That's Peter De Carlo, associate professor in the Department of Environmental Health and Engineering at Johns Hopkins University. Sergeant Carlo, thanks so much for joining us and sharing this expertise with us. Thank you for having me.",
@@ -1844,6 +1883,7 @@ export type TopicDetectionResult = {
  *   "audio_duration": 281,
  *   "punctuate": true,
  *   "format_text": true,
+ *   "multichannel": false,
  *   "dual_channel": false,
  *   "webhook_url": "https://your-webhook-url.tld/path",
  *   "webhook_status_code": 200,
@@ -2185,7 +2225,6 @@ export type TopicDetectionResult = {
  *       "MedicalHealth>DiseasesAndConditions>Injuries>FirstAid": 0.0004885646631009877
  *     }
  *   },
- *   "language_detection": false,
  *   "custom_spelling": null,
  *   "throttled": null,
  *   "auto_chapters": true,
@@ -2301,6 +2340,10 @@ export type Transcript = {
    */
   acoustic_model: string;
   /**
+   * The number of audio channels in the audio file. This is only present when multichannel is enabled.
+   */
+  audio_channels?: number;
+  /**
    * The duration of this transcript object's media file, in seconds
    */
   audio_duration?: number | null;
@@ -2363,6 +2406,7 @@ export type Transcript = {
    */
   disfluencies?: boolean | null;
   /**
+   * @deprecated
    * Whether {@link https://www.assemblyai.com/docs/models/speech-recognition#dual-channel-transcription | Dual channel transcription } was enabled in the transcription request, either true or false
    */
   dual_channel?: boolean | null;
@@ -2412,8 +2456,7 @@ export type Transcript = {
   language_confidence: number | null;
   /**
    * The confidence threshold for the automatically detected language.
-   * An error will be returned if the langauge confidence is below this threshold.
-   * Defaults to 0.
+   * An error will be returned if the language confidence is below this threshold.
    */
   language_confidence_threshold: number | null;
   /**
@@ -2425,6 +2468,10 @@ export type Transcript = {
    * The language model that was used for the transcript
    */
   language_model: string;
+  /**
+   * Whether {@link https://www.assemblyai.com/docs/models/speech-recognition#multichannel-transcription | Multichannel transcription } was enabled in the transcription request, either true or false
+   */
+  multichannel?: boolean | null;
   /**
    * Whether Automatic Punctuation is enabled, either true or false
    */
@@ -2583,7 +2630,6 @@ export type TranscriptCustomSpelling = {
  * The language of your audio file. Possible values are found in {@link https://www.assemblyai.com/docs/concepts/supported-languages | Supported Languages }.
  * The default value is 'en_us'.
  *
- * @defaultValue "en_us
  */
 export type TranscriptLanguageCode =
   | "en"
@@ -2695,7 +2741,7 @@ export type TranscriptLanguageCode =
  * ```js
  * {
  *   "page_details": {
- *     "limit": 3",
+ *     "limit": 3,
  *     "result_count": 3,
  *     "current_url": "https://api.assemblyai.com/v2/transcript?limit=3",
  *     "prev_url": "https://api.assemblyai.com/v2/transcript?limit=3&before_id=28a73d01-98db-41dd-9e98-2533ba0af117",
@@ -2734,7 +2780,13 @@ export type TranscriptLanguageCode =
  * ```
  */
 export type TranscriptList = {
+  /**
+   * Details of the transcript page
+   */
   page_details: PageDetails;
+  /**
+   * An array of transcripts
+   */
   transcripts: TranscriptListItem[];
 };
 
@@ -2753,15 +2805,33 @@ export type TranscriptList = {
  * ```
  */
 export type TranscriptListItem = {
+  /**
+   * The URL to the audio file
+   */
   audio_url: string;
+  /**
+   * The date and time the transcript was completed
+   */
   completed: Date | null;
+  /**
+   * The date and time the transcript was created
+   */
   created: Date;
   /**
    * Error message of why the transcript failed
    */
   error: string | null;
+  /**
+   * The unique identifier for the transcript
+   */
   id: string;
+  /**
+   * The URL to retrieve the transcript
+   */
   resource_url: string;
+  /**
+   * The status of the transcript
+   */
   status: TranscriptStatus;
 };
 
@@ -2772,9 +2842,12 @@ export type TranscriptListItem = {
  * {
  *   "speech_model": null,
  *   "language_code": "en_us",
+ *   "language_detection": true,
+ *   "language_confidence_threshold": 0.7,
  *   "punctuate": true,
  *   "format_text": true,
- *   "dual_channel": true,
+ *   "multichannel": true,
+ *   "dual_channel": false,
  *   "webhook_url": "https://your-webhook-url.tld/path",
  *   "webhook_auth_header_name": "webhook-secret",
  *   "webhook_auth_header_value": "webhook-secret-value",
@@ -2800,7 +2873,6 @@ export type TranscriptListItem = {
  *   "speakers_expected": 2,
  *   "content_safety": true,
  *   "iab_categories": true,
- *   "language_detection": false,
  *   "custom_spelling": [],
  *   "disfluencies": false,
  *   "sentiment_analysis": true,
@@ -2826,22 +2898,27 @@ export type TranscriptOptionalParams = {
   audio_start_from?: number;
   /**
    * Enable {@link https://www.assemblyai.com/docs/models/auto-chapters | Auto Chapters }, can be true or false
+   * @defaultValue false
    */
   auto_chapters?: boolean;
   /**
    * Enable Key Phrases, either true or false
+   * @defaultValue false
    */
   auto_highlights?: boolean;
   /**
    * How much to boost specified words
+   * @defaultValue default
    */
   boost_param?: TranscriptBoostParam;
   /**
    * Enable {@link https://www.assemblyai.com/docs/models/content-moderation | Content Moderation }, can be true or false
+   * @defaultValue false
    */
   content_safety?: boolean;
   /**
    * The confidence threshold for the Content Moderation model. Values must be between 25 and 100.
+   * @defaultValue 50
    */
   content_safety_confidence?: number;
   /**
@@ -2850,57 +2927,78 @@ export type TranscriptOptionalParams = {
   custom_spelling?: TranscriptCustomSpelling[];
   /**
    * Enable custom topics, either true or false
+   * @defaultValue false
    */
   custom_topics?: boolean;
   /**
    * Transcribe Filler Words, like "umm", in your media file; can be true or false
+   * @defaultValue false
    */
   disfluencies?: boolean;
   /**
+   * @deprecated
    * Enable {@link https://www.assemblyai.com/docs/models/speech-recognition#dual-channel-transcription | Dual Channel } transcription, can be true or false.
+   * @defaultValue false
    */
   dual_channel?: boolean;
   /**
    * Enable {@link https://www.assemblyai.com/docs/models/entity-detection | Entity Detection }, can be true or false
+   * @defaultValue false
    */
   entity_detection?: boolean;
   /**
    * Filter profanity from the transcribed text, can be true or false
+   * @defaultValue false
    */
   filter_profanity?: boolean;
   /**
    * Enable Text Formatting, can be true or false
+   * @defaultValue true
    */
   format_text?: boolean;
   /**
    * Enable {@link https://www.assemblyai.com/docs/models/topic-detection | Topic Detection }, can be true or false
+   * @defaultValue false
    */
   iab_categories?: boolean;
   /**
    * The language of your audio file. Possible values are found in {@link https://www.assemblyai.com/docs/concepts/supported-languages | Supported Languages }.
    * The default value is 'en_us'.
+   *
+   * @defaultValue en_us
    */
   language_code?: LiteralUnion<TranscriptLanguageCode, string> | null;
   /**
    * The confidence threshold for the automatically detected language.
-   * An error will be returned if the langauge confidence is below this threshold.
+   * An error will be returned if the language confidence is below this threshold.
    * Defaults to 0.
+   *
+   * @defaultValue 0
    */
   language_confidence_threshold?: number;
   /**
    * Enable {@link https://www.assemblyai.com/docs/models/speech-recognition#automatic-language-detection | Automatic language detection }, either true or false.
+   * @defaultValue false
    */
   language_detection?: boolean;
   /**
+   * Enable {@link https://www.assemblyai.com/docs/models/speech-recognition#multichannel-transcription | Multichannel } transcription, can be true or false.
+   * @defaultValue false
+   */
+  multichannel?: boolean;
+  /**
    * Enable Automatic Punctuation, can be true or false
+   * @defaultValue true
    */
   punctuate?: boolean;
   /**
    * Redact PII from the transcribed text using the Redact PII model, can be true or false
+   * @defaultValue false
    */
   redact_pii?: boolean;
   /**
    * Generate a copy of the original media file with spoken PII "beeped" out, can be true or false. See {@link https://www.assemblyai.com/docs/models/pii-redaction | PII redaction } for more details.
+   * @defaultValue false
    */
   redact_pii_audio?: boolean;
   /**
@@ -2914,35 +3012,39 @@ export type TranscriptOptionalParams = {
   redact_pii_policies?: PiiPolicy[];
   /**
    * The replacement logic for detected PII, can be "entity_type" or "hash". See {@link https://www.assemblyai.com/docs/models/pii-redaction | PII redaction } for more details.
+   * @defaultValue "hash"
    */
   redact_pii_sub?: SubstitutionPolicy | null;
   /**
    * Enable {@link https://www.assemblyai.com/docs/models/sentiment-analysis | Sentiment Analysis }, can be true or false
+   * @defaultValue false
    */
   sentiment_analysis?: boolean;
   /**
    * Enable {@link https://www.assemblyai.com/docs/models/speaker-diarization | Speaker diarization }, can be true or false
+   * @defaultValue false
    */
   speaker_labels?: boolean;
   /**
-   * Tells the speaker label model how many speakers it should attempt to identify, up to 10. See {@link https://www.assemblyai.com/docs/models/speaker-diarization | Speaker diarization } for more details.
+   * Tells the speaker label model how many speakers it should attempt to identify, up to 10". See {@link https://www.assemblyai.com/docs/models/speaker-diarization | Speaker diarization } for more details.
    * @defaultValue "null
    */
   speakers_expected?: number | null;
   /**
    * The speech model to use for the transcription. When `null`, the "best" model is used.
-   * @defaultValue null
+   * @defaultValue best
    */
   speech_model?: SpeechModel | null;
   /**
    * Reject audio files that contain less than this fraction of speech.
    * Valid values are in the range [0", 1] inclusive.
    *
-   * @defaultValue "null
+   * @defaultValue 0
    */
   speech_threshold?: number | null;
   /**
    * Enable {@link https://www.assemblyai.com/docs/models/summarization | Summarization }, can be true or false
+   * @defaultValue false
    */
   summarization?: boolean;
   /**
@@ -2970,7 +3072,9 @@ export type TranscriptOptionalParams = {
    */
   webhook_auth_header_value?: string | null;
   /**
-   * The URL to which we send webhook requests. We sends two different types of webhook requests. One request when a transcript is completed or failed, and one request when the redacted audio is ready if redact_pii_audio is enabled.
+   * The URL to which we send webhook requests.
+   * We sends two different types of webhook requests.
+   * One request when a transcript is completed or failed, and one request when the redacted audio is ready if redact_pii_audio is enabled.
    */
   webhook_url?: string;
   /**
@@ -3021,14 +3125,25 @@ export type TranscriptOptionalParams = {
  * ```
  */
 export type TranscriptParagraph = {
+  /**
+   * The confidence score for the transcript of this paragraph
+   */
   confidence: number;
+  /**
+   * The ending time, in milliseconds, of the paragraph
+   */
   end: number;
   /**
-   * The speaker of the sentence if {@link https://www.assemblyai.com/docs/models/speaker-diarization | Speaker Diarization } is enabled, else null
+   * The starting time, in milliseconds, of the paragraph
    */
-  speaker?: string | null;
   start: number;
+  /**
+   * The transcript of the paragraph
+   */
   text: string;
+  /**
+   * An array of words in the paragraph
+   */
   words: TranscriptWord[];
 };
 
@@ -3039,10 +3154,13 @@ export type TranscriptParagraph = {
  * {
  *   "speech_model": null,
  *   "language_code": "en_us",
+ *   "language_detection": true,
+ *   "language_confidence_threshold": 0.7,
  *   "audio_url": "https://assembly.ai/wildfires.mp3",
  *   "punctuate": true,
  *   "format_text": true,
- *   "dual_channel": true,
+ *   "multichannel": true,
+ *   "dual_channel": false,
  *   "webhook_url": "https://your-webhook-url/path",
  *   "webhook_auth_header_name": "webhook-secret",
  *   "webhook_auth_header_value": "webhook-secret-value",
@@ -3068,7 +3186,6 @@ export type TranscriptParagraph = {
  *   "speakers_expected": 2,
  *   "content_safety": true,
  *   "iab_categories": true,
- *   "language_detection": false,
  *   "custom_spelling": [],
  *   "disfluencies": false,
  *   "sentiment_analysis": true,
@@ -3159,14 +3276,33 @@ export type TranscriptReadyStatus = "completed" | "error";
  * ```
  */
 export type TranscriptSentence = {
+  /**
+   * The channel of the sentence. The left and right channels are channels 1 and 2. Additional channels increment the channel number sequentially.
+   */
+  channel?: string | null;
+  /**
+   * The confidence score for the transcript of this sentence
+   */
   confidence: number;
+  /**
+   * The ending time, in milliseconds, for the sentence
+   */
   end: number;
   /**
    * The speaker of the sentence if {@link https://www.assemblyai.com/docs/models/speaker-diarization | Speaker Diarization } is enabled, else null
    */
-  speaker?: string | null;
+  speaker: string | null;
+  /**
+   * The starting time, in milliseconds, for the sentence
+   */
   start: number;
+  /**
+   * The transcript of the sentence
+   */
   text: string;
+  /**
+   * An array of words in the sentence
+   */
   words: TranscriptWord[];
 };
 
@@ -3296,6 +3432,10 @@ export type TranscriptStatus = "queued" | "processing" | "completed" | "error";
  */
 export type TranscriptUtterance = {
   /**
+   * The channel of this utterance. The left and right channels are channels 1 and 2. Additional channels increment the channel number sequentially.
+   */
+  channel?: string | null;
+  /**
    * The confidence score for the transcript of this utterance
    */
   confidence: number;
@@ -3336,18 +3476,35 @@ export type TranscriptWebhookNotification =
  *   "start": 250,
  *   "end": 650,
  *   "confidence": 0.97465,
+ *   "channel": null,
  *   "speaker": null
  * }
  * ```
  */
 export type TranscriptWord = {
+  /**
+   * The channel of the word. The left and right channels are channels 1 and 2. Additional channels increment the channel number sequentially.
+   */
+  channel?: string | null;
+  /**
+   * The confidence score for the transcript of this word
+   */
   confidence: number;
+  /**
+   * The ending time, in milliseconds, for the word
+   */
   end: number;
   /**
-   * The speaker of the sentence if {@link https://www.assemblyai.com/docs/models/speaker-diarization | Speaker Diarization } is enabled, else null
+   * The speaker of the word if {@link https://www.assemblyai.com/docs/models/speaker-diarization | Speaker Diarization } is enabled, else null
    */
-  speaker?: string | null;
+  speaker: string | null;
+  /**
+   * The starting time, in milliseconds, for the word
+   */
   start: number;
+  /**
+   * The text of the word
+   */
   text: string;
 };
 
