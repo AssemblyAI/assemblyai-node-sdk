@@ -695,8 +695,6 @@ export type LemurModel =
   | "anthropic/claude-2-1"
   | "anthropic/claude-2"
   | "default"
-  | "anthropic/claude-instant-1-2"
-  | "basic"
   | "assemblyai/mistral-7b";
 
 /**
