@@ -967,6 +967,7 @@ export type ListTranscriptParams = {
   /**
    * Only get throttled transcripts, overrides the status filter
    * @defaultValue false
+   * @deprecated
    */
   throttled_only?: boolean;
 };
@@ -1413,7 +1414,7 @@ export type SeverityScoreSummary = {
 /**
  * The speech model to use for the transcription.
  */
-export type SpeechModel = "best" | "nano";
+export type SpeechModel = "best" | "nano" | "slam-1";
 
 /**
  * The replacement logic for detected PII, can be "entity_name" or "hash". See {@link https://www.assemblyai.com/docs/models/pii-redaction | PII redaction } for more details.
