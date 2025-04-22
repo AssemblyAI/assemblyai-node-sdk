@@ -2961,6 +2961,10 @@ export type TranscriptOptionalParams = {
    */
   iab_categories?: boolean;
   /**
+   * The list of key terms used to generate the transcript with the Slam-1 speech model. Can't be used together with `prompt`.
+   */
+  keyterms_prompt?: string[];
+  /**
    * The language of your audio file. Possible values are found in {@link https://www.assemblyai.com/docs/concepts/supported-languages | Supported Languages }.
    * The default value is 'en_us'.
    *
@@ -2985,6 +2989,10 @@ export type TranscriptOptionalParams = {
    * @defaultValue false
    */
   multichannel?: boolean;
+  /**
+   * The prompt used to generate the transcript with the Slam-1 speech model. Can't be used together with `keyterms_prompt`.
+   */
+  prompt?: string;
   /**
    * Enable Automatic Punctuation, can be true or false
    * @defaultValue true
