@@ -1416,7 +1416,7 @@ export type SeverityScoreSummary = {
 /**
  * The speech model to use for the transcription.
  */
-export type SpeechModel = "best" | "nano" | "slam-1";
+export type SpeechModel = "best" | "nano" | "slam-1" | "universal";
 
 /**
  * The replacement logic for detected PII, can be "entity_name" or "hash". See {@link https://www.assemblyai.com/docs/models/pii-redaction | PII redaction } for more details.
