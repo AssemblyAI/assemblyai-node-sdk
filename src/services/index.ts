@@ -8,8 +8,10 @@ import {
 } from "./realtime";
 import { TranscriptService } from "./transcripts";
 import { FileService } from "./files";
+import { StreamingTranscriber, StreamingTranscriberFactory } from "./streaming";
 
 const defaultBaseUrl = "https://api.assemblyai.com";
+const defaultStreamingUrl = "https://streaming.assemblyai.com";
 
 class AssemblyAI {
   /**
@@ -33,6 +35,11 @@ class AssemblyAI {
   public realtime: RealtimeTranscriberFactory;
 
   /**
+   * The streaming service.
+   */
+  public streaming: StreamingTranscriberFactory;
+
+  /**
    * Create a new AssemblyAI client.
    * @param params - The parameters for the service, including the API key and base URL, if any.
    */
@@ -41,10 +48,16 @@ class AssemblyAI {
     if (params.baseUrl && params.baseUrl.endsWith("/")) {
       params.baseUrl = params.baseUrl.slice(0, -1);
     }
+
     this.files = new FileService(params);
     this.transcripts = new TranscriptService(params, this.files);
     this.lemur = new LemurService(params);
     this.realtime = new RealtimeTranscriberFactory(params);
+
+    this.streaming = new StreamingTranscriberFactory({
+      ...params,
+      baseUrl: params.streamingBaseUrl || defaultStreamingUrl,
+    });
   }
 }
 
@@ -57,4 +70,5 @@ export {
   RealtimeService,
   TranscriptService,
   FileService,
+  StreamingTranscriber,
 };
