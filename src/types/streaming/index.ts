@@ -20,8 +20,8 @@ export type StreamingListeners = {
 };
 
 export type StreamingTokenParams = {
-  expires_in_seconds: number;
-  max_session_duration_seconds: number;
+  expires_in_seconds?: number;
+  max_session_duration_seconds?: number;
 };
 
 export type StreamingTemporaryTokenResponse = {
