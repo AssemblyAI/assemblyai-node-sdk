@@ -8,12 +8,21 @@ import { StreamingTranscriber } from "./service";
 import { BaseService } from "../base";
 
 export class StreamingTranscriberFactory extends BaseService {
+  private baseServiceParams: BaseServiceParams;
+
   constructor(params: BaseServiceParams) {
     super(params);
+    this.baseServiceParams = params;
   }
 
   transcriber(params: StreamingTranscriberParams): StreamingTranscriber {
-    return new StreamingTranscriber(params);
+    const serviceParams = { ...params };
+
+    if (!serviceParams.token && !serviceParams.apiKey) {
+      serviceParams.apiKey = this.baseServiceParams.apiKey;
+    }
+
+    return new StreamingTranscriber(serviceParams);
   }
 
   async createTemporaryToken(params: StreamingTokenParams) {

@@ -71,13 +71,6 @@ export class StreamingTranscriber {
 
     searchParams.set("sample_rate", this.params.sampleRate.toString());
 
-    if (this.params.wordFinalizationMaxWaitTime) {
-      searchParams.set(
-        "word_finalization_max_wait_time",
-        this.params.wordFinalizationMaxWaitTime.toString(),
-      );
-    }
-
     if (this.params.endOfTurnConfidenceThreshold) {
       searchParams.set(
         "end_of_turn_confidence_threshold",
@@ -99,11 +92,8 @@ export class StreamingTranscriber {
       );
     }
 
-    if (this.params.formattedFinals) {
-      searchParams.set(
-        "formatted_finals",
-        this.params.formattedFinals.toString(),
-      );
+    if (this.params.formatTurns) {
+      searchParams.set("format_turns", this.params.formatTurns.toString());
     }
 
     url.search = searchParams.toString();

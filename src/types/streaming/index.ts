@@ -4,11 +4,10 @@ export type StreamingTranscriberParams = {
   token?: string;
   sampleRate: number;
 
-  wordFinalizationMaxWaitTime?: number;
   endOfTurnConfidenceThreshold?: number;
   minEndOfTurnSilenceWhenConfident?: number;
   maxTurnSilence?: number;
-  formattedFinals?: boolean;
+  formatTurns?: boolean;
 };
 
 export type StreamingEvents = "open" | "close" | "turn" | "error";
@@ -67,11 +66,10 @@ export type StreamingTerminateSession = {
 
 export type StreamingUpdateConfiguration = {
   type: "UpdateConfiguration";
-  word_finalization_max_wait_time?: number;
   end_of_turn_confidence_threshold?: number;
   min_end_of_turn_silence_when_confident?: number;
   max_turn_silence?: number;
-  formatted_finals?: boolean;
+  format_turns?: boolean;
 };
 
 export type StreamingForceEndpoint = {
