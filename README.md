@@ -1,6 +1,6 @@
 <img src="https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/assemblyai.png?raw=true" width="500"/>
 
-______________________________________________________________________
+---
 
 [![npm](https://img.shields.io/npm/v/assemblyai)](https://www.npmjs.com/package/assemblyai)
 [![Test](https://github.com/AssemblyAI/assemblyai-node-sdk/actions/workflows/test.yml/badge.svg)](https://github.com/AssemblyAI/assemblyai-node-sdk/actions/workflows/test.yml)
@@ -263,7 +263,9 @@ const rt = client.streaming.transcriber({
 > _Server code_:
 >
 > ```typescript
-> const token = await client.streaming.createTemporaryToken({ expires_in_seconds = 60 });
+> const token = await client.streaming.createTemporaryToken({
+>   expires_in_seconds = 60,
+> });
 > // TODO: return token to client
 > ```
 >
@@ -281,7 +283,6 @@ const rt = client.streaming.transcriber({
 You can configure the following events.
 
 <!-- prettier-ignore -->
-
 ```typescript
 rt.on("open", ({ id, expires_at }) => console.log('Session ID:', id, 'Expires at:', expires_at));
 rt.on("close", (code: number, reason: string) => console.log('Closed', code, reason));
