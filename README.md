@@ -1,6 +1,6 @@
 <img src="https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/assemblyai.png?raw=true" width="500"/>
 
----
+______________________________________________________________________
 
 [![npm](https://img.shields.io/npm/v/assemblyai)](https://www.npmjs.com/package/assemblyai)
 [![Test](https://github.com/AssemblyAI/assemblyai-node-sdk/actions/workflows/test.yml/badge.svg)](https://github.com/AssemblyAI/assemblyai-node-sdk/actions/workflows/test.yml)
@@ -13,7 +13,7 @@
 # AssemblyAI JavaScript SDK
 
 The AssemblyAI JavaScript SDK provides an easy-to-use interface for interacting with the AssemblyAI API,
-which supports async and real-time transcription, as well as the latest LeMUR models.
+which supports async and streaming transcription, as well as the latest LeMUR models.
 It is written primarily for Node.js in TypeScript with all types exported, but also [compatible with other runtimes](./docs/compat.md).
 
 ## Documentation
@@ -73,11 +73,11 @@ You can use automatic CDNs like [UNPKG](https://unpkg.com/) to load the library 
 ```
 
 The script creates a global `assemblyai` variable containing all the services.
-Here's how you create a `RealtimeTranscriber` object.
+Here's how you create a `StreamingTranscriber` object.
 
 ```js
-const { RealtimeTranscriber } = assemblyai;
-const transcriber = new RealtimeTranscriber({
+const { StreamingTranscriber } = assemblyai;
+const transcriber = new StreamingTranscriber({
   token: "[GENERATE TEMPORARY AUTH TOKEN IN YOUR API]",
   ...
 });
@@ -101,7 +101,7 @@ let transcript = await client.transcripts.transcribe({
 });
 ```
 
-> **Note**
+> [!NOTE]
 > You can also pass a local file path, a stream, or a buffer as the `audio` property.
 
 `transcribe` queues a transcription job and polls it until the `status` is `completed` or `error`.
@@ -242,20 +242,18 @@ const res = await client.transcripts.delete(transcript.id);
 
 ### Transcribe in real-time
 
-Create the real-time transcriber.
+Create the streaming transcriber.
 
 ```typescript
-const rt = client.realtime.transcriber();
+const rt = client.streaming.transcriber();
 ```
 
 You can also pass in the following options.
 
 ```typescript
-const rt = client.realtime.transcriber({
-  realtimeUrl: 'wss://localhost/override',
+const rt = client.streaming.transcriber({
   apiKey: process.env.ASSEMBLYAI_API_KEY // The API key passed to `AssemblyAI` will be used by default,
   sampleRate: 16_000,
-  wordBoost: ['foo', 'bar']
 });
 ```
 
@@ -265,17 +263,17 @@ const rt = client.realtime.transcriber({
 > _Server code_:
 >
 > ```typescript
-> const token = await client.realtime.createTemporaryToken({ expires_in = 60 });
+> const token = await client.streaming.createTemporaryToken({ expires_in_seconds = 60 });
 > // TODO: return token to client
 > ```
 >
 > _Client code_:
 >
 > ```typescript
-> import { RealtimeTranscriber } from "assemblyai"; // or "assemblyai/streaming"
+> import { StreamingTranscriber } from "assemblyai";
 > // TODO: implement getToken to retrieve token from server
 > const token = await getToken();
-> const rt = new RealtimeTranscriber({
+> const rt = new StreamingTranscriber({
 >   token,
 > });
 > ```
@@ -283,12 +281,11 @@ const rt = client.realtime.transcriber({
 You can configure the following events.
 
 <!-- prettier-ignore -->
+
 ```typescript
-rt.on("open", ({ sessionId, expiresAt }) => console.log('Session ID:', sessionId, 'Expires at:', expiresAt));
+rt.on("open", ({ id, expires_at }) => console.log('Session ID:', id, 'Expires at:', expires_at));
 rt.on("close", (code: number, reason: string) => console.log('Closed', code, reason));
-rt.on("transcript", (transcript: TranscriptMessage) => console.log('Transcript:', transcript));
-rt.on("transcript.partial", (transcript: PartialTranscriptMessage) => console.log('Partial transcript:', transcript));
-rt.on("transcript.final", (transcript: FinalTranscriptMessage) => console.log('Final transcript:', transcript));
+rt.on("turn", ({ transcript }) => console.log('Transcript:', transcript));
 rt.on("error", (error: Error) => console.error('Error', error));
 ```
 
@@ -307,7 +304,7 @@ getAudio((chunk) => {
 });
 ```
 
-Or send audio data via a stream by piping to the real-time stream.
+Or send audio data via a stream:
 
 ```typescript
 audioStream.pipeTo(rt.stream());

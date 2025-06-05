@@ -4,6 +4,7 @@ import {
   factory as polyfillWebSocketFactory,
 } from "#websocket";
 import { ErrorEvent, MessageEvent, CloseEvent } from "ws";
+import { conditions } from "#conditions";
 import {
   StreamingEvents,
   StreamingListeners,
@@ -69,6 +70,10 @@ export class StreamingTranscriber {
 
     const searchParams = new URLSearchParams();
 
+    if (this.token) {
+      searchParams.set("token", this.token);
+    }
+
     searchParams.set("sample_rate", this.params.sampleRate.toString());
 
     if (this.params.endOfTurnConfidenceThreshold) {
@@ -118,9 +123,20 @@ export class StreamingTranscriber {
 
       const url = this.connectionUrl();
 
-      this.socket = polyfillWebSocketFactory(url.toString(), {
-        headers: { Authorization: this.token || this.apiKey },
-      });
+      if (this.token) {
+        this.socket = polyfillWebSocketFactory(url.toString());
+      } else {
+        if (conditions.browser) {
+          console.warn(
+            `API key authentication is not supported for the StreamingTranscriber in browser environment. Use temporary token authentication instead.
+Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/compat.md#browser-compatibility.`,
+          );
+        }
+
+        this.socket = polyfillWebSocketFactory(url.toString(), {
+          headers: { Authorization: this.apiKey },
+        });
+      }
 
       this.socket.binaryType = "arraybuffer";
 
