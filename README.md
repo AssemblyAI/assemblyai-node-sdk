@@ -101,7 +101,7 @@ let transcript = await client.transcripts.transcribe({
 });
 ```
 
-> [!NOTE]
+> [!TIP]
 > You can also pass a local file path, a stream, or a buffer as the `audio` property.
 
 `transcribe` queues a transcription job and polls it until the `status` is `completed` or `error`.
@@ -128,7 +128,7 @@ let transcript = await client.transcripts.transcribe({
 });
 ```
 
-> **Note:**
+> [!TIP]
 > You can also pass a file URL, a stream, or a buffer as the `audio` property.
 
 `transcribe` queues a transcription job and polls it until the `status` is `completed` or `error`.
@@ -224,7 +224,7 @@ do {
 } while (previousPageUrl !== null);
 ```
 
-> [!NOTE]
+> [!TIP]
 > To paginate over all pages, you need to use the `page.page_details.prev_url`
 > because the transcripts are returned in descending order by creation date and time.
 > The first page is are the most recent transcript, and each "previous" page are older transcripts.
