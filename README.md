@@ -1,6 +1,6 @@
 <img src="https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/assemblyai.png?raw=true" width="500"/>
 
----
+______________________________________________________________________
 
 [![npm](https://img.shields.io/npm/v/assemblyai)](https://www.npmjs.com/package/assemblyai)
 [![Test](https://github.com/AssemblyAI/assemblyai-node-sdk/actions/workflows/test.yml/badge.svg)](https://github.com/AssemblyAI/assemblyai-node-sdk/actions/workflows/test.yml)
@@ -101,7 +101,7 @@ let transcript = await client.transcripts.transcribe({
 });
 ```
 
-> [!TIP]
+> [!NOTE]
 > You can also pass a local file path, a stream, or a buffer as the `audio` property.
 
 `transcribe` queues a transcription job and polls it until the `status` is `completed` or `error`.
@@ -128,7 +128,7 @@ let transcript = await client.transcripts.transcribe({
 });
 ```
 
-> [!TIP]
+> **Note:**
 > You can also pass a file URL, a stream, or a buffer as the `audio` property.
 
 `transcribe` queues a transcription job and polls it until the `status` is `completed` or `error`.
@@ -224,7 +224,7 @@ do {
 } while (previousPageUrl !== null);
 ```
 
-> [!TIP]
+> [!NOTE]
 > To paginate over all pages, you need to use the `page.page_details.prev_url`
 > because the transcripts are returned in descending order by creation date and time.
 > The first page is are the most recent transcript, and each "previous" page are older transcripts.
@@ -263,9 +263,7 @@ const rt = client.streaming.transcriber({
 > _Server code_:
 >
 > ```typescript
-> const token = await client.streaming.createTemporaryToken({
->   expires_in_seconds = 60,
-> });
+> const token = await client.streaming.createTemporaryToken({ expires_in_seconds = 60 });
 > // TODO: return token to client
 > ```
 >
@@ -283,6 +281,7 @@ const rt = client.streaming.transcriber({
 You can configure the following events.
 
 <!-- prettier-ignore -->
+
 ```typescript
 rt.on("open", ({ id, expires_at }) => console.log('Session ID:', id, 'Expires at:', expires_at));
 rt.on("close", (code: number, reason: string) => console.log('Closed', code, reason));
