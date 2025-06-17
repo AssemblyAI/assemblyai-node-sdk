@@ -1414,6 +1414,20 @@ export type SeverityScoreSummary = {
 };
 
 /**
+ * Advanced options for controlling speaker diarization parameters
+ */
+export type SpeakerOptions = {
+  /**
+   * Minimum number of speakers expected in the audio
+   */
+  min_speakers_expected?: number | null;
+  /**
+   * Maximum number of speakers expected in the audio
+   */
+  max_speakers_expected?: number | null;
+};
+
+/**
  * The speech model to use for the transcription.
  */
 export type SpeechModel = "best" | "nano" | "slam-1" | "universal";
@@ -2518,6 +2532,10 @@ export type Transcript = {
    */
   speakers_expected?: number | null;
   /**
+   * Advanced options for controlling speaker diarization parameters
+   */
+  speaker_options?: SpeakerOptions | null;
+  /**
    * The speech model used for the transcription. When `null`, the default model is used.
    * @defaultValue "null
    */
@@ -3039,6 +3057,10 @@ export type TranscriptOptionalParams = {
    * @defaultValue "null
    */
   speakers_expected?: number | null;
+  /**
+   * Advanced options for controlling speaker diarization parameters
+   */
+  speaker_options?: SpeakerOptions | null;
   /**
    * The speech model to use for the transcription. When `null`, the "best" model is used.
    * @defaultValue best
