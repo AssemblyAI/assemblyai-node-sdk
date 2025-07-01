@@ -101,6 +101,10 @@ export class StreamingTranscriber {
       searchParams.set("format_turns", this.params.formatTurns.toString());
     }
 
+    if (this.params.encoding) {
+      searchParams.set("encoding", this.params.encoding.toString());
+    }
+
     url.search = searchParams.toString();
 
     return url;
