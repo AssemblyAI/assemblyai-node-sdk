@@ -1,9 +1,11 @@
+import { AudioEncoding } from "..";
+
 export type StreamingTranscriberParams = {
   websocketBaseUrl?: string;
   apiKey?: string;
   token?: string;
   sampleRate: number;
-
+  encoding?: AudioEncoding;
   endOfTurnConfidenceThreshold?: number;
   minEndOfTurnSilenceWhenConfident?: number;
   maxTurnSilence?: number;
