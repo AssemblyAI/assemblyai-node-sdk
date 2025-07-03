@@ -688,6 +688,8 @@ export type LemurBaseResponse = {
  *
  */
 export type LemurModel =
+  | "anthropic/claude-opus-4-20250514"
+  | "anthropic/claude-sonnet-4-20250514"
   | "anthropic/claude-3-7-sonnet-20250219"
   | "anthropic/claude-3-5-sonnet"
   | "anthropic/claude-3-opus"
