@@ -105,6 +105,10 @@ export class StreamingTranscriber {
       searchParams.set("encoding", this.params.encoding.toString());
     }
 
+    if (this.params.keyterms) {
+      searchParams.set("keyterms", JSON.stringify(this.params.keyterms));
+    }
+
     url.search = searchParams.toString();
 
     return url;
