@@ -1430,6 +1430,20 @@ export type SpeakerOptions = {
 };
 
 /**
+ * Options for controlling the behavior of Automatic Language Detection
+ */
+export type LanguageDetectionOptions = {
+  /**
+   * A list of languages that the audio could be expected to be.
+   */
+  expected_languages?: string[] | null;
+  /**
+   * The language to fallback to in case the language detection does not predict any of the expected ones.
+   */
+  fallback_language?: string | null;
+};
+
+/**
  * The speech model to use for the transcription.
  */
 export type SpeechModel = "best" | "nano" | "slam-1" | "universal";
@@ -3006,6 +3020,10 @@ export type TranscriptOptionalParams = {
    * @defaultValue false
    */
   language_detection?: boolean;
+  /**
+   * Options for controlling the behavior of Automatic Language Detection
+   */
+  language_detection_options?: LanguageDetectionOptions;
   /**
    * Enable {@link https://www.assemblyai.com/docs/models/speech-recognition#multichannel-transcription | Multichannel } transcription, can be true or false.
    * @defaultValue false
