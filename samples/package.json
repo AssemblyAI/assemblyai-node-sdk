@@ -1,0 +1,46 @@
+{
+  "name": "assemblyai-samples",
+  "version": "1.0.0",
+  "description": "Ready-to-run samples for the AssemblyAI JavaScript SDK",
+  "main": "basic-transcription.js",
+  "scripts": {
+    "setup": "node setup.js",
+    "transcribe": "node basic-transcription.js",
+    "transcribe:ts": "npx tsx basic-transcription.ts",
+    "streaming": "npx tsx streaming-realtime.ts",
+    "lemur": "npx tsx lemur-analysis.ts",
+    "speaker": "npx tsx speaker-diarization.ts",
+    "test": "echo \"Running all samples...\" && npm run transcribe && npm run streaming && npm run lemur",
+    "clean": "rm -rf node_modules package-lock.json .env",
+    "help": "echo \"Available commands:\" && echo \"  npm run setup      - Setup environment and install dependencies\" && echo \"  npm run transcribe  - Run basic transcription sample\" && echo \"  npm run streaming   - Run real-time streaming sample\" && echo \"  npm run lemur       - Run LeMUR AI analysis sample\" && echo \"  npm run speaker     - Run speaker diarization sample\" && echo \"  npm run test        - Run all samples\" && echo \"  npm run clean       - Clean up dependencies\" && echo \"  npm run help        - Show this help message\""
+  },
+  "keywords": [
+    "assemblyai",
+    "speech-to-text",
+    "transcription",
+    "ai",
+    "samples",
+    "examples"
+  ],
+  "author": "AssemblyAI",
+  "license": "MIT",
+  "dependencies": {
+    "assemblyai": "^4.15.0",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "tsx": "^4.7.0",
+    "@types/node": "^18.19.53"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AssemblyAI/assemblyai-node-sdk.git"
+  },
+  "bugs": {
+    "url": "https://github.com/AssemblyAI/assemblyai-node-sdk/issues"
+  },
+  "homepage": "https://www.assemblyai.com/docs"
+}
