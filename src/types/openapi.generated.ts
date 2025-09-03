@@ -672,6 +672,71 @@ export type LemurBaseParams = {
  * }
  * ```
  */
+
+export type LemurRequestDetails = {
+  /**
+   * The endpoint used for the leMUR request
+   */
+  request_endpoint: string;
+  /**
+   * The temperature to use for the model.
+   * Higher values result in answers that are more creative, lower values are more conservative.
+   * Can be any value between 0.0 and 1.0 inclusive.
+   *
+   * @defaultValue 0
+   */
+  temperature: number;
+  /**
+   * The model that was used for the final prompt after compression is performed.
+   *
+   * @defaultValue "default"
+   */
+  final_model: LiteralUnion<LemurModel, string>;
+  /**
+   * Max output size in tokens, up to 4000
+   * @defaultValue 2000
+   */
+  max_output_size: number;
+  /**
+   * The date when the request was created
+   */
+  created_at: Date;
+  /**
+   * A list of completed transcripts with text.
+   * Use either transcript_ids or input_text as input into LeMUR.
+   */
+  transcript_ids?: string[];
+  /**
+   * Custom formatted transcript data. Maximum size is the context limit of the selected model, which defaults to 100000".
+   * Use either transcript_ids or input_text as input into LeMUR.
+   */
+  input_text?: string;
+  /**
+   * A list of questions asked in the request
+   * Each question can have its own context and answer format.
+   */
+  questions?: LemurQuestion[];
+  /**
+   * The prompt used for the model.
+   */
+  prompt?: string;
+  /**
+   * Context provided to the model. This can be a string or a free-form JSON value.
+   */
+  context?: OneOf<
+    [
+      string,
+      {
+        [key: string]: unknown;
+      },
+    ]
+  >;
+  /**
+   * The format to use for the model's answers.
+   */
+  answer_format?: string;
+};
+
 export type LemurBaseResponse = {
   /**
    * The ID of the LeMUR request
@@ -681,6 +746,7 @@ export type LemurBaseResponse = {
    * The usage numbers for the LeMUR request
    */
   usage: LemurUsage;
+  request?: LemurRequestDetails;
 };
 
 /**
