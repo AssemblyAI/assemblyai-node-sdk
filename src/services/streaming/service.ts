@@ -105,8 +105,20 @@ export class StreamingTranscriber {
       searchParams.set("encoding", this.params.encoding.toString());
     }
 
-    if (this.params.keyterms) {
-      searchParams.set("keyterms", JSON.stringify(this.params.keyterms));
+    if (this.params.keytermsPrompt) {
+      searchParams.set(
+        "keyterms_prompt",
+        JSON.stringify(this.params.keytermsPrompt),
+      );
+    } else if (this.params.keyterms) {
+      console.warn(
+        "[Deprecation Warning] `keyterms` is deprecated and will be removed in a future release. Please use `keytermsPrompt` instead.",
+      );
+      searchParams.set("keyterms_prompt", JSON.stringify(this.params.keyterms));
+    }
+
+    if (this.params.filterProfanity) {
+      searchParams.set("filter_profanity", this.params.filterProfanity.toString());
     }
 
     url.search = searchParams.toString();
