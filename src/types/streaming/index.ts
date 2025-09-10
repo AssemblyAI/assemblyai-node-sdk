@@ -10,7 +10,9 @@ export type StreamingTranscriberParams = {
   minEndOfTurnSilenceWhenConfident?: number;
   maxTurnSilence?: number;
   formatTurns?: boolean;
+  filterProfanity?: boolean;
   keyterms?: string[];
+  keytermsPrompt?: string[];
 };
 
 export type StreamingEvents = "open" | "close" | "turn" | "error";
