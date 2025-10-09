@@ -118,7 +118,10 @@ export class StreamingTranscriber {
     }
 
     if (this.params.filterProfanity) {
-      searchParams.set("filter_profanity", this.params.filterProfanity.toString());
+      searchParams.set(
+        "filter_profanity",
+        this.params.filterProfanity.toString(),
+      );
     }
 
     url.search = searchParams.toString();

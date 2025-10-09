@@ -101,4 +101,41 @@ describe("lemur", () => {
     expect(deletionRequest.deleted).toBeTruthy();
     expect(deletionRequest.request_id_to_purge).toBe(request_id);
   });
+
+  it("should abort a summary request", async () => {
+    const controller = new AbortController();
+
+    // Start the request
+    const promise = client.lemur.summary(
+      {
+        final_model: "basic",
+        transcript_ids: knownTranscriptIds,
+        answer_format: "one sentence",
+      },
+      controller.signal,
+    );
+
+    // Abort immediately
+    controller.abort();
+
+    // Should throw an error
+    await expect(promise).rejects.toThrow();
+  });
+
+  it("should abort a task request", async () => {
+    const controller = new AbortController();
+
+    const promise = client.lemur.task(
+      {
+        final_model: "basic",
+        transcript_ids: knownTranscriptIds,
+        prompt: "Write a haiku about this conversation.",
+      },
+      controller.signal,
+    );
+
+    controller.abort();
+
+    await expect(promise).rejects.toThrow();
+  });
 });
