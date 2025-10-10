@@ -16,5 +16,6 @@ BUILD.bazel
 copy.bara.sky
 copybara.sh
 .env
+**/.env.sample
 temp
 temp-docs
