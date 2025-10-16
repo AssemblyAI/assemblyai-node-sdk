@@ -2623,6 +2623,14 @@ export type Transcript = {
    */
   speech_model: SpeechModel | null;
   /**
+   * The list of speech models to use for the transcription in priority order.
+   */
+  speech_models?: string[] | null;
+  /**
+   * The actual speech model that was used for the transcription.
+   */
+  speech_model_used?: string | null;
+  /**
    * Defaults to null. Reject audio files that contain less than this fraction of speech.
    * Valid values are in the range [0", 1] inclusive.
    */
@@ -3152,6 +3160,10 @@ export type TranscriptOptionalParams = {
    * @defaultValue best
    */
   speech_model?: SpeechModel | null;
+  /**
+   * The list of speech models to use for the transcription in priority order.
+   */
+  speech_models?: string[] | null;
   /**
    * Reject audio files that contain less than this fraction of speech.
    * Valid values are in the range [0", 1] inclusive.

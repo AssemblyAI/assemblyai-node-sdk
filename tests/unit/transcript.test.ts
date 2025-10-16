@@ -468,4 +468,39 @@ describe("transcript", () => {
     expect(searchResponse.total_count).toBe(1);
     expect(searchResponse.matches).toBeInstanceOf(Array);
   });
+
+  it("should handle transcript response with speech_model_used field", async () => {
+    const transcriptWithSpeechModelUsed = {
+      id: transcriptId,
+      status: "completed",
+      speech_model_used: "best",
+    };
+    fetchMock.doMockOnceIf(
+      requestMatches({ url: `/v2/transcript/${transcriptId}`, method: "GET" }),
+      JSON.stringify(transcriptWithSpeechModelUsed),
+    );
+    const transcript = await assembly.transcripts.get(transcriptId);
+
+    expect(transcript.id).toBe(transcriptId);
+    expect(transcript.speech_model_used).toBe("best");
+  });
+
+  it("should handle transcript response without speech_model_used field", async () => {
+    // This test verifies that the SDK gracefully handles responses
+    // where speech_model_used is not present, as the field has not yet
+    // been added to the API for all users.
+    const transcriptWithoutSpeechModelUsed = {
+      id: transcriptId,
+      status: "completed",
+      // speech_model_used intentionally omitted
+    };
+    fetchMock.doMockOnceIf(
+      requestMatches({ url: `/v2/transcript/${transcriptId}`, method: "GET" }),
+      JSON.stringify(transcriptWithoutSpeechModelUsed),
+    );
+    const transcript = await assembly.transcripts.get(transcriptId);
+
+    expect(transcript.id).toBe(transcriptId);
+    expect(transcript.speech_model_used).toBeUndefined();
+  });
 });
