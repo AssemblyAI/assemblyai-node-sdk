@@ -1482,6 +1482,59 @@ export type SeverityScoreSummary = {
 };
 
 /**
+ * Speaker identification type for speech understanding
+ */
+export type SpeakerType = "role" | "name";
+
+/**
+ * Speaker identification configuration for speech understanding
+ */
+export type SpeakerIdentificationRequest = {
+  /**
+   * The type of speaker identification to perform
+   */
+  speaker_type: SpeakerType;
+  /**
+   * Known speaker values (required if speaker_type is 'role')
+   */
+  known_values?: string[];
+};
+
+/**
+ * Speech understanding request configuration
+ */
+export type SpeechUnderstandingRequest = {
+  /**
+   * Speaker identification configuration
+   */
+  speaker_identification?: SpeakerIdentificationRequest;
+};
+
+/**
+ * Status of a speech understanding feature
+ */
+export type SpeechUnderstandingFeatureStatus = {
+  /**
+   * Status of the feature (e.g., 'success')
+   */
+  status: string;
+};
+
+/**
+ * Speech understanding response containing feature statuses and the original request
+ */
+export type SpeechUnderstandingResponse = {
+  /**
+   * Status of speaker identification feature
+   */
+  speaker_identification?: SpeechUnderstandingFeatureStatus;
+  /**
+   * The original speech understanding request
+   */
+  request?: SpeechUnderstandingRequest;
+};
+
+/**
  * Advanced options for controlling speaker diarization parameters
  */
 export type SpeakerOptions = {
@@ -2623,6 +2676,14 @@ export type Transcript = {
    */
   speech_model: SpeechModel | null;
   /**
+   * The list of speech models to use for the transcription in priority order.
+   */
+  speech_models?: string[] | null;
+  /**
+   * The actual speech model that was used for the transcription.
+   */
+  speech_model_used?: string | null;
+  /**
    * Defaults to null. Reject audio files that contain less than this fraction of speech.
    * Valid values are in the range [0", 1] inclusive.
    */
@@ -3067,6 +3128,12 @@ export type TranscriptOptionalParams = {
    */
   keyterms_prompt?: string[];
   /**
+   * Speech understanding configuration/response for speaker identification
+   */
+  speech_understanding?:
+    | SpeechUnderstandingRequest
+    | SpeechUnderstandingResponse;
+  /**
    * The language of your audio file. Possible values are found in {@link https://www.assemblyai.com/docs/concepts/supported-languages | Supported Languages }.
    * The default value is 'en_us'.
    *
@@ -3152,6 +3219,10 @@ export type TranscriptOptionalParams = {
    * @defaultValue best
    */
   speech_model?: SpeechModel | null;
+  /**
+   * The list of speech models to use for the transcription in priority order.
+   */
+  speech_models?: string[] | null;
   /**
    * Reject audio files that contain less than this fraction of speech.
    * Valid values are in the range [0", 1] inclusive.
