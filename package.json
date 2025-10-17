@@ -157,6 +157,7 @@
     "typescript": "^5.4.5"
   },
   "dependencies": {
+    "assemblyai": "^4.15.0",
     "ws": "^8.18.0"
   },
   "pnpm": {
