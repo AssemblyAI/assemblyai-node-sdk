@@ -2552,6 +2552,10 @@ export type Transcript = {
    */
   language_confidence: number | null;
   /**
+   * List of language codes detected in the audio file when language detection is enabled
+   */
+  language_codes: LiteralUnion<TranscriptLanguageCode, string>[] | null;
+  /**
    * The confidence threshold for the automatically detected language.
    * An error will be returned if the language confidence is below this threshold.
    */
