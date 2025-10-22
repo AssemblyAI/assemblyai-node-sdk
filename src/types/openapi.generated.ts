@@ -1037,7 +1037,7 @@ export type ListTranscriptParams = {
   /**
    * Only get throttled transcripts, overrides the status filter
    * @defaultValue false
-   * @deprecated
+   * @deprecated This parameter is no longer supported and will be removed in a future version.
    */
   throttled_only?: boolean;
 };
@@ -1479,6 +1479,167 @@ export type SeverityScoreSummary = {
   high: number;
   low: number;
   medium: number;
+};
+
+/**
+ * Speaker identification type for speech understanding
+ */
+export type SpeakerType = "role" | "name";
+
+/**
+ * Speaker identification configuration for speech understanding
+ */
+export type SpeakerIdentificationRequest = {
+  /**
+   * The type of speaker identification to perform
+   */
+  speaker_type: SpeakerType;
+  /**
+   * Known speaker values (required when speaker_type is 'role')
+   */
+  known_values?: string[];
+};
+
+/**
+ * Translation configuration for speech understanding
+ */
+export type TranslationRequest = {
+  /**
+   * List of target language codes to translate the transcript into
+   */
+  target_languages: string[];
+  /**
+   * Whether to use formal language in translations (default: false)
+   */
+  formal?: boolean;
+  /**
+   * Whether to match the original utterance structure in translations (default: false)
+   */
+  match_original_utterance?: boolean;
+};
+
+/**
+ * Custom formatting configuration for speech understanding
+ */
+export type CustomFormattingRequest = {
+  /**
+   * Custom date format pattern (e.g., 'mm/dd/yyyy')
+   */
+  date?: string;
+  /**
+   * Custom phone number format pattern (e.g., '(xxx)xxx-xxxx')
+   */
+  phone_number?: string;
+  /**
+   * Custom email format pattern (e.g., 'username\@domain.com')
+   */
+  email?: string;
+};
+
+/**
+ * Speech understanding feature requests grouped together
+ */
+export type SpeechUnderstandingFeatureRequests = {
+  /**
+   * Speaker identification configuration
+   */
+  speaker_identification?: SpeakerIdentificationRequest;
+  /**
+   * Translation configuration
+   */
+  translation?: TranslationRequest;
+  /**
+   * Custom formatting configuration
+   */
+  custom_formatting?: CustomFormattingRequest;
+};
+
+/**
+ * Speech understanding request configuration for LLM Gateway features
+ */
+export type SpeechUnderstandingRequest = {
+  /**
+   * The speech understanding feature requests
+   */
+  request?: SpeechUnderstandingFeatureRequests;
+};
+
+/**
+ * Speaker identification response containing status and mapping
+ */
+export type SpeakerIdentificationResponse = {
+  /**
+   * Status of the speaker identification feature (e.g., 'success')
+   */
+  status: string;
+  /**
+   * Mapping of original speaker labels to identified speaker labels
+   */
+  mapping?: Record<string, string>;
+};
+
+/**
+ * Translation response containing status
+ */
+export type TranslationResponse = {
+  /**
+   * Status of the translation feature
+   */
+  status: string;
+};
+
+/**
+ * Custom formatting response containing mapping and formatted texts
+ */
+export type CustomFormattingResponse = {
+  /**
+   * Mapping of original entities to formatted entities
+   */
+  mapping?: Record<string, string>;
+  /**
+   * Full transcript text with formatted entities
+   */
+  formatted_text?: string;
+  /**
+   * List of utterances with formatted text
+   */
+  formatted_utterances?: Record<string, unknown>[];
+  /**
+   * Status of the custom formatting feature
+   */
+  status: string;
+};
+
+/**
+ * Speech understanding feature responses grouped together
+ */
+export type SpeechUnderstandingFeatureResponses = {
+  /**
+   * Speaker identification results including status and mapping
+   */
+  speaker_identification?: SpeakerIdentificationResponse;
+  /**
+   * Translation results
+   */
+  translation?: TranslationResponse;
+  /**
+   * Custom formatting results
+   */
+  custom_formatting?: CustomFormattingResponse;
+};
+
+/**
+ * Speech understanding response containing both request and response
+ */
+export type SpeechUnderstandingResponse = {
+  /**
+   * The original speech understanding request
+   */
+  request?: SpeechUnderstandingRequest;
+  /**
+   * The speech understanding feature responses
+   */
+  response?: SpeechUnderstandingFeatureResponses;
 };
 
 /**
@@ -2709,6 +2870,14 @@ export type Transcript = {
    * See {@link https://www.assemblyai.com/docs/models/speech-recognition | Speech recognition } for more information.
    */
   words?: TranscriptWord[] | null;
+  /**
+   * Speech understanding response when enabled
+   */
+  speech_understanding?: SpeechUnderstandingResponse;
+  /**
+   * Translations of the full transcript text when translation is enabled
+   */
+  translated_texts?: Record<string, string>;
 };
 
 /**
@@ -3214,6 +3383,12 @@ export type TranscriptOptionalParams = {
    * The list of custom vocabulary to boost transcription probability for
    */
   word_boost?: string[];
+  /**
+   * Speech understanding configuration/response for LLM Gateway features
+   */
+  speech_understanding?:
+    | SpeechUnderstandingRequest
+    | SpeechUnderstandingResponse;
 };
 
 /**
@@ -3592,6 +3767,10 @@ export type TranscriptUtterance = {
    * The words in the utterance.
    */
   words: TranscriptWord[];
+  /**
+   * Translations of the utterance text when translation is enabled
+   */
+  translated_texts?: Record<string, string>;
 };
 
 /**
