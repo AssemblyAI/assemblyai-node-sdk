@@ -124,6 +124,10 @@ export class StreamingTranscriber {
       );
     }
 
+    if (this.params.speechModel) {
+      searchParams.set("speech_model", this.params.speechModel.toString());
+    }
+
     url.search = searchParams.toString();
 
     return url;

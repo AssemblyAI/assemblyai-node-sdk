@@ -13,6 +13,7 @@ export type StreamingTranscriberParams = {
   filterProfanity?: boolean;
   keyterms?: string[];
   keytermsPrompt?: string[];
+  speechModel?: StreamingSpeechModel;
 };
 
 export type StreamingEvents = "open" | "close" | "turn" | "error";
@@ -23,6 +24,8 @@ export type StreamingListeners = {
   turn?: (event: TurnEvent) => void;
   error?: (error: Error) => void;
 };
+
+export type StreamingSpeechModel = "universal-streaming-english" | "universal-streaming-multilingual";
 
 export type StreamingTokenParams = {
   expires_in_seconds: number;
