@@ -25,7 +25,9 @@ export type StreamingListeners = {
   error?: (error: Error) => void;
 };
 
-export type StreamingSpeechModel = "universal-streaming-english" | "universal-streaming-multilingual";
+export type StreamingSpeechModel =
+  | "universal-streaming-english"
+  | "universal-streaming-multilingual";
 
 export type StreamingTokenParams = {
   expires_in_seconds: number;
