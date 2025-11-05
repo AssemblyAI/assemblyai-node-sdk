@@ -1657,6 +1657,20 @@ export type SpeakerOptions = {
 };
 
 /**
+ * Code switching language detection result
+ */
+export type CodeSwitchingLanguage = {
+  /**
+   * The language code detected
+   */
+  language_code: string;
+  /**
+   * The confidence score for this language detection, between 0.0 and 1.0
+   */
+  confidence: number;
+};
+
+/**
  * Options for controlling the behavior of Automatic Language Detection
  */
 export type LanguageDetectionOptions = {
@@ -1668,6 +1682,14 @@ export type LanguageDetectionOptions = {
    * The language to fallback to in case the language detection does not predict any of the expected ones.
    */
   fallback_language?: string | null;
+  /**
+   * Should code switching be enabled for this transcription.
+   */
+  code_switching?: boolean | null;
+  /**
+   * The confidence threshold for the automatically detected code switching language.
+   */
+  code_switching_confidence_threshold?: number | null;
 };
 
 /**
@@ -2717,6 +2739,10 @@ export type Transcript = {
    */
   language_codes: LiteralUnion<TranscriptLanguageCode, string>[] | null;
   /**
+   * List of detected languages with confidence scores when code switching is enabled
+   */
+  code_switching_languages?: CodeSwitchingLanguage[] | null;
+  /**
    * The confidence threshold for the automatically detected language.
    * An error will be returned if the language confidence is below this threshold.
    */
@@ -3270,7 +3296,7 @@ export type TranscriptOptionalParams = {
   /**
    * Options for controlling the behavior of Automatic Language Detection
    */
-  language_detection_options?: LanguageDetectionOptions;
+  language_detection_options?: LanguageDetectionOptions | null;
   /**
    * Enable {@link https://www.assemblyai.com/docs/models/speech-recognition#multichannel-transcription | Multichannel } transcription, can be true or false.
    * @defaultValue false
