@@ -13,8 +13,8 @@ If you do use an older version of Node.js like version 16, you'll need to polyfi
 To make the SDK compatible with the browser, the SDK aims to use web standards as much as possible.
 However, there are still incompatibilities between Node.js and the browser.
 
-- `RealtimeTranscriber` doesn't support the AssemblyAI API key in the browser.
-  Instead, you have to generate a temporary auth token using `client.realtime.createTemporaryToken`, and pass in the resulting token to the real-time transcriber.
+- `StreamingTranscriber` doesn't support the AssemblyAI API key in the browser.
+  Instead, you have to generate a temporary auth token using `client.streaming.createTemporaryToken`, and pass in the resulting token to the streaming transcriber.
 
   Generate a temporary auth token on the server.
 
@@ -23,7 +23,7 @@ However, there are still incompatibilities between Node.js and the browser.
   // Ideally, to avoid embedding your API key client side,
   // you generate this token on the server, and pass it to the client via an API.
   const client = new AssemblyAI({ apiKey: "YOUR_API_KEY" });
-  const token = await client.realtime.createTemporaryToken({ expires_in = 480 });
+  const token = await client.streaming.createTemporaryToken({ expires_in_seconds: 60 });
   ```
 
   > [!NOTE]
@@ -31,16 +31,16 @@ However, there are still incompatibilities between Node.js and the browser.
   > If you embed the API key on the client, everyone can see it and use it for themselves.
 
   Then pass the token via an API to the client.
-  On the client, create an instance of `RealtimeTranscriber` using the token.
+  On the client, create an instance of `StreamingTranscriber` using the token.
 
   ```js
-  import { RealtimeTranscriber } from "assemblyai";
+  import { StreamingTranscriber } from "assemblyai";
   // or the following if you're using UMD
-  // const { RealtimeTranscriber } = assemblyai;
+  // const { StreamingTranscriber } = assemblyai;
 
   const token = getToken(); // getToken is a function for you to implement
 
-  const rt = new RealtimeTranscriber({
+  const rt = new StreamingTranscriber({
     token: token,
   });
   ```
