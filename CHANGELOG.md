@@ -1,5 +1,11 @@
 # Changelog
 
+## [4.20.0]
+
+- Add `on_low_language_confidence` property to `LanguageDetectionOptions`
+  > Controls behavior when language confidence is below threshold. Either "error" (default) or "fallback".
+  > When set to "fallback", the transcription will use the fallback language instead of erroring when confidence is low.
+
 ## [4.8.0]
 
 - Add `multichannel` property to `TranscriptParams`

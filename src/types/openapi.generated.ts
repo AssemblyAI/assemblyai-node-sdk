@@ -1690,6 +1690,10 @@ export type LanguageDetectionOptions = {
    * The confidence threshold for the automatically detected code switching language.
    */
   code_switching_confidence_threshold?: number | null;
+  /**
+   * Controls behavior when language confidence is below threshold. Either "error" (default) or "fallback".
+   */
+  on_low_language_confidence?: string | null;
 };
 
 /**
