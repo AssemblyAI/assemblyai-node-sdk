@@ -9,11 +9,14 @@ export type StreamingTranscriberParams = {
   endOfTurnConfidenceThreshold?: number;
   minEndOfTurnSilenceWhenConfident?: number;
   maxTurnSilence?: number;
+  vadThreshold?: number;
   formatTurns?: boolean;
   filterProfanity?: boolean;
   keyterms?: string[];
   keytermsPrompt?: string[];
   speechModel?: StreamingSpeechModel;
+  languageDetection?: boolean;
+  inactivityTimeout?: number;
 };
 
 export type StreamingEvents = "open" | "close" | "turn" | "error";
@@ -54,6 +57,8 @@ export type TurnEvent = {
   transcript: string;
   end_of_turn_confidence: number;
   words: StreamingWord[];
+  language_code?: string;
+  language_confidence?: number;
 };
 
 export type StreamingWord = {
@@ -79,6 +84,7 @@ export type StreamingUpdateConfiguration = {
   end_of_turn_confidence_threshold?: number;
   min_end_of_turn_silence_when_confident?: number;
   max_turn_silence?: number;
+  vad_threshold?: number;
   format_turns?: boolean;
 };
 

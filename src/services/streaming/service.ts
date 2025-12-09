@@ -97,6 +97,10 @@ export class StreamingTranscriber {
       );
     }
 
+    if (this.params.vadThreshold !== undefined) {
+      searchParams.set("vad_threshold", this.params.vadThreshold.toString());
+    }
+
     if (this.params.formatTurns) {
       searchParams.set("format_turns", this.params.formatTurns.toString());
     }
@@ -126,6 +130,20 @@ export class StreamingTranscriber {
 
     if (this.params.speechModel) {
       searchParams.set("speech_model", this.params.speechModel.toString());
+    }
+
+    if (this.params.languageDetection !== undefined) {
+      searchParams.set(
+        "language_detection",
+        this.params.languageDetection.toString(),
+      );
+    }
+
+    if (this.params.inactivityTimeout !== undefined) {
+      searchParams.set(
+        "inactivity_timeout",
+        this.params.inactivityTimeout.toString(),
+      );
     }
 
     url.search = searchParams.toString();

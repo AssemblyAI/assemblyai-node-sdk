@@ -143,4 +143,56 @@ describe("language detection options", () => {
     const requestBody = JSON.parse(fetchMock.mock.calls[0][1]?.body as string);
     expect(requestBody.language_detection_options).toBe(null);
   });
+
+  it("should create transcript with on_low_language_confidence set to fallback", async () => {
+    const languageDetectionOptions: LanguageDetectionOptions = {
+      fallback_language: "en",
+      on_low_language_confidence: "fallback",
+    };
+
+    fetchMock.doMockOnceIf(
+      requestMatches({ url: "/v2/transcript", method: "POST" }),
+      JSON.stringify({ id: transcriptId, status: "queued" }),
+    );
+
+    const transcript = await assembly.transcripts.submit({
+      audio_url: remoteAudioURL,
+      language_detection: true,
+      language_confidence_threshold: 0.8,
+      language_detection_options: languageDetectionOptions,
+    });
+
+    expect(transcript.id).toBe(transcriptId);
+
+    const requestBody = JSON.parse(fetchMock.mock.calls[0][1]?.body as string);
+    expect(requestBody.language_confidence_threshold).toBe(0.8);
+    expect(requestBody.language_detection_options.fallback_language).toBe("en");
+    expect(requestBody.language_detection_options.on_low_language_confidence).toBe("fallback");
+  });
+
+  it("should create transcript with on_low_language_confidence set to error", async () => {
+    const languageDetectionOptions: LanguageDetectionOptions = {
+      fallback_language: "en",
+      on_low_language_confidence: "error",
+    };
+
+    fetchMock.doMockOnceIf(
+      requestMatches({ url: "/v2/transcript", method: "POST" }),
+      JSON.stringify({ id: transcriptId, status: "queued" }),
+    );
+
+    const transcript = await assembly.transcripts.submit({
+      audio_url: remoteAudioURL,
+      language_detection: true,
+      language_confidence_threshold: 0.7,
+      language_detection_options: languageDetectionOptions,
+    });
+
+    expect(transcript.id).toBe(transcriptId);
+
+    const requestBody = JSON.parse(fetchMock.mock.calls[0][1]?.body as string);
+    expect(requestBody.language_confidence_threshold).toBe(0.7);
+    expect(requestBody.language_detection_options.fallback_language).toBe("en");
+    expect(requestBody.language_detection_options.on_low_language_confidence).toBe("error");
+  });
 });
