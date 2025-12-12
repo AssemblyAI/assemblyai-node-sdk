@@ -1671,6 +1671,16 @@ export type CodeSwitchingLanguage = {
 };
 
 /**
+ * Language detection results including code switching languages
+ */
+export type LanguageDetectionResults = {
+  /**
+   * List of detected languages with confidence scores when code switching is enabled
+   */
+  code_switching_languages?: CodeSwitchingLanguage[] | null;
+};
+
+/**
  * Options for controlling the behavior of Automatic Language Detection
  */
 export type LanguageDetectionOptions = {
@@ -2743,10 +2753,6 @@ export type Transcript = {
    */
   language_codes: LiteralUnion<TranscriptLanguageCode, string>[] | null;
   /**
-   * List of detected languages with confidence scores when code switching is enabled
-   */
-  code_switching_languages?: CodeSwitchingLanguage[] | null;
-  /**
    * The confidence threshold for the automatically detected language.
    * An error will be returned if the language confidence is below this threshold.
    */
@@ -2755,6 +2761,10 @@ export type Transcript = {
    * Whether {@link https://www.assemblyai.com/docs/models/speech-recognition#automatic-language-detection | Automatic language detection } is enabled, either true or false
    */
   language_detection?: boolean | null;
+  /**
+   * Language detection results including code switching languages
+   */
+  language_detection_results?: LanguageDetectionResults | null;
   /**
    * @deprecated
    * The language model that was used for the transcript

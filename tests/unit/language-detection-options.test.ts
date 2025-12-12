@@ -167,7 +167,9 @@ describe("language detection options", () => {
     const requestBody = JSON.parse(fetchMock.mock.calls[0][1]?.body as string);
     expect(requestBody.language_confidence_threshold).toBe(0.8);
     expect(requestBody.language_detection_options.fallback_language).toBe("en");
-    expect(requestBody.language_detection_options.on_low_language_confidence).toBe("fallback");
+    expect(
+      requestBody.language_detection_options.on_low_language_confidence,
+    ).toBe("fallback");
   });
 
   it("should create transcript with on_low_language_confidence set to error", async () => {
@@ -193,6 +195,8 @@ describe("language detection options", () => {
     const requestBody = JSON.parse(fetchMock.mock.calls[0][1]?.body as string);
     expect(requestBody.language_confidence_threshold).toBe(0.7);
     expect(requestBody.language_detection_options.fallback_language).toBe("en");
-    expect(requestBody.language_detection_options.on_low_language_confidence).toBe("error");
+    expect(
+      requestBody.language_detection_options.on_low_language_confidence,
+    ).toBe("error");
   });
 });
