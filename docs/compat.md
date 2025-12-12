@@ -19,11 +19,13 @@ However, there are still incompatibilities between Node.js and the browser.
   Generate a temporary auth token on the server.
 
   ```js
-  import { AssemblyAI } from "assemblyai"
+  import { AssemblyAI } from "assemblyai";
   // Ideally, to avoid embedding your API key client side,
   // you generate this token on the server, and pass it to the client via an API.
   const client = new AssemblyAI({ apiKey: "YOUR_API_KEY" });
-  const token = await client.streaming.createTemporaryToken({ expires_in_seconds: 60 });
+  const token = await client.streaming.createTemporaryToken({
+    expires_in_seconds: 60,
+  });
   ```
 
   > [!NOTE]
