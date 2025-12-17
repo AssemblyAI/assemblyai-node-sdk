@@ -1704,6 +1704,10 @@ export type LanguageDetectionOptions = {
    * Controls behavior when language confidence is below threshold. Either "error" (default) or "fallback".
    */
   on_low_language_confidence?: string | null;
+  /**
+   * If True, route German language requests as Swiss German audio. Only applies when language_detection is enabled and German is detected.
+   */
+  swiss_german?: boolean | null;
 };
 
 /**
@@ -2961,6 +2965,7 @@ export type TranscriptLanguageCode =
   | "es"
   | "fr"
   | "de"
+  | "de_ch"
   | "it"
   | "pt"
   | "nl"
