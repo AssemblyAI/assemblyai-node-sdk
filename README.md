@@ -383,6 +383,40 @@ const response = await client.lemur.purgeRequestData(lemurResponse.request_id);
 
 </details>
 
+## 🚀 Ready-to-Run Samples
+
+We've created comprehensive, ready-to-run samples that you can use immediately:
+
+### 📁 Available Samples
+- **Basic Transcription** - Simple audio-to-text conversion
+- **Real-time Streaming** - Live audio transcription
+- **Speaker Diarization** - Identify who said what
+- **LeMUR AI Analysis** - AI-powered audio insights
+- **File Management** - Upload and manage audio files
+
+### 🎯 Quick Start
+```bash
+cd samples
+./setup.sh          # On macOS/Linux
+# OR
+setup.bat           # On Windows
+
+npm run transcribe  # Run your first sample
+```
+
+### 📱 Notebook Experience
+For Jupyter notebooks and Google Colab, see our [notebook examples](./samples/notebook-example.md).
+
+### 📚 Sample Documentation
+Each sample includes:
+- ✅ Environment setup
+- ✅ Error handling
+- ✅ Progress updates
+- ✅ Sample audio URLs
+- ✅ Ready to run from terminal
+
+Visit the [samples directory](./samples/) for complete examples and setup instructions.
+
 ## Contributing
 
 If you want to contribute to the JavaScript SDK, follow the guidelines in [CONTRIBUTING.md](./CONTRIBUTING.md).
