@@ -2873,6 +2873,12 @@ export type Transcript = {
   /**
    * The textual transcript of your media file
    */
+
+  temperature?: number | null;
+  /**
+   * Change how deterministic the response is, with 0 being the most deterministic and 1 being the least deterministic.
+   */
+
   text?: string | null;
   /**
    * True while a request is throttled and false when a request is no longer throttled
@@ -3407,6 +3413,12 @@ export type TranscriptOptionalParams = {
   /**
    * The list of custom topics
    */
+
+  temperature?: number | null;
+  /**
+   * Change how deterministic the response is, with 0 being the most deterministic and 1 being the least deterministic.
+   */
+
   topics?: string[];
   /**
    * The header name to be sent with the transcript completed or failed webhook requests
