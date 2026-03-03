@@ -165,6 +165,14 @@ export class StreamingTranscriber {
       );
     }
 
+    if (this.params.speakerLabels !== undefined) {
+      searchParams.set("speaker_labels", this.params.speakerLabels.toString());
+    }
+
+    if (this.params.maxSpeakers !== undefined) {
+      searchParams.set("max_speakers", this.params.maxSpeakers.toString());
+    }
+
     url.search = searchParams.toString();
 
     return url;
