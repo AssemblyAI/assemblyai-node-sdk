@@ -13,6 +13,8 @@ import {
   BeginEvent,
   StreamingEventMessage,
   TurnEvent,
+  StreamingUpdateConfiguration,
+  StreamingForceEndpoint,
 } from "../..";
 import { StreamingError, StreamingErrorMessages } from "../../utils/errors";
 import { StreamingErrorTypeCodes } from "../../utils/errors/streaming";
@@ -83,7 +85,15 @@ export class StreamingTranscriber {
       );
     }
 
-    if (this.params.minEndOfTurnSilenceWhenConfident) {
+    if (this.params.minTurnSilence) {
+      searchParams.set(
+        "min_turn_silence",
+        this.params.minTurnSilence.toString(),
+      );
+    } else if (this.params.minEndOfTurnSilenceWhenConfident) {
+      console.warn(
+        "[Deprecation Warning] `minEndOfTurnSilenceWhenConfident` is deprecated and will be removed in a future release. Please use `minTurnSilence` instead.",
+      );
       searchParams.set(
         "min_end_of_turn_silence_when_confident",
         this.params.minEndOfTurnSilenceWhenConfident.toString(),
@@ -121,6 +131,10 @@ export class StreamingTranscriber {
       searchParams.set("keyterms_prompt", JSON.stringify(this.params.keyterms));
     }
 
+    if (this.params.prompt) {
+      searchParams.set("prompt", this.params.prompt);
+    }
+
     if (this.params.filterProfanity) {
       searchParams.set(
         "filter_profanity",
@@ -129,6 +143,11 @@ export class StreamingTranscriber {
     }
 
     if (this.params.speechModel) {
+      if (this.params.speechModel === "u3-pro") {
+        console.warn(
+          "[Deprecation Warning] The speech model `u3-pro` is deprecated and will be removed in a future release. Please use `u3-rt-pro` instead.",
+        );
+      }
       searchParams.set("speech_model", this.params.speechModel.toString());
     }
 
@@ -238,6 +257,28 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
 
   sendAudio(audio: AudioData) {
     this.send(audio);
+  }
+
+  /**
+   * Update the streaming configuration mid-stream.
+   * @param config - The configuration parameters to update
+   */
+  updateConfiguration(config: Omit<StreamingUpdateConfiguration, "type">) {
+    const message: StreamingUpdateConfiguration = {
+      type: "UpdateConfiguration",
+      ...config,
+    };
+    this.send(JSON.stringify(message));
+  }
+
+  /**
+   * Force the current turn to end immediately.
+   */
+  forceEndpoint() {
+    const message: StreamingForceEndpoint = {
+      type: "ForceEndpoint",
+    };
+    this.send(JSON.stringify(message));
   }
 
   private send(data: BufferLike) {

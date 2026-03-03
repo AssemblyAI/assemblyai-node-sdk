@@ -7,13 +7,18 @@ export type StreamingTranscriberParams = {
   sampleRate: number;
   encoding?: AudioEncoding;
   endOfTurnConfidenceThreshold?: number;
+  /**
+   * @deprecated Use `minTurnSilence` instead. This parameter will be removed in a future release.
+   */
   minEndOfTurnSilenceWhenConfident?: number;
+  minTurnSilence?: number;
   maxTurnSilence?: number;
   vadThreshold?: number;
   formatTurns?: boolean;
   filterProfanity?: boolean;
   keyterms?: string[];
   keytermsPrompt?: string[];
+  prompt?: string;
   speechModel?: StreamingSpeechModel;
   languageDetection?: boolean;
   inactivityTimeout?: number;
@@ -30,7 +35,9 @@ export type StreamingListeners = {
 
 export type StreamingSpeechModel =
   | "universal-streaming-english"
-  | "universal-streaming-multilingual";
+  | "universal-streaming-multilingual"
+  | "u3-rt-pro"
+  | "u3-pro";
 
 export type StreamingTokenParams = {
   expires_in_seconds: number;
@@ -82,10 +89,17 @@ export type StreamingTerminateSession = {
 export type StreamingUpdateConfiguration = {
   type: "UpdateConfiguration";
   end_of_turn_confidence_threshold?: number;
+  /**
+   * @deprecated Use `min_turn_silence` instead. This parameter will be removed in a future release.
+   */
   min_end_of_turn_silence_when_confident?: number;
+  min_turn_silence?: number;
   max_turn_silence?: number;
   vad_threshold?: number;
   format_turns?: boolean;
+  keyterms_prompt?: string[];
+  prompt?: string;
+  filter_profanity?: boolean;
 };
 
 export type StreamingForceEndpoint = {
