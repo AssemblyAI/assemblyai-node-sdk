@@ -22,6 +22,8 @@ export type StreamingTranscriberParams = {
   speechModel?: StreamingSpeechModel;
   languageDetection?: boolean;
   inactivityTimeout?: number;
+  speakerLabels?: boolean;
+  maxSpeakers?: number;
 };
 
 export type StreamingEvents = "open" | "close" | "turn" | "error";
@@ -37,6 +39,7 @@ export type StreamingSpeechModel =
   | "universal-streaming-english"
   | "universal-streaming-multilingual"
   | "u3-rt-pro"
+  | "whisper-rt"
   | "u3-pro";
 
 export type StreamingTokenParams = {
@@ -66,6 +69,7 @@ export type TurnEvent = {
   words: StreamingWord[];
   language_code?: string;
   language_confidence?: number;
+  speaker_label?: string;
 };
 
 export type StreamingWord = {

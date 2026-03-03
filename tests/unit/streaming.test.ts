@@ -59,4 +59,76 @@ describe("streaming", () => {
   }
 
   it("noop", async () => {});
+
+  it("should include speaker_labels in connection URL", async () => {
+    await cleanup();
+    WS.clean();
+
+    const wsUrl = `${websocketBaseUrl}?token=123&sample_rate=16000&speaker_labels=true`;
+    server = new WS(wsUrl);
+    rt = new StreamingTranscriber({
+      websocketBaseUrl,
+      token: "123",
+      sampleRate: 16_000,
+      speakerLabels: true,
+    });
+    onOpen = jest.fn();
+    rt.on("open", onOpen);
+    await connect(rt, server);
+  });
+
+  it("should include speaker_labels and max_speakers in connection URL", async () => {
+    await cleanup();
+    WS.clean();
+
+    const wsUrl = `${websocketBaseUrl}?token=123&sample_rate=16000&speaker_labels=true&max_speakers=4`;
+    server = new WS(wsUrl);
+    rt = new StreamingTranscriber({
+      websocketBaseUrl,
+      token: "123",
+      sampleRate: 16_000,
+      speakerLabels: true,
+      maxSpeakers: 4,
+    });
+    onOpen = jest.fn();
+    rt.on("open", onOpen);
+    await connect(rt, server);
+  });
+
+  it("should include whisper-rt speech model in connection URL", async () => {
+    await cleanup();
+    WS.clean();
+
+    const wsUrl = `${websocketBaseUrl}?token=123&sample_rate=16000&speech_model=whisper-rt`;
+    server = new WS(wsUrl);
+    rt = new StreamingTranscriber({
+      websocketBaseUrl,
+      token: "123",
+      sampleRate: 16_000,
+      speechModel: "whisper-rt",
+    });
+    onOpen = jest.fn();
+    rt.on("open", onOpen);
+    await connect(rt, server);
+  });
+
+  it("should parse speaker_label from turn event", async () => {
+    const turnPromise = new Promise<{ speaker_label?: string }>((resolve) => {
+      rt.on("turn", (event) => resolve(event));
+    });
+    server.send(
+      JSON.stringify({
+        type: "Turn",
+        turn_order: 1,
+        turn_is_formatted: true,
+        end_of_turn: true,
+        transcript: "hello",
+        end_of_turn_confidence: 0.9,
+        words: [],
+        speaker_label: "A",
+      }),
+    );
+    const turn = await turnPromise;
+    expect(turn.speaker_label).toBe("A");
+  });
 });
