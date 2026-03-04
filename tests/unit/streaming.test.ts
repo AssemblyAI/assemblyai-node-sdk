@@ -46,6 +46,7 @@ describe("streaming", () => {
       websocketBaseUrl: websocketBaseUrl,
       apiKey: "123",
       sampleRate: 16_000,
+      speechModel: "universal-streaming-english",
     });
     onOpen = jest.fn();
     rt.on("open", onOpen);
@@ -64,12 +65,13 @@ describe("streaming", () => {
     await cleanup();
     WS.clean();
 
-    const wsUrl = `${websocketBaseUrl}?token=123&sample_rate=16000&speaker_labels=true`;
+    const wsUrl = `${websocketBaseUrl}?token=123&sample_rate=16000&speech_model=universal-streaming-english&speaker_labels=true`;
     server = new WS(wsUrl);
     rt = new StreamingTranscriber({
       websocketBaseUrl,
       token: "123",
       sampleRate: 16_000,
+      speechModel: "universal-streaming-english",
       speakerLabels: true,
     });
     onOpen = jest.fn();
@@ -81,12 +83,13 @@ describe("streaming", () => {
     await cleanup();
     WS.clean();
 
-    const wsUrl = `${websocketBaseUrl}?token=123&sample_rate=16000&speaker_labels=true&max_speakers=4`;
+    const wsUrl = `${websocketBaseUrl}?token=123&sample_rate=16000&speech_model=universal-streaming-english&speaker_labels=true&max_speakers=4`;
     server = new WS(wsUrl);
     rt = new StreamingTranscriber({
       websocketBaseUrl,
       token: "123",
       sampleRate: 16_000,
+      speechModel: "universal-streaming-english",
       speakerLabels: true,
       maxSpeakers: 4,
     });
@@ -105,7 +108,7 @@ describe("streaming", () => {
       websocketBaseUrl,
       token: "123",
       sampleRate: 16_000,
-      speechModel: "whisper-rt",
+      speechModel: "whisper-rt" as const,
     });
     onOpen = jest.fn();
     rt.on("open", onOpen);

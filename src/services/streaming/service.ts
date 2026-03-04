@@ -142,14 +142,12 @@ export class StreamingTranscriber {
       );
     }
 
-    if (this.params.speechModel) {
-      if (this.params.speechModel === "u3-pro") {
-        console.warn(
-          "[Deprecation Warning] The speech model `u3-pro` is deprecated and will be removed in a future release. Please use `u3-rt-pro` instead.",
-        );
-      }
-      searchParams.set("speech_model", this.params.speechModel.toString());
+    if (this.params.speechModel === "u3-pro") {
+      console.warn(
+        "[Deprecation Warning] The speech model `u3-pro` is deprecated and will be removed in a future release. Please use `u3-rt-pro` instead.",
+      );
     }
+    searchParams.set("speech_model", this.params.speechModel.toString());
 
     if (this.params.languageDetection !== undefined) {
       searchParams.set(

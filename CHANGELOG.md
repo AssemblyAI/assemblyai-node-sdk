@@ -22,7 +22,7 @@
 
 - Add `language_confidence_threshold` to `Transcript`, `TranscriptParams`, and `TranscriptOptionalParams`.
   > The confidence threshold for the automatically detected language.
-  > An error will be returned if the langauge confidence is below this threshold.
+  > An error will be returned if the language confidence is below this threshold.
 - Add `language_confidence` to `Transcript`
   > The confidence score for the detected language, between 0.0 (low confidence) and 1.0 (high confidence)
 
