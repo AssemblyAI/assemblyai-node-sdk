@@ -246,6 +246,10 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
             this.listeners.turn?.(message);
             break;
           }
+          case "SpeechStarted": {
+            this.listeners.speechStarted?.(message);
+            break;
+          }
           case "Termination": {
             this.sessionTerminatedResolve?.();
             break;

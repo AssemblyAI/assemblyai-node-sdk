@@ -26,12 +26,18 @@ export type StreamingTranscriberParams = {
   maxSpeakers?: number;
 };
 
-export type StreamingEvents = "open" | "close" | "turn" | "error";
+export type StreamingEvents =
+  | "open"
+  | "close"
+  | "turn"
+  | "speechStarted"
+  | "error";
 
 export type StreamingListeners = {
   open?: (event: BeginEvent) => void;
   close?: (code: number, reason: string) => void;
   turn?: (event: TurnEvent) => void;
+  speechStarted?: (event: SpeechStartedEvent) => void;
   error?: (error: Error) => void;
 };
 
@@ -57,6 +63,11 @@ export type BeginEvent = {
   type: "Begin";
   id: string;
   expires_at: number;
+};
+
+export type SpeechStartedEvent = {
+  type: "SpeechStarted";
+  timestamp: number;
 };
 
 export type TurnEvent = {
@@ -117,6 +128,7 @@ export type ErrorEvent = {
 export type StreamingEventMessage =
   | BeginEvent
   | TurnEvent
+  | SpeechStartedEvent
   | TerminationEvent
   | ErrorEvent;
 
