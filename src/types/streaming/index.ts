@@ -19,7 +19,7 @@ export type StreamingTranscriberParams = {
   keyterms?: string[];
   keytermsPrompt?: string[];
   prompt?: string;
-  speechModel?: StreamingSpeechModel;
+  speechModel: StreamingSpeechModel;
   languageDetection?: boolean;
   inactivityTimeout?: number;
   speakerLabels?: boolean;
