@@ -1,5 +1,16 @@
 import { AudioEncoding } from "..";
 
+export type LLMGatewayMessage = {
+  role: string;
+  content: string;
+};
+
+export type LLMGatewayConfig = {
+  model: string;
+  messages: LLMGatewayMessage[];
+  max_tokens: number;
+};
+
 export type StreamingTranscriberParams = {
   websocketBaseUrl?: string;
   apiKey?: string;
@@ -24,6 +35,7 @@ export type StreamingTranscriberParams = {
   inactivityTimeout?: number;
   speakerLabels?: boolean;
   maxSpeakers?: number;
+  llmGateway?: LLMGatewayConfig;
 };
 
 export type StreamingEvents =
@@ -31,6 +43,7 @@ export type StreamingEvents =
   | "close"
   | "turn"
   | "speechStarted"
+  | "llmGatewayResponse"
   | "error";
 
 export type StreamingListeners = {
@@ -38,6 +51,7 @@ export type StreamingListeners = {
   close?: (code: number, reason: string) => void;
   turn?: (event: TurnEvent) => void;
   speechStarted?: (event: SpeechStartedEvent) => void;
+  llmGatewayResponse?: (event: LLMGatewayResponseEvent) => void;
   error?: (error: Error) => void;
 };
 
@@ -125,11 +139,19 @@ export type ErrorEvent = {
   error: string;
 };
 
+export type LLMGatewayResponseEvent = {
+  type: "LLMGatewayResponse";
+  turn_order: number;
+  transcript: string;
+  data: unknown;
+};
+
 export type StreamingEventMessage =
   | BeginEvent
   | TurnEvent
   | SpeechStartedEvent
   | TerminationEvent
+  | LLMGatewayResponseEvent
   | ErrorEvent;
 
 export type StreamingOperationMessage =

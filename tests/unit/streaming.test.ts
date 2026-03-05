@@ -134,4 +134,60 @@ describe("streaming", () => {
     const turn = await turnPromise;
     expect(turn.speaker_label).toBe("A");
   });
+
+  it("should include llm_gateway in connection URL", async () => {
+    await cleanup();
+    WS.clean();
+
+    const llmGatewayConfig = {
+      model: "claude-3-5-sonnet",
+      messages: [
+        { role: "system", content: "You are a helpful assistant." },
+        { role: "user", content: "Hello" },
+      ],
+      max_tokens: 100,
+    };
+
+    const wsUrl = `${websocketBaseUrl}?token=123&sample_rate=16000&speech_model=universal-streaming-english&llm_gateway=${encodeURIComponent(JSON.stringify(llmGatewayConfig))}`;
+    server = new WS(wsUrl);
+    rt = new StreamingTranscriber({
+      websocketBaseUrl,
+      token: "123",
+      sampleRate: 16_000,
+      speechModel: "universal-streaming-english",
+      llmGateway: llmGatewayConfig,
+    });
+    onOpen = jest.fn();
+    rt.on("open", onOpen);
+    await connect(rt, server);
+  });
+
+  it("should parse LLMGatewayResponse event", async () => {
+    const llmResponsePromise = new Promise<{
+      turn_order: number;
+      transcript: string;
+      data: unknown;
+    }>((resolve) => {
+      rt.on("llmGatewayResponse", (event) => resolve(event));
+    });
+
+    const llmResponseData = {
+      type: "LLMGatewayResponse",
+      turn_order: 1,
+      transcript: "hello world",
+      data: {
+        response: "This is an LLM response",
+        model: "claude-3-5-sonnet",
+      },
+    };
+
+    server.send(JSON.stringify(llmResponseData));
+    const response = await llmResponsePromise;
+    expect(response.turn_order).toBe(1);
+    expect(response.transcript).toBe("hello world");
+    expect(response.data).toEqual({
+      response: "This is an LLM response",
+      model: "claude-3-5-sonnet",
+    });
+  });
 });
