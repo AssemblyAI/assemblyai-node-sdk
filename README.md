@@ -46,8 +46,11 @@ Then, import the `assemblyai` module and create an AssemblyAI object with your A
 ```js
 import { AssemblyAI } from "assemblyai";
 
+const baseUrl = "https://api.assemblyai.com";
+
 const client = new AssemblyAI({
-  apiKey: process.env.ASSEMBLYAI_API_KEY,
+  apiKey: "YOUR_API_KEY",
+  baseUrl: baseUrl,
 });
 ```
 
@@ -96,9 +99,20 @@ When you create a transcript, you can either pass in a URL to an audio file or u
 
 ```js
 // Transcribe file at remote URL
-let transcript = await client.transcripts.transcribe({
-  audio: "https://assembly.ai/espn.m4a",
-});
+const audioFile = "https://assembly.ai/sports_injuries.mp3";
+
+const params = {
+  audio: audioFile,
+  speech_models: ["universal-3-pro", "universal-2"],
+  language_detection: true,
+};
+
+const run = async () => {
+  const transcript = await client.transcripts.transcribe(params);
+  console.log(transcript.text);
+};
+
+run();
 ```
 
 > [!NOTE]
@@ -245,15 +259,10 @@ const res = await client.transcripts.delete(transcript.id);
 Create the streaming transcriber.
 
 ```typescript
-const rt = client.streaming.transcriber();
-```
-
-You can also pass in the following options.
-
-```typescript
-const rt = client.streaming.transcriber({
-  apiKey: process.env.ASSEMBLYAI_API_KEY // The API key passed to `AssemblyAI` will be used by default,
+const transcriber = client.streaming.transcriber({
+  speechModel: "u3-rt-pro",
   sampleRate: 16_000,
+  formatTurns: true,
 });
 ```
 
