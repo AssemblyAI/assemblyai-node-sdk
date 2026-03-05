@@ -73,6 +73,7 @@ async function createStreamingTranscriber(useToken: boolean) {
   const serviceParams: StreamingTranscriberParams = {
     websocketBaseUrl: process.env.ASSEMBLYAI_STREAMING_WS_API_HOST,
     sampleRate: 16_000,
+    speechModel: "universal-streaming-english",
     apiKey: useToken ? undefined : process.env.ASSEMBLYAI_API_KEY,
     token: useToken
       ? await client.streaming.createTemporaryToken({

@@ -13,6 +13,7 @@ import {
   BeginEvent,
   StreamingEventMessage,
   TurnEvent,
+  LLMGatewayResponseEvent,
   StreamingUpdateConfiguration,
   StreamingForceEndpoint,
 } from "../..";
@@ -171,6 +172,10 @@ export class StreamingTranscriber {
       searchParams.set("max_speakers", this.params.maxSpeakers.toString());
     }
 
+    if (this.params.llmGateway !== undefined) {
+      searchParams.set("llm_gateway", JSON.stringify(this.params.llmGateway));
+    }
+
     url.search = searchParams.toString();
 
     return url;
@@ -178,6 +183,10 @@ export class StreamingTranscriber {
 
   on(event: "open", listener: (event: BeginEvent) => void): void;
   on(event: "turn", listener: (event: TurnEvent) => void): void;
+  on(
+    event: "llmGatewayResponse",
+    listener: (event: LLMGatewayResponseEvent) => void,
+  ): void;
   on(event: "error", listener: (error: Error) => void): void;
   on(event: "close", listener: (code: number, reason: string) => void): void;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -246,6 +255,10 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
           }
           case "SpeechStarted": {
             this.listeners.speechStarted?.(message);
+            break;
+          }
+          case "LLMGatewayResponse": {
+            this.listeners.llmGatewayResponse?.(message);
             break;
           }
           case "Termination": {
