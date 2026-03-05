@@ -326,7 +326,7 @@ Close the connection when you're finished.
 await rt.close();
 ```
 
-## Apply LLMs to your audio with LeMUR
+<!-- ## Apply LLMs to your audio with LeMUR
 
 Call [LeMUR endpoints](https://www.assemblyai.com/docs/api-reference/lemur) to apply LLMs to your transcript.
 
@@ -391,6 +391,7 @@ const response = await client.lemur.purgeRequestData(lemurResponse.request_id);
 ```
 
 </details>
+-->
 
 ## Contributing
 
