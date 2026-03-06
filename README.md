@@ -13,7 +13,7 @@
 # AssemblyAI JavaScript SDK
 
 The AssemblyAI JavaScript SDK provides an easy-to-use interface for interacting with the AssemblyAI API,
-which supports async and streaming transcription, as well as the latest LeMUR models.
+which supports async and streaming transcription.
 It is written primarily for Node.js in TypeScript with all types exported, but also [compatible with other runtimes](./docs/compat.md).
 
 ## Documentation
@@ -125,6 +125,8 @@ If you don't want to wait until the transcript is ready, you can use `submit`:
 ```js
 let transcript = await client.transcripts.submit({
   audio: "https://assembly.ai/espn.m4a",
+  speech_models: ["universal-3-pro", "universal-2"],
+  language_detection: true,
 });
 ```
 
@@ -139,6 +141,8 @@ When you create a transcript, you can either pass in a URL to an audio file or u
 // Upload a file via local path and transcribe
 let transcript = await client.transcripts.transcribe({
   audio: "./news.mp4",
+  speech_models: ["universal-3-pro", "universal-2"],
+  language_detection: true,
 });
 ```
 
@@ -152,25 +156,44 @@ If you don't want to wait until the transcript is ready, you can use `submit`:
 ```js
 let transcript = await client.transcripts.submit({
   audio: "./news.mp4",
+  speech_models: ["universal-3-pro", "universal-2"],
+  language_detection: true,
 });
 ```
 
 </details>
 
 <details>
-  <summary>Enable additional AI models</summary>
+  <summary>Enable additional Speech Understanding models</summary>
 
-You can extract even more insights from the audio by enabling any of our [AI models](https://www.assemblyai.com/docs/audio-intelligence) using _transcription options_.
-For example, here's how to enable [Speaker diarization](https://www.assemblyai.com/docs/speech-to-text/speaker-diarization) model to detect who said what.
+You can extract even more insights from the audio by enabling any of our Speech Understanding models using _transcription options_.
+For example, here's how to enable [Speaker diarization](https://www.assemblyai.com/docs/pre-recorded-audio/speaker-diarization) model to detect who said what.
 
 ```js
-let transcript = await client.transcripts.transcribe({
-  audio: "https://assembly.ai/espn.m4a",
-  speaker_labels: true,
+import { AssemblyAI } from "assemblyai";
+
+const client = new AssemblyAI({
+  apiKey: "<YOUR_API_KEY>",
 });
-for (let utterance of transcript.utterances) {
-  console.log(`Speaker ${utterance.speaker}: ${utterance.text}`);
-}
+
+const audioFile = "https://assembly.ai/wildfires.mp3";
+
+const params = {
+  audio: audioFile,
+  speech_models: ["universal-3-pro", "universal-2"],
+  language_detection: true,
+  speaker_labels: true,
+};
+
+const run = async () => {
+  const transcript = await client.transcripts.transcribe(params);
+
+  for (const utterance of transcript.utterances!) {
+    console.log(`Speaker ${utterance.speaker}: ${utterance.text}`);
+  }
+};
+
+run();
 ```
 
 </details>
@@ -201,7 +224,16 @@ const transcript = await client.transcripts.waitUntilReady(transcript.id, {
 
 ```js
 const sentences = await client.transcripts.sentences(transcript.id);
-const paragraphs = await client.transcripts.paragraphs(transcript.id);
+const { paragraphs } = await client.transcripts.paragraphs(transcript.id);
+
+for (const paragraph of paragraphs) {
+  console.log(paragraph.text);
+}
+
+for (const sentence of sentences) {
+  console.log(sentence.text);
+}
+
 ```
 
 </details>
@@ -254,7 +286,9 @@ const res = await client.transcripts.delete(transcript.id);
 
 </details>
 
-### Transcribe in real-time
+### Transcribe streaming audio
+
+Refer to [AssemblyAI's streaming documentation](https://www.assemblyai.com/docs/getting-started/transcribe-streaming-audio) for full code examples.
 
 Create the streaming transcriber.
 
@@ -284,7 +318,7 @@ const transcriber = client.streaming.transcriber({
 > import { StreamingTranscriber } from "assemblyai";
 > // TODO: implement getToken to retrieve token from server
 > const token = await getToken();
-> const rt = new StreamingTranscriber({
+> const transcriber = new StreamingTranscriber({
 >   token,
 > });
 > ```
@@ -293,16 +327,16 @@ You can configure the following events.
 
 <!-- prettier-ignore -->
 ```typescript
-rt.on("open", ({ id, expires_at }) => console.log('Session ID:', id, 'Expires at:', expires_at));
-rt.on("close", (code: number, reason: string) => console.log('Closed', code, reason));
-rt.on("turn", ({ transcript }) => console.log('Transcript:', transcript));
-rt.on("error", (error: Error) => console.error('Error', error));
+transcriber.on("open", ({ id, expires_at }) => console.log('Session ID:', id, 'Expires at:', expires_at));
+transcriber.on("close", (code: number, reason: string) => console.log('Closed', code, reason));
+transcriber.on("turn", ({ transcript }) => console.log('Transcript:', transcript));
+transcriber.on("error", (error: Error) => console.error('Error', error));
 ```
 
 After configuring your events, connect to the server.
 
 ```typescript
-await rt.connect();
+await transcriber.connect();
 ```
 
 Send audio data via chunks.
@@ -310,88 +344,21 @@ Send audio data via chunks.
 ```typescript
 // Pseudo code for getting audio
 getAudio((chunk) => {
-  rt.sendAudio(chunk);
+  transcriber.sendAudio(chunk);
 });
 ```
 
 Or send audio data via a stream:
 
 ```typescript
-audioStream.pipeTo(rt.stream());
+audioStream.pipeTo(transcriber.stream());
 ```
 
 Close the connection when you're finished.
 
 ```typescript
-await rt.close();
+await transcriber.close();
 ```
-
-<!-- ## Apply LLMs to your audio with LeMUR
-
-Call [LeMUR endpoints](https://www.assemblyai.com/docs/api-reference/lemur) to apply LLMs to your transcript.
-
-<details open>
-<summary>Prompt your audio with LeMUR</summary>
-
-```js
-const { response } = await client.lemur.task({
-  transcript_ids: ["0d295578-8c75-421a-885a-2c487f188927"],
-  prompt: "Write a haiku about this conversation.",
-});
-```
-
-</details>
-
-<details>
-<summary>Summarize with LeMUR</summary>
-
-```js
-const { response } = await client.lemur.summary({
-  transcript_ids: ["0d295578-8c75-421a-885a-2c487f188927"],
-  answer_format: "one sentence",
-  context: {
-    speakers: ["Alex", "Bob"],
-  },
-});
-```
-
-</details>
-
-<details>
-<summary>Ask questions</summary>
-
-```js
-const { response } = await client.lemur.questionAnswer({
-  transcript_ids: ["0d295578-8c75-421a-885a-2c487f188927"],
-  questions: [
-    {
-      question: "What are they discussing?",
-      answer_format: "text",
-    },
-  ],
-});
-```
-
-</details>
-<details>
-<summary>Generate action items</summary>
-
-```js
-const { response } = await client.lemur.actionItems({
-  transcript_ids: ["0d295578-8c75-421a-885a-2c487f188927"],
-});
-```
-
-</details>
-<details>
-<summary>Delete LeMUR request</summary>
-
-```js
-const response = await client.lemur.purgeRequestData(lemurResponse.request_id);
-```
-
-</details>
--->
 
 ## Contributing
 
