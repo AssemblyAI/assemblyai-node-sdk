@@ -55,7 +55,6 @@ TEST_TRANSCRIPT_IDS=...
 ## Generate types from OpenAPI and AsyncAPI spec
 
 1. Configure the location of the OpenAPI and AsyncAPI spec as environment variables:
-
    - `OPENAPI_SPEC`: Path or URL to the AssemblyAI OpenAPI spec
    - `ASYNCAPI_SPEC`: Path or URL to the AssemblyAI AsyncAPI spec
 

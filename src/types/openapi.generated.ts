@@ -2889,6 +2889,11 @@ export type Transcript = {
    * Change how deterministic the response is, with 0 being the most deterministic and 1 being the least deterministic.
    */
 
+  remove_audio_tags?: string | null;
+  /**
+   * When set to 'all', removes all bracketed audio/speaker tags (e.g. [MUSIC], [Speaker: A]) from the transcript. Only supported for Universal-3 Pro.
+   */
+
   text?: string | null;
   /**
    * True while a request is throttled and false when a request is no longer throttled
@@ -3431,6 +3436,11 @@ export type TranscriptOptionalParams = {
   temperature?: number | null;
   /**
    * Change how deterministic the response is, with 0 being the most deterministic and 1 being the least deterministic.
+   */
+
+  remove_audio_tags?: string | null;
+  /**
+   * When set to 'all', removes all bracketed audio/speaker tags (e.g. [MUSIC], [Speaker: A]) from the transcript. Only supported for Universal-3 Pro.
    */
 
   topics?: string[];
