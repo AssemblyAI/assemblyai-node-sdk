@@ -233,7 +233,6 @@ for (const paragraph of paragraphs) {
 for (const sentence of sentences) {
   console.log(sentence.text);
 }
-
 ```
 
 </details>
