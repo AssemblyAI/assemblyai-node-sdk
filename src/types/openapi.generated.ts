@@ -21,6 +21,13 @@ type OneOf<T extends any[]> = T extends [infer Only]
  */
 export type AudioIntelligenceModelStatus = "success" | "unavailable";
 
+export interface TranscriptMetadata {
+  /** The domain that was actually used for the transcription. */
+  domain_used?: string | null;
+  /** An optional warning message, if applicable. */
+  warning?: string | null;
+}
+
 /**
  * @example
  * ```js
@@ -2943,6 +2950,14 @@ export type Transcript = {
    * Translations of the full transcript text when translation is enabled
    */
   translated_texts?: Record<string, string>;
+  /**
+   * The domain used for the transcription.
+   */
+  domain?: string | null;
+  /**
+   * Metadata returned by the transcription API.
+   */
+  metadata?: TranscriptMetadata | null;
 };
 
 /**
@@ -3470,6 +3485,10 @@ export type TranscriptOptionalParams = {
   speech_understanding?:
     | SpeechUnderstandingRequest
     | SpeechUnderstandingResponse;
+  /**
+   * The domain to use for the transcription (e.g. 'medical-v1').
+   */
+  domain?: string | null;
 };
 
 /**
