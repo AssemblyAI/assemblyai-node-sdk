@@ -32,6 +32,7 @@ export type StreamingTranscriberParams = {
   prompt?: string;
   speechModel: StreamingSpeechModel;
   languageDetection?: boolean;
+  domain?: StreamingDomain;
   inactivityTimeout?: number;
   speakerLabels?: boolean;
   maxSpeakers?: number;
@@ -61,6 +62,8 @@ export type StreamingSpeechModel =
   | "u3-rt-pro"
   | "whisper-rt"
   | "u3-pro";
+
+export type StreamingDomain = "medical-v1";
 
 export type StreamingTokenParams = {
   expires_in_seconds: number;

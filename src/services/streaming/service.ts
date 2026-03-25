@@ -157,6 +157,10 @@ export class StreamingTranscriber {
       );
     }
 
+    if (this.params.domain) {
+      searchParams.set("domain", this.params.domain);
+    }
+
     if (this.params.inactivityTimeout !== undefined) {
       searchParams.set(
         "inactivity_timeout",
