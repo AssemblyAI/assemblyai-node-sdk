@@ -359,6 +359,10 @@ Close the connection when you're finished.
 await transcriber.close();
 ```
 
+## Claude Code
+
+This repository includes a [`CLAUDE.md`](CLAUDE.md) file that provides context to [Claude Code](https://docs.anthropic.com/en/docs/claude-code) about this SDK — key APIs, common patterns, and gotchas. When you open this repo in Claude Code, it automatically reads this file to give better assistance.
+
 ## Contributing
 
 If you want to contribute to the JavaScript SDK, follow the guidelines in [CONTRIBUTING.md](./CONTRIBUTING.md).
