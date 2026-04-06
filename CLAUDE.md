@@ -47,6 +47,7 @@ const client = new AssemblyAI({
 ## Common patterns
 
 **Transcribe a local file:**
+
 ```typescript
 const transcript = await client.transcripts.transcribe({
   audio: "./recording.mp3",
@@ -54,6 +55,7 @@ const transcript = await client.transcripts.transcribe({
 ```
 
 **With multiple features:**
+
 ```typescript
 const transcript = await client.transcripts.transcribe({
   audio: audioUrl,
@@ -67,6 +69,7 @@ const transcript = await client.transcripts.transcribe({
 ```
 
 **Streaming:**
+
 ```typescript
 const transcriber = client.streaming.transcriber({
   speechModel: "u3-rt-pro",
@@ -83,6 +86,7 @@ await transcriber.close();
 ```
 
 **Subtitles:**
+
 ```typescript
 const srt = await client.transcripts.subtitles(id, "srt");
 const vtt = await client.transcripts.subtitles(id, "vtt");
