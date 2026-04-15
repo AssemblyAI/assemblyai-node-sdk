@@ -21,11 +21,18 @@ type OneOf<T extends any[]> = T extends [infer Only]
  */
 export type AudioIntelligenceModelStatus = "success" | "unavailable";
 
+export interface TranscriptWarning {
+  /** The warning message. */
+  message: string;
+}
+
 export interface TranscriptMetadata {
   /** The domain that was actually used for the transcription. */
   domain_used?: string | null;
   /** An optional warning message, if applicable. */
   warning?: string | null;
+  /** A list of warning objects, if applicable. */
+  warnings?: TranscriptWarning[] | null;
 }
 
 /**

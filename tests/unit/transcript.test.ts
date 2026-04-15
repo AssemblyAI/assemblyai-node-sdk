@@ -503,4 +503,69 @@ describe("transcript", () => {
     expect(transcript.id).toBe(transcriptId);
     expect(transcript.speech_model_used).toBeUndefined();
   });
+
+  it("should handle transcript response with metadata warnings", async () => {
+    const transcriptWithWarnings = {
+      id: transcriptId,
+      status: "completed",
+      metadata: {
+        domain_used: null,
+        warnings: [
+          {
+            message:
+              "Skipped medical-v1 correction because the language is not supported",
+          },
+        ],
+      },
+    };
+    fetchMock.doMockOnceIf(
+      requestMatches({ url: `/v2/transcript/${transcriptId}`, method: "GET" }),
+      JSON.stringify(transcriptWithWarnings),
+    );
+    const transcript = await assembly.transcripts.get(transcriptId);
+
+    expect(transcript.id).toBe(transcriptId);
+    expect(transcript.metadata).toBeDefined();
+    expect(transcript.metadata!.warnings).toHaveLength(1);
+    expect(transcript.metadata!.warnings![0].message).toBe(
+      "Skipped medical-v1 correction because the language is not supported",
+    );
+    expect(transcript.metadata!.domain_used).toBeNull();
+  });
+
+  it("should handle transcript response with metadata but no warnings key", async () => {
+    const transcriptWithMetadataNoWarnings = {
+      id: transcriptId,
+      status: "completed",
+      metadata: {
+        domain_used: null,
+      },
+    };
+    fetchMock.doMockOnceIf(
+      requestMatches({ url: `/v2/transcript/${transcriptId}`, method: "GET" }),
+      JSON.stringify(transcriptWithMetadataNoWarnings),
+    );
+    const transcript = await assembly.transcripts.get(transcriptId);
+
+    expect(transcript.id).toBe(transcriptId);
+    expect(transcript.metadata).toBeDefined();
+    expect(transcript.metadata!.domain_used).toBeNull();
+    expect(transcript.metadata!.warnings).toBeUndefined();
+  });
+
+  it("should handle transcript response without metadata", async () => {
+    const transcriptWithoutMetadata = {
+      id: transcriptId,
+      status: "completed",
+      // metadata intentionally omitted
+    };
+    fetchMock.doMockOnceIf(
+      requestMatches({ url: `/v2/transcript/${transcriptId}`, method: "GET" }),
+      JSON.stringify(transcriptWithoutMetadata),
+    );
+    const transcript = await assembly.transcripts.get(transcriptId);
+
+    expect(transcript.id).toBe(transcriptId);
+    expect(transcript.metadata).toBeUndefined();
+  });
 });
