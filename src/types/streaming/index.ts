@@ -36,6 +36,8 @@ export type StreamingTranscriberParams = {
   inactivityTimeout?: number;
   speakerLabels?: boolean;
   maxSpeakers?: number;
+  noiseSuppressionModel?: NoiseSuppressionModel;
+  noiseSuppressionThreshold?: number;
   llmGateway?: LLMGatewayConfig;
 };
 
@@ -45,6 +47,7 @@ export type StreamingEvents =
   | "turn"
   | "speechStarted"
   | "llmGatewayResponse"
+  | "warning"
   | "error";
 
 export type StreamingListeners = {
@@ -53,6 +56,7 @@ export type StreamingListeners = {
   turn?: (event: TurnEvent) => void;
   speechStarted?: (event: SpeechStartedEvent) => void;
   llmGatewayResponse?: (event: LLMGatewayResponseEvent) => void;
+  warning?: (event: WarningEvent) => void;
   error?: (error: Error) => void;
 };
 
@@ -64,6 +68,8 @@ export type StreamingSpeechModel =
   | "u3-pro";
 
 export type StreamingDomain = "medical-v1";
+
+export type NoiseSuppressionModel = "near-field" | "far-field";
 
 export type StreamingTokenParams = {
   expires_in_seconds: number;
@@ -139,7 +145,15 @@ export type StreamingForceEndpoint = {
 };
 
 export type ErrorEvent = {
+  type: "Error";
+  error_code?: number;
   error: string;
+};
+
+export type WarningEvent = {
+  type: "Warning";
+  warning_code: number;
+  warning: string;
 };
 
 export type LLMGatewayResponseEvent = {
@@ -155,7 +169,8 @@ export type StreamingEventMessage =
   | SpeechStartedEvent
   | TerminationEvent
   | LLMGatewayResponseEvent
-  | ErrorEvent;
+  | ErrorEvent
+  | WarningEvent;
 
 export type StreamingOperationMessage =
   | StreamingUpdateConfiguration

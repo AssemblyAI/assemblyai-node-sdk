@@ -16,6 +16,7 @@ import {
   LLMGatewayResponseEvent,
   StreamingUpdateConfiguration,
   StreamingForceEndpoint,
+  WarningEvent,
 } from "../..";
 import { StreamingError, StreamingErrorMessages } from "../../utils/errors";
 import { StreamingErrorTypeCodes } from "../../utils/errors/streaming";
@@ -86,19 +87,22 @@ export class StreamingTranscriber {
       );
     }
 
-    if (this.params.minTurnSilence) {
-      searchParams.set(
-        "min_turn_silence",
-        this.params.minTurnSilence.toString(),
-      );
-    } else if (this.params.minEndOfTurnSilenceWhenConfident) {
-      console.warn(
-        "[Deprecation Warning] `minEndOfTurnSilenceWhenConfident` is deprecated and will be removed in a future release. Please use `minTurnSilence` instead.",
-      );
-      searchParams.set(
-        "min_end_of_turn_silence_when_confident",
-        this.params.minEndOfTurnSilenceWhenConfident.toString(),
-      );
+    if (this.params.minEndOfTurnSilenceWhenConfident !== undefined) {
+      if (this.params.minTurnSilence !== undefined) {
+        console.warn(
+          "[Deprecation Warning] Both `minEndOfTurnSilenceWhenConfident` and `minTurnSilence` are set. Using `minTurnSilence`; `minEndOfTurnSilenceWhenConfident` is deprecated.",
+        );
+      } else {
+        console.warn(
+          "[Deprecation Warning] `minEndOfTurnSilenceWhenConfident` is deprecated and will be removed in a future release. Please use `minTurnSilence` instead.",
+        );
+      }
+    }
+    const effectiveMinTurnSilence =
+      this.params.minTurnSilence ??
+      this.params.minEndOfTurnSilenceWhenConfident;
+    if (effectiveMinTurnSilence !== undefined) {
+      searchParams.set("min_turn_silence", effectiveMinTurnSilence.toString());
     }
 
     if (this.params.maxTurnSilence) {
@@ -176,6 +180,20 @@ export class StreamingTranscriber {
       searchParams.set("max_speakers", this.params.maxSpeakers.toString());
     }
 
+    if (this.params.noiseSuppressionModel) {
+      searchParams.set(
+        "noise_suppression_model",
+        this.params.noiseSuppressionModel,
+      );
+    }
+
+    if (this.params.noiseSuppressionThreshold !== undefined) {
+      searchParams.set(
+        "noise_suppression_threshold",
+        this.params.noiseSuppressionThreshold.toString(),
+      );
+    }
+
     if (this.params.llmGateway !== undefined) {
       searchParams.set("llm_gateway", JSON.stringify(this.params.llmGateway));
     }
@@ -191,6 +209,7 @@ export class StreamingTranscriber {
     event: "llmGatewayResponse",
     listener: (event: LLMGatewayResponseEvent) => void,
   ): void;
+  on(event: "warning", listener: (event: WarningEvent) => void): void;
   on(event: "error", listener: (error: Error) => void): void;
   on(event: "close", listener: (code: number, reason: string) => void): void;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -243,7 +262,12 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
         const message = JSON.parse(data.toString()) as StreamingEventMessage;
 
         if ("error" in message) {
-          this.listeners.error?.(new StreamingError(message.error));
+          const err = new StreamingError(message.error);
+          if ("error_code" in message) {
+            (err as StreamingError & { code?: number }).code =
+              message.error_code;
+          }
+          this.listeners.error?.(err);
           return;
         }
 
@@ -263,6 +287,14 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
           }
           case "LLMGatewayResponse": {
             this.listeners.llmGatewayResponse?.(message);
+            break;
+          }
+          case "Warning": {
+            const warning = message as WarningEvent;
+            console.warn(
+              `Streaming warning (code=${warning.warning_code}): ${warning.warning}`,
+            );
+            this.listeners.warning?.(warning);
             break;
           }
           case "Termination": {
@@ -291,9 +323,27 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
    * @param config - The configuration parameters to update
    */
   updateConfiguration(config: Omit<StreamingUpdateConfiguration, "type">) {
+    const {
+      min_end_of_turn_silence_when_confident,
+      min_turn_silence,
+      ...rest
+    } = config;
+    if (min_end_of_turn_silence_when_confident !== undefined) {
+      if (min_turn_silence !== undefined) {
+        console.warn(
+          "[Deprecation Warning] Both `min_end_of_turn_silence_when_confident` and `min_turn_silence` are set. Using `min_turn_silence`; `min_end_of_turn_silence_when_confident` is deprecated.",
+        );
+      } else {
+        console.warn(
+          "[Deprecation Warning] `min_end_of_turn_silence_when_confident` is deprecated and will be removed in a future release. Please use `min_turn_silence` instead.",
+        );
+      }
+    }
+    const effective = min_turn_silence ?? min_end_of_turn_silence_when_confident;
     const message: StreamingUpdateConfiguration = {
       type: "UpdateConfiguration",
-      ...config,
+      ...rest,
+      ...(effective !== undefined ? { min_turn_silence: effective } : {}),
     };
     this.send(JSON.stringify(message));
   }

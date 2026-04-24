@@ -98,6 +98,72 @@ describe("streaming", () => {
     await connect(rt, server);
   });
 
+  it("should normalize deprecated minEndOfTurnSilenceWhenConfident to min_turn_silence in connection URL", async () => {
+    await cleanup();
+    WS.clean();
+
+    const wsUrl = `${websocketBaseUrl}?token=123&sample_rate=16000&speech_model=universal-streaming-english&min_turn_silence=200`;
+    server = new WS(wsUrl);
+    rt = new StreamingTranscriber({
+      websocketBaseUrl,
+      token: "123",
+      sampleRate: 16_000,
+      speechModel: "universal-streaming-english",
+      minEndOfTurnSilenceWhenConfident: 200,
+    });
+    onOpen = jest.fn();
+    rt.on("open", onOpen);
+    await connect(rt, server);
+  });
+
+  it("should prefer minTurnSilence when both are set", async () => {
+    await cleanup();
+    WS.clean();
+
+    const wsUrl = `${websocketBaseUrl}?token=123&sample_rate=16000&speech_model=universal-streaming-english&min_turn_silence=500`;
+    server = new WS(wsUrl);
+    rt = new StreamingTranscriber({
+      websocketBaseUrl,
+      token: "123",
+      sampleRate: 16_000,
+      speechModel: "universal-streaming-english",
+      minEndOfTurnSilenceWhenConfident: 200,
+      minTurnSilence: 500,
+    });
+    onOpen = jest.fn();
+    rt.on("open", onOpen);
+    await connect(rt, server);
+  });
+
+  it("should normalize deprecated min_end_of_turn_silence_when_confident in updateConfiguration", async () => {
+    rt.updateConfiguration({ min_end_of_turn_silence_when_confident: 200 });
+    await expect(server).toReceiveMessage(
+      JSON.stringify({
+        type: "UpdateConfiguration",
+        min_turn_silence: 200,
+      }),
+    );
+  });
+
+  it("should include noise_suppression_model and noise_suppression_threshold in connection URL", async () => {
+    await cleanup();
+    WS.clean();
+
+    const wsUrl = `${websocketBaseUrl}?token=123&sample_rate=16000&speech_model=universal-streaming-english&noise_suppression_model=near-field&noise_suppression_threshold=0.5`;
+    server = new WS(wsUrl);
+    rt = new StreamingTranscriber({
+      websocketBaseUrl,
+      token: "123",
+      sampleRate: 16_000,
+      speechModel: "universal-streaming-english",
+      noiseSuppressionModel: "near-field",
+      noiseSuppressionThreshold: 0.5,
+    });
+    onOpen = jest.fn();
+    rt.on("open", onOpen);
+    await connect(rt, server);
+  });
+
   it("should include whisper-rt speech model in connection URL", async () => {
     await cleanup();
     WS.clean();
