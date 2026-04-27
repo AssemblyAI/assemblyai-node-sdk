@@ -15,12 +15,24 @@ const StreamingErrorType = {
   BadSchema: 4101,
   TooManyStreams: 4102,
   Reconnected: 4103,
+  ServerError: 3005,
+  InputValidationError: 3006,
+  AudioChunkDurationViolation: 3007,
+  MaxSessionDurationExceeded: 3008,
+  ConcurrencyLimitExceeded: 3009,
 } as const;
 
 type StreamingErrorTypeCodes =
   (typeof StreamingErrorType)[keyof typeof StreamingErrorType];
 
 const StreamingErrorMessages: Record<StreamingErrorTypeCodes, string> = {
+  [StreamingErrorType.ServerError]: "Server error",
+  [StreamingErrorType.InputValidationError]: "Input validation error",
+  [StreamingErrorType.AudioChunkDurationViolation]:
+    "Audio chunk duration violation",
+  [StreamingErrorType.MaxSessionDurationExceeded]:
+    "Session expired: maximum session duration exceeded",
+  [StreamingErrorType.ConcurrencyLimitExceeded]: "Too many concurrent sessions",
   [StreamingErrorType.BadSampleRate]: "Sample rate must be a positive integer",
   [StreamingErrorType.AuthFailed]: "Not Authorized",
   [StreamingErrorType.InsufficientFunds]: "Insufficient funds",

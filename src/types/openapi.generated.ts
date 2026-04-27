@@ -2826,6 +2826,10 @@ export type Transcript = {
    */
   redact_pii_policies?: PiiPolicy[] | null;
   /**
+   * Whether the unredacted text, words, and utterances were also returned alongside the redacted fields. Only applies when `redact_pii` is enabled.
+   */
+  redact_pii_return_unredacted?: boolean | null;
+  /**
    * The replacement logic for detected PII, can be "entity_type" or "hash". See {@link https://www.assemblyai.com/docs/models/pii-redaction | PII redaction } for more details.
    */
   redact_pii_sub?: SubstitutionPolicy;
@@ -2917,6 +2921,18 @@ export type Transcript = {
    * The list of custom topics provided if custom topics is enabled
    */
   topics?: string[];
+  /**
+   * The unredacted transcript text. Returned only when `redact_pii_return_unredacted` was set with `redact_pii`.
+   */
+  unredacted_text?: string | null;
+  /**
+   * The unredacted list of utterances. Returned only when `redact_pii_return_unredacted` was set with `redact_pii` and channel/speaker modes are enabled.
+   */
+  unredacted_utterances?: TranscriptUtterance[] | null;
+  /**
+   * The unredacted list of individual words. Returned only when `redact_pii_return_unredacted` was set with `redact_pii`.
+   */
+  unredacted_words?: TranscriptWord[] | null;
   /**
    * When dual_channel or speaker_labels is enabled, a list of turn-by-turn utterance objects.
    * See {@link https://www.assemblyai.com/docs/models/speaker-diarization | Speaker diarization } for more information.
@@ -3396,6 +3412,11 @@ export type TranscriptOptionalParams = {
    * The list of PII Redaction policies to enable. See {@link https://www.assemblyai.com/docs/models/pii-redaction | PII redaction } for more details.
    */
   redact_pii_policies?: PiiPolicy[];
+  /**
+   * If `redact_pii` is enabled, also return the unredacted text, words, and utterances alongside the redacted fields.
+   * @defaultValue false
+   */
+  redact_pii_return_unredacted?: boolean;
   /**
    * The replacement logic for detected PII, can be "entity_type" or "hash". See {@link https://www.assemblyai.com/docs/models/pii-redaction | PII redaction } for more details.
    * @defaultValue "hash"
