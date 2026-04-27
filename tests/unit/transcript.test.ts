@@ -568,4 +568,81 @@ describe("transcript", () => {
     expect(transcript.id).toBe(transcriptId);
     expect(transcript.metadata).toBeUndefined();
   });
+
+  it("should include redact_pii_return_unredacted in the request body when set", async () => {
+    fetchMock.doMockOnceIf(
+      requestMatches({ url: "/v2/transcript", method: "POST" }),
+      JSON.stringify({ id: transcriptId, status: "queued" }),
+    );
+
+    await assembly.transcripts.submit({
+      audio_url: remoteAudioURL,
+      redact_pii: true,
+      redact_pii_policies: ["person_name"],
+      redact_pii_return_unredacted: true,
+    });
+
+    const requestBody = JSON.parse(fetchMock.mock.calls[0][1]?.body as string);
+    expect(requestBody.redact_pii).toBe(true);
+    expect(requestBody.redact_pii_return_unredacted).toBe(true);
+  });
+
+  it("should expose unredacted_text, unredacted_words, and unredacted_utterances on the response", async () => {
+    const unredactedResponse = {
+      id: transcriptId,
+      status: "completed",
+      text: "Hi, my name is [PERSON_NAME].",
+      unredacted_text: "Hi, my name is Alice.",
+      words: [
+        { text: "Hi,", start: 0, end: 100, confidence: 0.99 },
+        { text: "my", start: 100, end: 200, confidence: 0.99 },
+        { text: "name", start: 200, end: 300, confidence: 0.99 },
+        { text: "is", start: 300, end: 400, confidence: 0.99 },
+        { text: "[PERSON_NAME].", start: 400, end: 600, confidence: 0.99 },
+      ],
+      unredacted_words: [
+        { text: "Hi,", start: 0, end: 100, confidence: 0.99 },
+        { text: "my", start: 100, end: 200, confidence: 0.99 },
+        { text: "name", start: 200, end: 300, confidence: 0.99 },
+        { text: "is", start: 300, end: 400, confidence: 0.99 },
+        { text: "Alice.", start: 400, end: 600, confidence: 0.99 },
+      ],
+      utterances: [
+        {
+          text: "Hi, my name is [PERSON_NAME].",
+          start: 0,
+          end: 600,
+          confidence: 0.99,
+          speaker: "A",
+          words: [],
+        },
+      ],
+      unredacted_utterances: [
+        {
+          text: "Hi, my name is Alice.",
+          start: 0,
+          end: 600,
+          confidence: 0.99,
+          speaker: "A",
+          words: [],
+        },
+      ],
+    };
+    fetchMock.doMockOnceIf(
+      requestMatches({ url: `/v2/transcript/${transcriptId}`, method: "GET" }),
+      JSON.stringify(unredactedResponse),
+    );
+    const transcript = await assembly.transcripts.get(transcriptId);
+
+    expect(transcript.text).toBe("Hi, my name is [PERSON_NAME].");
+    expect(transcript.unredacted_text).toBe("Hi, my name is Alice.");
+    expect(transcript.unredacted_words).toBeDefined();
+    expect(transcript.unredacted_words!.length).toBe(5);
+    expect(transcript.unredacted_words![4].text).toBe("Alice.");
+    expect(transcript.unredacted_utterances).toBeDefined();
+    expect(transcript.unredacted_utterances!.length).toBe(1);
+    expect(transcript.unredacted_utterances![0].text).toBe(
+      "Hi, my name is Alice.",
+    );
+  });
 });
