@@ -145,19 +145,47 @@ describe("streaming", () => {
     );
   });
 
-  it("should include noise_suppression_model and noise_suppression_threshold in connection URL", async () => {
+  it("should include redact_pii params and include_partial_turns in connection URL", async () => {
     await cleanup();
     WS.clean();
 
-    const wsUrl = `${websocketBaseUrl}?token=123&sample_rate=16000&speech_model=universal-streaming-english&noise_suppression_model=near-field&noise_suppression_threshold=0.5`;
+    const policies = ["email_address", "phone_number"] as const;
+    const wsUrl =
+      `${websocketBaseUrl}?token=123&sample_rate=16000` +
+      `&speech_model=universal-streaming-english` +
+      `&include_partial_turns=false` +
+      `&redact_pii=true` +
+      `&redact_pii_policies=${encodeURIComponent(JSON.stringify(policies))}` +
+      `&redact_pii_sub=entity_name`;
     server = new WS(wsUrl);
     rt = new StreamingTranscriber({
       websocketBaseUrl,
       token: "123",
       sampleRate: 16_000,
       speechModel: "universal-streaming-english",
-      noiseSuppressionModel: "near-field",
-      noiseSuppressionThreshold: 0.5,
+      includePartialTurns: false,
+      redactPii: true,
+      redactPiiPolicies: [...policies],
+      redactPiiSub: "entity_name",
+    });
+    onOpen = jest.fn();
+    rt.on("open", onOpen);
+    await connect(rt, server);
+  });
+
+  it("should include voice_focus and voice_focus_threshold in connection URL", async () => {
+    await cleanup();
+    WS.clean();
+
+    const wsUrl = `${websocketBaseUrl}?token=123&sample_rate=16000&speech_model=universal-streaming-english&voice_focus=near-field&voice_focus_threshold=0.5`;
+    server = new WS(wsUrl);
+    rt = new StreamingTranscriber({
+      websocketBaseUrl,
+      token: "123",
+      sampleRate: 16_000,
+      speechModel: "universal-streaming-english",
+      voiceFocus: "near-field",
+      voiceFocusThreshold: 0.5,
     });
     onOpen = jest.fn();
     rt.on("open", onOpen);
