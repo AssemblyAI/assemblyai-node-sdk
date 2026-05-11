@@ -1,5 +1,14 @@
 # Changelog
 
+## [4.33.0]
+
+- Add streaming parameters to match the Python SDK:
+  - `voiceFocus` and `voiceFocusThreshold` (replaces the unreleased `noiseSuppressionModel` / `noiseSuppressionThreshold`)
+  - `continuousPartials`
+  - `customerSupportAudioCapture` (logs a warning when enabled — records session audio for AssemblyAI support)
+  - `webhookUrl`, `webhookAuthHeaderName`, `webhookAuthHeaderValue`
+- Add `speaker` field to `StreamingWord`
+
 ## [4.20.0]
 
 - Add `on_low_language_confidence` property to `LanguageDetectionOptions`

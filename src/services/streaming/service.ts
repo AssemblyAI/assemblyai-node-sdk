@@ -180,18 +180,72 @@ export class StreamingTranscriber {
       searchParams.set("max_speakers", this.params.maxSpeakers.toString());
     }
 
-    if (this.params.noiseSuppressionModel) {
+    if (this.params.voiceFocus) {
+      searchParams.set("voice_focus", this.params.voiceFocus);
+    }
+
+    if (this.params.voiceFocusThreshold !== undefined) {
       searchParams.set(
-        "noise_suppression_model",
-        this.params.noiseSuppressionModel,
+        "voice_focus_threshold",
+        this.params.voiceFocusThreshold.toString(),
       );
     }
 
-    if (this.params.noiseSuppressionThreshold !== undefined) {
+    if (this.params.continuousPartials !== undefined) {
       searchParams.set(
-        "noise_suppression_threshold",
-        this.params.noiseSuppressionThreshold.toString(),
+        "continuous_partials",
+        this.params.continuousPartials.toString(),
       );
+    }
+
+    if (this.params.customerSupportAudioCapture) {
+      console.warn(
+        "`customerSupportAudioCapture=true` will record session audio. Only enable this when explicitly coordinating with AssemblyAI support.",
+      );
+      searchParams.set(
+        "customer_support_audio_capture",
+        this.params.customerSupportAudioCapture.toString(),
+      );
+    }
+
+    if (this.params.webhookUrl) {
+      searchParams.set("webhook_url", this.params.webhookUrl);
+    }
+
+    if (this.params.webhookAuthHeaderName) {
+      searchParams.set(
+        "webhook_auth_header_name",
+        this.params.webhookAuthHeaderName,
+      );
+    }
+
+    if (this.params.webhookAuthHeaderValue) {
+      searchParams.set(
+        "webhook_auth_header_value",
+        this.params.webhookAuthHeaderValue,
+      );
+    }
+
+    if (this.params.includePartialTurns !== undefined) {
+      searchParams.set(
+        "include_partial_turns",
+        this.params.includePartialTurns.toString(),
+      );
+    }
+
+    if (this.params.redactPii !== undefined) {
+      searchParams.set("redact_pii", this.params.redactPii.toString());
+    }
+
+    if (this.params.redactPiiPolicies !== undefined) {
+      searchParams.set(
+        "redact_pii_policies",
+        JSON.stringify(this.params.redactPiiPolicies),
+      );
+    }
+
+    if (this.params.redactPiiSub !== undefined) {
+      searchParams.set("redact_pii_sub", this.params.redactPiiSub);
     }
 
     if (this.params.llmGateway !== undefined) {

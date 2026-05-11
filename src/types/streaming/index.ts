@@ -36,9 +36,18 @@ export type StreamingTranscriberParams = {
   inactivityTimeout?: number;
   speakerLabels?: boolean;
   maxSpeakers?: number;
-  noiseSuppressionModel?: NoiseSuppressionModel;
-  noiseSuppressionThreshold?: number;
+  voiceFocus?: VoiceFocusModel;
+  voiceFocusThreshold?: number;
+  continuousPartials?: boolean;
+  customerSupportAudioCapture?: boolean;
+  includePartialTurns?: boolean;
+  redactPii?: boolean;
+  redactPiiPolicies?: StreamingPiiPolicy[];
+  redactPiiSub?: StreamingPiiSubstitution;
   llmGateway?: LLMGatewayConfig;
+  webhookUrl?: string;
+  webhookAuthHeaderName?: string;
+  webhookAuthHeaderValue?: string;
 };
 
 export type StreamingEvents =
@@ -69,7 +78,58 @@ export type StreamingSpeechModel =
 
 export type StreamingDomain = "medical-v1";
 
-export type NoiseSuppressionModel = "near-field" | "far-field";
+export type VoiceFocusModel = "near-field" | "far-field";
+
+export type StreamingPiiSubstitution = "hash" | "entity_name";
+
+export type StreamingPiiPolicy =
+  | "account_number"
+  | "banking_information"
+  | "blood_type"
+  | "credit_card_number"
+  | "credit_card_expiration"
+  | "credit_card_cvv"
+  | "date"
+  | "date_interval"
+  | "date_of_birth"
+  | "drivers_license"
+  | "drug"
+  | "duration"
+  | "email_address"
+  | "event"
+  | "filename"
+  | "gender_sexuality"
+  | "gender"
+  | "healthcare_number"
+  | "injury"
+  | "ip_address"
+  | "language"
+  | "location"
+  | "marital_status"
+  | "medical_condition"
+  | "medical_process"
+  | "money_amount"
+  | "nationality"
+  | "number_sequence"
+  | "passport_number"
+  | "password"
+  | "person_age"
+  | "person_name"
+  | "phone_number"
+  | "physical_attribute"
+  | "political_affiliation"
+  | "occupation"
+  | "organization"
+  | "organization_medical_facility"
+  | "religion"
+  | "sexuality"
+  | "statistics"
+  | "time"
+  | "url"
+  | "us_social_security_number"
+  | "username"
+  | "vehicle_id"
+  | "zodiac_sign";
 
 export type StreamingTokenParams = {
   expires_in_seconds: number;
@@ -112,6 +172,7 @@ export type StreamingWord = {
   confidence: number;
   text: string;
   word_is_final: boolean;
+  speaker?: string;
 };
 
 export type TerminationEvent = {
