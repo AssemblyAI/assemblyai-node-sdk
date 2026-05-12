@@ -39,6 +39,7 @@ export type StreamingTranscriberParams = {
   voiceFocus?: VoiceFocusModel;
   voiceFocusThreshold?: number;
   continuousPartials?: boolean;
+  interruptionDelay?: number;
   customerSupportAudioCapture?: boolean;
   includePartialTurns?: boolean;
   redactPii?: boolean;
@@ -82,35 +83,54 @@ export type VoiceFocusModel = "near-field" | "far-field";
 
 export type StreamingPiiSubstitution = "hash" | "entity_name";
 
+// Source of truth: assemblyai/engineering/projects/pii/enums.py (`AAIEntities`).
+// Keep this union in sync when entities are added or removed server-side.
 export type StreamingPiiPolicy =
   | "account_number"
   | "banking_information"
   | "blood_type"
-  | "credit_card_number"
-  | "credit_card_expiration"
+  | "corporate_action"
   | "credit_card_cvv"
+  | "credit_card_expiration"
+  | "credit_card_number"
   | "date"
   | "date_interval"
   | "date_of_birth"
+  | "day"
   | "drivers_license"
   | "drug"
   | "duration"
+  | "effect"
   | "email_address"
   | "event"
   | "filename"
-  | "gender_sexuality"
+  | "financial_metric"
   | "gender"
+  | "gender_sexuality"
   | "healthcare_number"
   | "injury"
   | "ip_address"
   | "language"
   | "location"
+  | "location_address"
+  | "location_address_street"
+  | "location_city"
+  | "location_coordinate"
+  | "location_country"
+  | "location_state"
+  | "location_zip"
   | "marital_status"
+  | "medical_code"
   | "medical_condition"
   | "medical_process"
   | "money_amount"
+  | "month"
   | "nationality"
   | "number_sequence"
+  | "occupation"
+  | "organization"
+  | "organization_id"
+  | "organization_medical_facility"
   | "passport_number"
   | "password"
   | "person_age"
@@ -118,17 +138,18 @@ export type StreamingPiiPolicy =
   | "phone_number"
   | "physical_attribute"
   | "political_affiliation"
-  | "occupation"
-  | "organization"
-  | "organization_medical_facility"
+  | "product"
+  | "project"
   | "religion"
   | "sexuality"
   | "statistics"
   | "time"
+  | "trend"
   | "url"
   | "us_social_security_number"
   | "username"
   | "vehicle_id"
+  | "year"
   | "zodiac_sign";
 
 export type StreamingTokenParams = {
@@ -199,6 +220,7 @@ export type StreamingUpdateConfiguration = {
   keyterms_prompt?: string[];
   prompt?: string;
   filter_profanity?: boolean;
+  interruption_delay?: number;
 };
 
 export type StreamingForceEndpoint = {

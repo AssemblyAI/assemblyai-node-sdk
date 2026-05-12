@@ -173,6 +173,37 @@ describe("streaming", () => {
     await connect(rt, server);
   });
 
+  it("should include interruption_delay in connection URL", async () => {
+    await cleanup();
+    WS.clean();
+
+    const wsUrl =
+      `${websocketBaseUrl}?token=123&sample_rate=16000` +
+      `&speech_model=u3-rt-pro` +
+      `&interruption_delay=500`;
+    server = new WS(wsUrl);
+    rt = new StreamingTranscriber({
+      websocketBaseUrl,
+      token: "123",
+      sampleRate: 16_000,
+      speechModel: "u3-rt-pro",
+      interruptionDelay: 500,
+    });
+    onOpen = jest.fn();
+    rt.on("open", onOpen);
+    await connect(rt, server);
+  });
+
+  it("should include interruption_delay in updateConfiguration message", async () => {
+    rt.updateConfiguration({ interruption_delay: 250 });
+    await expect(server).toReceiveMessage(
+      JSON.stringify({
+        type: "UpdateConfiguration",
+        interruption_delay: 250,
+      }),
+    );
+  });
+
   it("should include voice_focus and voice_focus_threshold in connection URL", async () => {
     await cleanup();
     WS.clean();

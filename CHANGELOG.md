@@ -4,9 +4,12 @@
 
 - Add streaming parameters to match the Python SDK:
   - `voiceFocus` and `voiceFocusThreshold` (replaces the unreleased `noiseSuppressionModel` / `noiseSuppressionThreshold`)
-  - `continuousPartials`
-  - `customerSupportAudioCapture` (logs a warning when enabled — records session audio for AssemblyAI support)
+  - `continuousPartials` (U3Pro speech models only)
+  - `customerSupportAudioCapture` — internal/unstable; sent on the wire as `_customer_support_audio_capture` to mirror the server's stability marker. Records session audio for AssemblyAI support; only enable when coordinating with support
+  - `includePartialTurns` — explicitly include or exclude partial (non-final) turns
+  - `redactPii`, `redactPiiPolicies`, `redactPiiSub` — server-side PII redaction on final turns
   - `webhookUrl`, `webhookAuthHeaderName`, `webhookAuthHeaderValue`
+- Add `StreamingPiiPolicy` and `StreamingPiiSubstitution` exported types. `StreamingPiiPolicy` covers the full server-side `AAIEntities` enum (65 entities)
 - Add `speaker` field to `StreamingWord`
 
 ## [4.20.0]

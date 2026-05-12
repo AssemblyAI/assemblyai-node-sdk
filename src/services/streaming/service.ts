@@ -198,12 +198,24 @@ export class StreamingTranscriber {
       );
     }
 
+    if (this.params.interruptionDelay !== undefined) {
+      searchParams.set(
+        "interruption_delay",
+        this.params.interruptionDelay.toString(),
+      );
+    }
+
     if (this.params.customerSupportAudioCapture) {
       console.warn(
         "`customerSupportAudioCapture=true` will record session audio. Only enable this when explicitly coordinating with AssemblyAI support.",
       );
+      // The server's canonical wire name is `_customer_support_audio_capture`
+      // (leading underscore = "not officially supported / unstable"). The
+      // server also accepts `customer_support_audio_capture` via
+      // `populate_by_name=True`, but we send the underscore form to honor
+      // the server's stability marker.
       searchParams.set(
-        "customer_support_audio_capture",
+        "_customer_support_audio_capture",
         this.params.customerSupportAudioCapture.toString(),
       );
     }
