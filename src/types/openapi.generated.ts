@@ -1722,6 +1722,10 @@ export type LanguageDetectionOptions = {
    * If True, route German language requests as Swiss German audio. Only applies when language_detection is enabled and German is detected.
    */
   swiss_german?: boolean | null;
+  /**
+   * The language detection model to use.
+   */
+  language_detection_model?: string | null;
 };
 
 /**
