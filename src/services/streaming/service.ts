@@ -205,6 +205,13 @@ export class StreamingTranscriber {
       );
     }
 
+    if (this.params.turnLeftPadMs !== undefined) {
+      searchParams.set(
+        "turn_left_pad_ms",
+        this.params.turnLeftPadMs.toString(),
+      );
+    }
+
     if (this.params.customerSupportAudioCapture) {
       console.warn(
         "`customerSupportAudioCapture=true` will record session audio. Only enable this when explicitly coordinating with AssemblyAI support.",
