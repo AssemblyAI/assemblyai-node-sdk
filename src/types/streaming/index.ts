@@ -40,6 +40,7 @@ export type StreamingTranscriberParams = {
   voiceFocusThreshold?: number;
   continuousPartials?: boolean;
   interruptionDelay?: number;
+  turnLeftPadMs?: number;
   customerSupportAudioCapture?: boolean;
   includePartialTurns?: boolean;
   redactPii?: boolean;
@@ -221,6 +222,7 @@ export type StreamingUpdateConfiguration = {
   prompt?: string;
   filter_profanity?: boolean;
   interruption_delay?: number;
+  turn_left_pad_ms?: number;
 };
 
 export type StreamingForceEndpoint = {
