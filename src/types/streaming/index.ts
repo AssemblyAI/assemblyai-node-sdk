@@ -1,4 +1,65 @@
 import { AudioEncoding } from "..";
+import type { Channel, VadDetector, VadFrame } from "./dual-channel";
+
+export * from "./dual-channel";
+
+/**
+ * Per-channel attribution tuning for dual-channel mode. All fields optional;
+ * ignored when `StreamingTranscriberParams.channels` is not set.
+ */
+export type ChannelAttributionParams = {
+  /** Energy ratio above which a channel is declared dominant for a word. Default 4. */
+  dominanceRatio?: number;
+  /** Rolling VAD timeline window in ms. Default 30_000. */
+  timelineWindowMs?: number;
+  /**
+   * Factory for the per-channel VAD detector. Called once per declared channel
+   * at transcriber construction time. The channel name is passed so factories
+   * that wrap higher-level VAD libraries (which manage their own audio source)
+   * can map each `VadDetector` instance to its corresponding channel.
+   */
+  createVad?: (channelName: string) => VadDetector;
+  /** Mix flush interval in ms — how often per-channel buffers are summed and sent. Default 50. */
+  flushIntervalMs?: number;
+  /**
+   * Strategy used to fill words whose per-word VAD attribution resolved to
+   * `"unknown"`. Confident per-word VAD decisions (`"mic"` / `"system"`) are
+   * never modified by any strategy.
+   *
+   * - `"window"` (default): look at the dominant non-`"unknown"` channel
+   *   among ±`resolutionWindowWords` neighboring words in the same turn.
+   *   Ignores `speaker_label`, so it works even when AAI re-uses a label for
+   *   two physically distinct voices.
+   * - `"speaker-history"`: accumulate per-`speaker_label` per-channel active
+   *   VAD energy across the session, then fill `"unknown"` words with the
+   *   speaker's dominant channel when it clears
+   *   `speakerHistoryMinRmsEvidence` and beats runner-up by
+   *   `speakerHistoryDominanceRatio`. Robust for stable speaker labels but
+   *   does nothing when a speaker has split evidence.
+   * - `"none"`: disable resolution; `"unknown"` words remain `"unknown"` in
+   *   the output.
+   */
+  resolveUnknownChannelsMethod?: "none" | "window" | "speaker-history";
+  /**
+   * Half-window (in words) on each side of an `"unknown"` word for the
+   * `"window"` method. Default 2 — so the full window is up to 5 words
+   * (2 before + the unknown + 2 after).
+   */
+  resolutionWindowWords?: number;
+  /**
+   * Minimum cumulative active-RMS evidence (sum across all the speaker's
+   * frames to date) before a speaker can be resolved via the
+   * `"speaker-history"` method. Default 0.5 — roughly a few seconds of
+   * sustained speech.
+   */
+  speakerHistoryMinRmsEvidence?: number;
+  /**
+   * For the `"speaker-history"` method, the top channel's evidence must
+   * exceed the runner-up's by at least this factor for the speaker to be
+   * considered pinned to that channel. Default 3.
+   */
+  speakerHistoryDominanceRatio?: number;
+};
 
 export type LLMGatewayMessage = {
   role: string;
@@ -50,6 +111,33 @@ export type StreamingTranscriberParams = {
   webhookUrl?: string;
   webhookAuthHeaderName?: string;
   webhookAuthHeaderValue?: string;
+  /**
+   * Enable dual-channel (or N-channel) mode. Presence of `channels` switches the
+   * transcriber into channel-tagged mode: `sendAudio(audio, { channel })` is required,
+   * per-channel VAD runs on the raw PCM, the streams are mixed to mono before being
+   * sent to the server, and emitted `TurnEvent`s are enriched with `channel` and
+   * per-word `channel` attribution.
+   *
+   * Must contain exactly 2 entries with unique names. The names are echoed back in
+   * `TurnEvent.channel` / `words[i].channel`.
+   *
+   * **Acoustic-leak caveat.** Per-word channel attribution uses energy-based
+   * VAD on each channel. If your capture setup lets one channel's audio bleed
+   * into another at similar amplitude — typically system audio playing
+   * through speakers and being picked up by an open mic — attribution can
+   * misfire (mic-tagged words that were actually system). Transcription
+   * quality is unaffected; only the `channel` field is. To preserve
+   * attribution in speaker-leak setups, apply echo cancellation at capture
+   * before feeding audio to the SDK. In browsers, that's
+   * `getUserMedia({ audio: { echoCancellation: true } })`. On macOS native,
+   * `AVAudioEngine.setVoiceProcessingEnabled(true)` on the input node. If
+   * platform-level AEC isn't available, swap in a DNN VAD (e.g. Silero) via
+   * `channelAttribution.createVad`. See the dual-channel sample app's
+   * README for worked examples.
+   */
+  channels?: Array<{ name: string }>;
+  /** Tuning for dual-channel attribution. Ignored when `channels` is unset. */
+  channelAttribution?: ChannelAttributionParams;
 };
 
 export type StreamingEvents =
@@ -59,6 +147,7 @@ export type StreamingEvents =
   | "speechStarted"
   | "llmGatewayResponse"
   | "warning"
+  | "vad"
   | "error";
 
 export type StreamingListeners = {
@@ -68,6 +157,7 @@ export type StreamingListeners = {
   speechStarted?: (event: SpeechStartedEvent) => void;
   llmGatewayResponse?: (event: LLMGatewayResponseEvent) => void;
   warning?: (event: WarningEvent) => void;
+  vad?: (event: VadFrame) => void;
   error?: (error: Error) => void;
 };
 
@@ -186,6 +276,12 @@ export type TurnEvent = {
   language_code?: string;
   language_confidence?: number;
   speaker_label?: string;
+  /**
+   * Duration-weighted majority channel across `words[i].channel`. Populated only
+   * when the transcriber is configured with `channels`. Independent from
+   * `speaker_label`.
+   */
+  channel?: Channel;
 };
 
 export type StreamingWord = {
@@ -195,6 +291,20 @@ export type StreamingWord = {
   text: string;
   word_is_final: boolean;
   speaker?: string;
+  /**
+   * Physical input channel attributed by client-side VAD during this word's
+   * time window. Populated only when the transcriber is configured with
+   * `channels`. Independent from `speaker`.
+   */
+  channel?: Channel;
+  /**
+   * True if `channel` was filled in by `channelAttribution.resolveUnknownChannelsMethod`
+   * rather than by the per-word VAD. Only set on words whose per-word VAD
+   * attribution was `"unknown"` and whose resolution method produced a
+   * confident channel. Useful for debugging or rendering an indicator that a
+   * word's channel came from context, not direct VAD evidence.
+   */
+  channelResolved?: boolean;
 };
 
 export type TerminationEvent = {

@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AssemblyAI — Dual-Channel Mic + System</title>
+    <style>
+      body {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        max-width: 760px;
+        margin: 2rem auto;
+        padding: 0 1rem;
+        line-height: 1.5;
+      }
+      button {
+        padding: 0.5rem 1rem;
+        font-size: 1rem;
+        cursor: pointer;
+      }
+      input[type="text"] {
+        width: 100%;
+        padding: 0.5rem;
+        font: inherit;
+      }
+      .panel-tabs {
+        display: flex;
+        gap: 0.25rem;
+        margin-top: 1rem;
+        margin-bottom: -1px;
+      }
+      .panel-tab-btn {
+        padding: 0.4rem 0.9rem;
+        font-size: 0.85rem;
+        border: 1px solid #d1d5db;
+        background: #f9fafb;
+        border-radius: 0.4rem 0.4rem 0 0;
+        cursor: pointer;
+      }
+      .panel-tab-btn.active {
+        background: #f3f3f3;
+        border-bottom-color: #f3f3f3;
+        font-weight: bold;
+      }
+      .panel {
+        padding: 1rem;
+        background: #f3f3f3;
+        border-radius: 0 6px 6px 6px;
+        height: 60vh;
+        max-height: 600px;
+      }
+      .panel.hidden {
+        display: none !important;
+      }
+      #output {
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 0.6rem;
+      }
+      #output > * {
+        margin: 0;
+      }
+      #events {
+        overflow: auto;
+        font-size: 0.75rem;
+        background: #1f2937;
+        color: #e5e7eb;
+        border-radius: 0 6px 6px 6px;
+      }
+      #events .event-line {
+        white-space: pre;
+        padding: 0.15rem 0;
+      }
+      #events .event-line.event-Turn {
+        color: #d1fae5;
+      }
+      #events .event-line.event-Begin {
+        color: #fde68a;
+      }
+      #events .event-line.event-Termination {
+        color: #fecaca;
+      }
+      .turn-container {
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+      }
+      .resolve-hint {
+        display: inline-block;
+        margin-left: 0.5rem;
+        color: #6b7280;
+        font-size: 0.8rem;
+      }
+      /* Each turn is its own bubble. Mic = right side; everything else (system, unknown, custom channels) = left, iMessage-style. */
+      .turn-row {
+        max-width: 75%;
+        padding: 0.6rem 0.85rem;
+        border-radius: 0.9rem;
+        line-height: 1.5;
+        word-wrap: break-word;
+        overflow-wrap: anywhere;
+      }
+      .turn-row.align-right {
+        align-self: flex-end;
+        background: #dbeafe;
+      }
+      .turn-row.align-left {
+        align-self: flex-start;
+        background: #e5e7eb;
+      }
+      .turn-row.partial {
+        color: #6b7280;
+        font-style: italic;
+      }
+      .turn-row.final {
+        color: inherit;
+        font-style: normal;
+      }
+      .turn-row .partial-marker {
+        display: block;
+        font-size: 0.7rem;
+        color: #9ca3af;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.35rem;
+      }
+      .word-chip {
+        display: block;
+        white-space: normal;
+        padding: 0.1rem 0;
+      }
+      .speaker-change-log {
+        align-self: center;
+        color: #b45309;
+        font-weight: bold;
+        font-size: 0.8rem;
+        padding: 0.4rem 0.7rem;
+        background: #fef3c7;
+        border-radius: 0.5rem;
+        max-width: 80%;
+        text-align: center;
+      }
+      .rollup-line {
+        align-self: center;
+        color: #6b7280;
+        font-size: 0.75rem;
+        padding: 0.15rem 0.5rem;
+      }
+      .description {
+        background: #fef9c3;
+        border: 1px solid #facc15;
+        border-radius: 0.5rem;
+        padding: 0.75rem 1rem;
+        font-size: 0.85rem;
+        margin: 1rem 0;
+      }
+      .description summary {
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 0.9rem;
+        user-select: none;
+      }
+      .description summary + * {
+        margin-top: 0.5rem;
+      }
+      .description pre {
+        background: #fff;
+        padding: 0.5rem;
+        border-radius: 0.25rem;
+        margin: 0.5rem 0;
+        font-size: 0.75rem;
+        white-space: pre-wrap;
+        word-break: break-all;
+        font-family: inherit;
+      }
+      .tuning-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.75rem 1.5rem;
+        margin: 0.5rem 0;
+      }
+      .tuning-label {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        gap: 0.5rem;
+        align-items: center;
+        font-size: 0.9rem;
+      }
+      .tuning-value {
+        font-variant-numeric: tabular-nums;
+        color: #6b7280;
+        min-width: 2.5rem;
+        text-align: right;
+      }
+      .mic {
+        color: #2563eb;
+      }
+      .system {
+        color: #15803d;
+      }
+      .unknown {
+        color: #6b7280;
+      }
+      #meters {
+        margin-top: 1rem;
+        display: grid;
+        gap: 0.5rem;
+        min-width: 0;
+      }
+      .meter-row {
+        display: grid;
+        grid-template-columns: 2.5rem minmax(0, 1fr) 4rem 5rem;
+        gap: 0.5rem;
+        align-items: center;
+        min-width: 0;
+      }
+      .meter-label {
+        font-weight: bold;
+      }
+      .meter-bar {
+        width: 100%;
+        height: 0.75rem;
+        background: #e5e7eb;
+        border-radius: 4px;
+        overflow: hidden;
+      }
+      .meter-fill {
+        height: 100%;
+        width: 0%;
+        transition: width 60ms linear;
+      }
+      .meter-fill.mic {
+        background: #2563eb;
+      }
+      .meter-fill.system {
+        background: #15803d;
+      }
+      .meter-db {
+        font-variant-numeric: tabular-nums;
+        font-size: 0.85rem;
+        color: #6b7280;
+      }
+      .meter-flag {
+        font-size: 0.85rem;
+      }
+      .meter-flag.active {
+        color: #b45309;
+        font-weight: bold;
+      }
+      #diag {
+        margin-top: 0.25rem;
+        color: #b45309;
+        font-size: 0.85rem;
+      }
+      .controls-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 1rem;
+        align-items: start;
+        margin: 1rem 0;
+      }
+      .controls-left {
+        min-width: 0;
+      }
+      .controls-left p {
+        margin: 0 0 0.5rem;
+      }
+      .yt-embed {
+        margin: 0;
+        min-width: 0;
+        width: 100%;
+        aspect-ratio: 16 / 9;
+        background: #000;
+        border-radius: 0.5rem;
+        overflow: hidden;
+      }
+      .yt-embed iframe {
+        width: 100%;
+        height: 100%;
+        border: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Dual-Channel Mic + System</h1>
+    <p>
+      Streams mic + system audio (via <code>getDisplayMedia</code>) as a single
+      mixed mono stream to AssemblyAI's Streaming v3 endpoint, with per-word
+      channel attribution. Requires a temporary token; never expose your API key
+      in the browser.
+    </p>
+    <details class="description">
+      <summary>How do I get a temporary token?</summary>
+      <p>
+        Grab an API key from your
+        <a
+          href="https://www.assemblyai.com/dashboard/api-keys"
+          target="_blank"
+          rel="noopener noreferrer"
+          >AssemblyAI dashboard</a
+        >, then run this in a terminal to mint a 60-second token (replace
+        <code>&lt;YOUR_API_KEY&gt;</code>):
+      </p>
+      <pre>
+curl -G https://streaming.assemblyai.com/v3/token \
+  -H "Authorization: &lt;YOUR_API_KEY&gt;" \
+  -d expires_in_seconds=60</pre
+      >
+      <p>Paste the <code>token</code> value from the response below.</p>
+    </details>
+    <label
+      >Temporary token
+      <input
+        id="token"
+        type="text"
+        placeholder="paste a streaming temporary token"
+      />
+    </label>
+    <p>
+      <label>
+        Resolve <code>unknown</code> channels:
+        <select id="resolve-method">
+          <option value="none">none</option>
+          <option value="window" selected>window (neighbor-based)</option>
+          <option value="speaker-history">speaker-history</option>
+        </select>
+      </label>
+      <span class="resolve-hint"
+        >Resolved words are marked with a trailing <code>*</code> (e.g.
+        <code>[mic*]</code>).</span
+      >
+    </p>
+    <p>
+      <label>
+        Max speakers (optional):
+        <input
+          id="max-speakers"
+          type="number"
+          min="1"
+          step="1"
+          placeholder="auto"
+        />
+      </label>
+      <span class="resolve-hint"
+        >Caps AAI diarization. Leave blank to let the server decide.</span
+      >
+    </p>
+    <div class="tuning-row">
+      <label class="tuning-label">
+        Threshold ratio
+        <input
+          id="threshold-ratio"
+          type="range"
+          min="1.5"
+          max="5"
+          step="0.5"
+          value="3"
+        />
+        <span id="threshold-ratio-value" class="tuning-value">3</span>
+      </label>
+      <label class="tuning-label">
+        Hangover frames
+        <input
+          id="hangover-frames"
+          type="range"
+          min="0"
+          max="25"
+          step="5"
+          value="10"
+        />
+        <span id="hangover-frames-value" class="tuning-value">10</span>
+      </label>
+    </div>
+    <div class="controls-row">
+      <div class="controls-left">
+        <p>
+          <button id="start">Start</button>
+          <button id="stop" disabled>Stop</button>
+        </p>
+        <div id="meters">
+          <div class="meter-row">
+            <span class="meter-label">mic</span>
+            <div class="meter-bar">
+              <div id="mic-fill" class="meter-fill mic"></div>
+            </div>
+            <span id="mic-db" class="meter-db">–∞ dB</span>
+            <span id="mic-flag" class="meter-flag"></span>
+          </div>
+          <div class="meter-row">
+            <span class="meter-label">sys</span>
+            <div class="meter-bar">
+              <div id="sys-fill" class="meter-fill system"></div>
+            </div>
+            <span id="sys-db" class="meter-db">–∞ dB</span>
+            <span id="sys-flag" class="meter-flag"></span>
+          </div>
+          <div id="diag"></div>
+        </div>
+      </div>
+      <div class="yt-embed">
+        <iframe
+          src="https://www.youtube-nocookie.com/embed/BsK1UyWMvuE"
+          allow="autoplay; encrypted-media; picture-in-picture"
+          allowfullscreen
+        ></iframe>
+      </div>
+    </div>
+    <div class="panel-tabs">
+      <button
+        type="button"
+        class="panel-tab-btn active"
+        data-panel-tab="output"
+      >
+        Transcript
+      </button>
+      <button type="button" class="panel-tab-btn" data-panel-tab="events">
+        Events
+      </button>
+    </div>
+    <div id="output" class="panel"></div>
+    <div id="events" class="panel hidden"></div>
+    <script type="module" src="/main.ts"></script>
+  </body>
+</html>

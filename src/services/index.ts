@@ -8,7 +8,18 @@ import {
 } from "./realtime";
 import { TranscriptService } from "./transcripts";
 import { FileService } from "./files";
-import { StreamingTranscriber, StreamingTranscriberFactory } from "./streaming";
+import {
+  StreamingTranscriber,
+  StreamingTranscriberFactory,
+  DualChannelCapture,
+  EnergyVad,
+  LinearResampler,
+  VadTimeline,
+  attributeTurn,
+  attributeWord,
+  rollUpTurnChannel,
+  float32ToPcm16,
+} from "./streaming";
 
 const defaultBaseUrl = "https://api.assemblyai.com";
 const defaultStreamingUrl = "https://streaming.assemblyai.com";
@@ -71,4 +82,12 @@ export {
   TranscriptService,
   FileService,
   StreamingTranscriber,
+  DualChannelCapture,
+  EnergyVad,
+  LinearResampler,
+  VadTimeline,
+  attributeTurn,
+  attributeWord,
+  rollUpTurnChannel,
+  float32ToPcm16,
 };
