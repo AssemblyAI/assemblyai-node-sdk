@@ -414,10 +414,12 @@ export class StreamingTranscriber {
   }
 
   connect() {
-    return new Promise<BeginEvent>((resolve) => {
+    return new Promise<BeginEvent>((resolve, reject) => {
       if (this.socket) {
         throw new Error("Already connected");
       }
+
+      let hasBegun = false;
 
       const url = this.connectionUrl();
 
@@ -454,11 +456,21 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
           this.flushTimer = undefined;
         }
         this.listeners.close?.(code, reason);
+        if (!hasBegun) {
+          reject(
+            new StreamingError(
+              reason || `Streaming connection closed before session began`,
+            ),
+          );
+        }
       };
 
       this.socket.onerror = (event: ErrorEvent) => {
-        if (event.error) this.listeners.error?.(event.error as Error);
-        else this.listeners.error?.(new Error(event.message));
+        const error = event.error
+          ? (event.error as Error)
+          : new Error(event.message);
+        this.listeners.error?.(error);
+        if (!hasBegun) reject(error);
       };
 
       this.socket.onmessage = ({ data }: MessageEvent) => {
@@ -471,11 +483,13 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
               message.error_code;
           }
           this.listeners.error?.(err);
+          if (!hasBegun) reject(err);
           return;
         }
 
         switch (message.type) {
           case "Begin": {
+            hasBegun = true;
             resolve(message);
             this.listeners.open?.(message);
             break;

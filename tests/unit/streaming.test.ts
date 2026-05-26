@@ -24,6 +24,15 @@ let aai: AssemblyAI;
 let rt: StreamingTranscriber;
 let onOpen: jest.Mock;
 
+function createDefaultTranscriber() {
+  return aai.streaming.transcriber({
+    websocketBaseUrl: websocketBaseUrl,
+    apiKey: "123",
+    sampleRate: 16_000,
+    speechModel: "universal-streaming-english",
+  });
+}
+
 async function connect(rt: StreamingTranscriber, server: WS) {
   const connectPromise = rt.connect();
   await server.connected;
@@ -42,12 +51,7 @@ describe("streaming", () => {
   beforeEach(async () => {
     server = new WS(websocketBaseUrl);
     aai = createClient();
-    rt = aai.streaming.transcriber({
-      websocketBaseUrl: websocketBaseUrl,
-      apiKey: "123",
-      sampleRate: 16_000,
-      speechModel: "universal-streaming-english",
-    });
+    rt = createDefaultTranscriber();
     onOpen = jest.fn();
     rt.on("open", onOpen);
     await connect(rt, server);
@@ -60,6 +64,54 @@ describe("streaming", () => {
   }
 
   it("noop", async () => {});
+
+  it("rejects connect when the socket errors before Begin", async () => {
+    await cleanup();
+    WS.clean();
+
+    server = new WS(websocketBaseUrl);
+    rt = createDefaultTranscriber();
+    const connectPromise = rt.connect();
+    await server.connected;
+
+    server.error({
+      code: 0,
+      reason: "DNS failure",
+      wasClean: false,
+    });
+
+    await expect(connectPromise).rejects.toThrow(Error);
+
+    WS.clean();
+    server = new WS(websocketBaseUrl);
+    rt = createDefaultTranscriber();
+    await connect(rt, server);
+  });
+
+  it("rejects connect when the socket closes before Begin", async () => {
+    await cleanup();
+    WS.clean();
+
+    server = new WS(websocketBaseUrl);
+    rt = createDefaultTranscriber();
+    const connectPromise = rt.connect();
+    await server.connected;
+
+    server.close({
+      code: 4001,
+      reason: "upstream closed before Begin",
+      wasClean: false,
+    });
+
+    await expect(connectPromise).rejects.toThrow(
+      "upstream closed before Begin",
+    );
+
+    WS.clean();
+    server = new WS(websocketBaseUrl);
+    rt = createDefaultTranscriber();
+    await connect(rt, server);
+  });
 
   it("should include speaker_labels in connection URL", async () => {
     await cleanup();
