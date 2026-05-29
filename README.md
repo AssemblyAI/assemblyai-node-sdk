@@ -23,6 +23,28 @@ It is written primarily for Node.js in TypeScript with all types exported, but a
 
 This repository includes a [`CLAUDE.md`](CLAUDE.md) file that provides context to Claude Code about this SDK — key APIs, common patterns, and gotchas. When you open this repo in Claude Code, it automatically reads this file to give better assistance.
 
+## Using with AI coding agents
+
+If you're integrating this SDK with Claude Code, Cursor, Copilot, or another AI coding assistant, give your agent current API context so it doesn't generate code against outdated model names or parameters.
+
+The most effective option is project instructions. Add this to your `CLAUDE.md`, `.cursorrules`, `AGENTS.md`, or equivalent agent instructions file:
+
+> Always fetch https://assemblyai.com/docs/llms.txt before writing AssemblyAI code. The API has changed, do not rely on memorized parameter names.
+
+For on-demand documentation lookups during a session, connect the AssemblyAI docs MCP server:
+
+```
+claude mcp add assemblyai-docs --transport http https://mcp.assemblyai.com/docs
+```
+
+For deep SDK context in Claude Code specifically, install the [AssemblyAI skill](https://github.com/AssemblyAI/assemblyai-skill):
+
+```
+claude install-skill https://github.com/AssemblyAI/assemblyai-skill
+```
+
+See [Coding agent prompts](https://www.assemblyai.com/docs/coding-agent-prompts) for Cursor setup, MCP tool details, and tips for best results.
+
 ## Documentation
 
 Visit the [AssemblyAI documentation](https://www.assemblyai.com/docs) for step-by-step instructions and a lot more details about our AI models and API.
