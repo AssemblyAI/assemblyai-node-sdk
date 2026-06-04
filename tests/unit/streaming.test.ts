@@ -204,6 +204,37 @@ describe("streaming", () => {
     );
   });
 
+  it("should include agent_context in updateConfiguration message", async () => {
+    rt.updateConfiguration({ agent_context: "What is your account number?" });
+    await expect(server).toReceiveMessage(
+      JSON.stringify({
+        type: "UpdateConfiguration",
+        agent_context: "What is your account number?",
+      }),
+    );
+  });
+
+  it("should include agent_context in connection URL", async () => {
+    await cleanup();
+    WS.clean();
+
+    const wsUrl =
+      `${websocketBaseUrl}?token=123&sample_rate=16000` +
+      `&agent_context=${encodeURIComponent("What is your account number?")}` +
+      `&speech_model=u3-rt-pro`;
+    server = new WS(wsUrl);
+    rt = new StreamingTranscriber({
+      websocketBaseUrl,
+      token: "123",
+      sampleRate: 16_000,
+      speechModel: "u3-rt-pro",
+      agentContext: "What is your account number?",
+    });
+    onOpen = jest.fn();
+    rt.on("open", onOpen);
+    await connect(rt, server);
+  });
+
   it("should include turn_left_pad_ms in connection URL", async () => {
     await cleanup();
     WS.clean();
@@ -248,6 +279,24 @@ describe("streaming", () => {
       speechModel: "universal-streaming-english",
       voiceFocus: "near-field",
       voiceFocusThreshold: 0.5,
+    });
+    onOpen = jest.fn();
+    rt.on("open", onOpen);
+    await connect(rt, server);
+  });
+
+  it("should include mode in connection URL", async () => {
+    await cleanup();
+    WS.clean();
+
+    const wsUrl = `${websocketBaseUrl}?token=123&sample_rate=16000&speech_model=u3-rt-pro&mode=max_accuracy`;
+    server = new WS(wsUrl);
+    rt = new StreamingTranscriber({
+      websocketBaseUrl,
+      token: "123",
+      sampleRate: 16_000,
+      speechModel: "u3-rt-pro",
+      mode: "max_accuracy",
     });
     onOpen = jest.fn();
     rt.on("open", onOpen);
@@ -345,5 +394,61 @@ describe("streaming", () => {
       response: "This is an LLM response",
       model: "claude-3-5-sonnet",
     });
+  });
+
+  it("should parse and dispatch SpeakerRevision event", async () => {
+    const revisionPromise = new Promise<{
+      revisions: {
+        turn_order: number;
+        speaker_label?: string;
+        words: { speaker?: string }[];
+      }[];
+    }>((resolve) => {
+      rt.on("speakerRevision", (event) => resolve(event));
+    });
+
+    // One message per recluster resolve, carrying a list of revised turns.
+    // Revision words use the same word schema as Turn.
+    server.send(
+      JSON.stringify({
+        type: "SpeakerRevision",
+        revisions: [
+          {
+            turn_order: 3,
+            speaker_label: "B",
+            words: [
+              {
+                start: 1000,
+                end: 1200,
+                confidence: 0.9,
+                text: "hello",
+                word_is_final: true,
+                speaker: "B",
+              },
+              {
+                start: 1210,
+                end: 1400,
+                confidence: 0.88,
+                text: "world",
+                word_is_final: true,
+                speaker: "A",
+              },
+            ],
+          },
+          {
+            turn_order: 7,
+            speaker_label: "A",
+            words: [],
+          },
+        ],
+      }),
+    );
+
+    const event = await revisionPromise;
+    expect(event.revisions.map((r) => r.turn_order)).toEqual([3, 7]);
+    expect(event.revisions[0].speaker_label).toBe("B");
+    expect(event.revisions[0].words.map((w) => w.speaker)).toEqual(["B", "A"]);
+    expect(event.revisions[1].speaker_label).toBe("A");
+    expect(event.revisions[1].words).toEqual([]);
   });
 });

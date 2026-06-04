@@ -15,6 +15,7 @@ import {
   StreamingEventMessage,
   TurnEvent,
   LLMGatewayResponseEvent,
+  SpeakerRevisionEvent,
   StreamingUpdateConfiguration,
   StreamingForceEndpoint,
   WarningEvent,
@@ -262,6 +263,10 @@ export class StreamingTranscriber {
       searchParams.set("prompt", this.params.prompt);
     }
 
+    if (this.params.agentContext) {
+      searchParams.set("agent_context", this.params.agentContext);
+    }
+
     if (this.params.filterProfanity) {
       searchParams.set(
         "filter_profanity",
@@ -274,7 +279,9 @@ export class StreamingTranscriber {
         "[Deprecation Warning] The speech model `u3-pro` is deprecated and will be removed in a future release. Please use `u3-rt-pro` instead.",
       );
     }
-    searchParams.set("speech_model", this.params.speechModel.toString());
+    if (this.params.speechModel !== undefined) {
+      searchParams.set("speech_model", this.params.speechModel.toString());
+    }
 
     if (this.params.languageDetection !== undefined) {
       searchParams.set(
@@ -389,6 +396,10 @@ export class StreamingTranscriber {
       searchParams.set("redact_pii_sub", this.params.redactPiiSub);
     }
 
+    if (this.params.mode !== undefined) {
+      searchParams.set("mode", this.params.mode);
+    }
+
     if (this.params.llmGateway !== undefined) {
       searchParams.set("llm_gateway", JSON.stringify(this.params.llmGateway));
     }
@@ -403,6 +414,10 @@ export class StreamingTranscriber {
   on(
     event: "llmGatewayResponse",
     listener: (event: LLMGatewayResponseEvent) => void,
+  ): void;
+  on(
+    event: "speakerRevision",
+    listener: (event: SpeakerRevisionEvent) => void,
   ): void;
   on(event: "warning", listener: (event: WarningEvent) => void): void;
   on(event: "vad", listener: (event: VadFrame) => void): void;
@@ -506,6 +521,10 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
           }
           case "LLMGatewayResponse": {
             this.listeners.llmGatewayResponse?.(message);
+            break;
+          }
+          case "SpeakerRevision": {
+            this.listeners.speakerRevision?.(message);
             break;
           }
           case "Warning": {
