@@ -219,6 +219,13 @@ async function start(): Promise<void> {
   // contiguous same-channel run within the turn) plus the rollup line on
   // end_of_turn. Keyed by turn_order so partials replace the same container.
   const turnContainers = new Map<number, HTMLElement>()
+  // Finalized turns we keep around so a later SpeakerRevision can re-render
+  // them in place. Keyed by turn_order; holds the container, its rollup line,
+  // and the last-rendered TurnEvent (so revisions merge onto known words).
+  const finalizedTurns = new Map<
+    number,
+    { container: HTMLElement; rollup: HTMLElement; turn: TurnEvent }
+  >()
   // Last committed turn-level (channel, speaker_label) composite — used to
   // detect speaker changes between consecutive *finalized turns*.
   let lastFinalTurnComposite: string | undefined
@@ -333,6 +340,43 @@ async function start(): Promise<void> {
     } | Most active channel: ${turn.channel ?? "unknown"}`
     container.after(rollupLine)
     output.scrollTop = output.scrollHeight
+
+    // Retain the finalized turn so a later SpeakerRevision can correct it.
+    finalizedTurns.set(turn.turn_order, { container, rollup: rollupLine, turn })
+  })
+
+  // SpeakerRevision: diarization-only, emitted once per offline-recluster
+  // resolve. Each revision is an *earlier* finalized turn whose speaker labels
+  // changed — we re-render that turn in place with the corrected labels and
+  // flag it as revised. Unchanged turns are not included.
+  transcriber.on("speakerRevision", (event) => {
+    logEvent("SpeakerRevision", event)
+    for (const rev of event.revisions) {
+      const entry = finalizedTurns.get(rev.turn_order)
+      if (!entry) continue // turn isn't in view (e.g. session was reset)
+
+      // Revision words carry the corrected `speaker` but no client-side
+      // `channel` attribution, so merge speakers onto the original words by
+      // timestamp and keep each word's channel/channelResolved intact.
+      const speakerByStart = new Map(rev.words.map((w) => [w.start, w.speaker]))
+      const revisedWords = entry.turn.words.map((w) => ({
+        ...w,
+        speaker: speakerByStart.get(w.start) ?? w.speaker,
+      }))
+      entry.turn = {
+        ...entry.turn,
+        speaker_label: rev.speaker_label ?? entry.turn.speaker_label,
+        words: revisedWords,
+      }
+
+      renderTurnContainer(entry.container, entry.turn, true)
+      entry.container.classList.add("revised")
+      entry.rollup.className = "rollup-line revised"
+      entry.rollup.textContent = `-- End of turn #${rev.turn_order}: speaker_label: ${
+        entry.turn.speaker_label ?? "?"
+      } | Most active channel: ${entry.turn.channel ?? "unknown"}  (revised)`
+    }
+    output.scrollTop = output.scrollHeight
   })
 
   // Expose so stop() can reset session-scoped state.
@@ -340,6 +384,7 @@ async function start(): Promise<void> {
     globalThis as unknown as { __resetTurnState?: () => void }
   ).__resetTurnState = () => {
     turnContainers.clear()
+    finalizedTurns.clear()
     lastFinalTurnComposite = undefined
   }
 

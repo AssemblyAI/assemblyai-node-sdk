@@ -109,6 +109,30 @@ between consecutive words. `channel` reliably reports the physical source
 (VAD-derived); `speaker_label` is AAI's acoustic diarization on the mixed
 mono stream. Either change is a real boundary.
 
+### Speaker revisions
+
+With `speakerLabels` enabled, the server may revise the diarization of
+_earlier_ turns once it has more context (offline reclustering). It sends a
+`SpeakerRevision` event — one message per resolve, listing only the turns whose
+labels actually changed:
+
+```ts
+transcriber.on("speakerRevision", (event) => {
+  for (const rev of event.revisions) {
+    // rev.turn_order: which earlier turn to correct
+    // rev.speaker_label: corrected turn-level label
+    // rev.words[i].speaker: corrected per-word labels
+  }
+})
+```
+
+The sample keeps each finalized turn in the DOM and, on a revision, re-renders
+the matching `turn_order` in place with the corrected labels — outlining the
+bubble in purple and appending `(revised)` to its rollup line. Revision words
+carry the new `speaker` but no client-side `channel`, so the sample merges
+speakers onto the original words by timestamp and leaves channel attribution
+untouched.
+
 ## Platform caveats
 
 - **macOS:** `getDisplayMedia({ audio: true })` does **not** capture system

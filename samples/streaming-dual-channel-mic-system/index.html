@@ -80,6 +80,9 @@
       #events .event-line.event-Termination {
         color: #fecaca;
       }
+      #events .event-line.event-SpeakerRevision {
+        color: #ddd6fe;
+      }
       .turn-container {
         display: flex;
         flex-direction: column;
@@ -145,6 +148,15 @@
         color: #6b7280;
         font-size: 0.75rem;
         padding: 0.15rem 0.5rem;
+      }
+      .rollup-line.revised {
+        color: #6d28d9;
+        font-weight: bold;
+      }
+      /* A turn corrected by a later SpeakerRevision: outline its bubbles. */
+      .turn-container.revised .turn-row {
+        outline: 2px solid #8b5cf6;
+        outline-offset: 1px;
       }
       .description {
         background: #fef9c3;

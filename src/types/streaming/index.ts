@@ -91,7 +91,8 @@ export type StreamingTranscriberParams = {
   keyterms?: string[];
   keytermsPrompt?: string[];
   prompt?: string;
-  speechModel: StreamingSpeechModel;
+  agentContext?: string;
+  speechModel?: StreamingSpeechModel;
   languageDetection?: boolean;
   domain?: StreamingDomain;
   inactivityTimeout?: number;
@@ -107,6 +108,7 @@ export type StreamingTranscriberParams = {
   redactPii?: boolean;
   redactPiiPolicies?: StreamingPiiPolicy[];
   redactPiiSub?: StreamingPiiSubstitution;
+  mode?: StreamingMode;
   llmGateway?: LLMGatewayConfig;
   webhookUrl?: string;
   webhookAuthHeaderName?: string;
@@ -146,6 +148,7 @@ export type StreamingEvents =
   | "turn"
   | "speechStarted"
   | "llmGatewayResponse"
+  | "speakerRevision"
   | "warning"
   | "vad"
   | "error";
@@ -156,6 +159,7 @@ export type StreamingListeners = {
   turn?: (event: TurnEvent) => void;
   speechStarted?: (event: SpeechStartedEvent) => void;
   llmGatewayResponse?: (event: LLMGatewayResponseEvent) => void;
+  speakerRevision?: (event: SpeakerRevisionEvent) => void;
   warning?: (event: WarningEvent) => void;
   vad?: (event: VadFrame) => void;
   error?: (error: Error) => void;
@@ -165,10 +169,13 @@ export type StreamingSpeechModel =
   | "universal-streaming-english"
   | "universal-streaming-multilingual"
   | "u3-rt-pro"
+  | "u3-rt-pro-beta-1"
   | "whisper-rt"
   | "u3-pro";
 
 export type StreamingDomain = "medical-v1";
+
+export type StreamingMode = "max_accuracy" | "min_latency" | "balanced";
 
 export type VoiceFocusModel = "near-field" | "far-field";
 
@@ -330,6 +337,7 @@ export type StreamingUpdateConfiguration = {
   format_turns?: boolean;
   keyterms_prompt?: string[];
   prompt?: string;
+  agent_context?: string;
   filter_profanity?: boolean;
   interruption_delay?: number;
   turn_left_pad_ms?: number;
@@ -358,12 +366,37 @@ export type LLMGatewayResponseEvent = {
   data: unknown;
 };
 
+/**
+ * A single earlier Turn whose speaker labels were revised by reclustering.
+ * Match by `turn_order` against the original Turn; replace its per-word
+ * `speaker` assignments (and the turn-level `speaker_label`) with these. Text
+ * and word timestamps are unchanged from the original Turn.
+ */
+export type SpeakerRevisionItem = {
+  turn_order: number;
+  speaker_label?: string;
+  words: StreamingWord[];
+};
+
+/**
+ * Server-side correction to previously-emitted Turns' speaker labels.
+ * Diarization-only (emitted only when `speakerLabels` is enabled). Sent once
+ * per offline-recluster resolve; `revisions` carries one entry per earlier
+ * Turn whose label actually changed (unchanged turns are omitted). Apply each
+ * entry by matching its `turn_order`.
+ */
+export type SpeakerRevisionEvent = {
+  type: "SpeakerRevision";
+  revisions: SpeakerRevisionItem[];
+};
+
 export type StreamingEventMessage =
   | BeginEvent
   | TurnEvent
   | SpeechStartedEvent
   | TerminationEvent
   | LLMGatewayResponseEvent
+  | SpeakerRevisionEvent
   | ErrorEvent
   | WarningEvent;
 
