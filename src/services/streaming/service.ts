@@ -429,7 +429,7 @@ export class StreamingTranscriber {
   }
 
   connect() {
-    return new Promise<BeginEvent>((resolve) => {
+    return new Promise<BeginEvent>((resolve, reject) => {
       if (this.socket) {
         throw new Error("Already connected");
       }
@@ -456,6 +456,11 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
       this.socket.onopen = () => {};
 
       this.socket.onclose = ({ code, reason }: CloseEvent) => {
+        reject(
+          new Error(
+            `Connection closed before session started. Code: ${code}, Reason: ${reason}`,
+          ),
+        );
         if (!reason) {
           if (code in StreamingErrorMessages) {
             reason = StreamingErrorMessages[code as StreamingErrorTypeCodes];
@@ -472,8 +477,9 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
       };
 
       this.socket.onerror = (event: ErrorEvent) => {
-        if (event.error) this.listeners.error?.(event.error as Error);
-        else this.listeners.error?.(new Error(event.message));
+        const error = event.error || new Error(event.message);
+        reject(error);
+        this.listeners.error?.(error);
       };
 
       this.socket.onmessage = ({ data }: MessageEvent) => {
