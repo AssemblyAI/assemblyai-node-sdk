@@ -93,6 +93,7 @@ export type StreamingTranscriberParams = {
   prompt?: string;
   agentContext?: string;
   speechModel?: StreamingSpeechModel;
+  languageCode?: string;
   languageDetection?: boolean;
   domain?: StreamingDomain;
   inactivityTimeout?: number;
