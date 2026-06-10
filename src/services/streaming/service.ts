@@ -283,6 +283,10 @@ export class StreamingTranscriber {
       searchParams.set("speech_model", this.params.speechModel.toString());
     }
 
+    if (this.params.languageCode !== undefined) {
+      searchParams.set("language_code", this.params.languageCode);
+    }
+
     if (this.params.languageDetection !== undefined) {
       searchParams.set(
         "language_detection",
