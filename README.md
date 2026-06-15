@@ -16,9 +16,6 @@ The AssemblyAI JavaScript SDK provides an easy-to-use interface for interacting 
 which supports async and streaming transcription.
 It is written primarily for Node.js in TypeScript with all types exported, but also [compatible with other runtimes](./docs/compat.md).
 
-> **⚠️ WARNING**
-> This SDK is intended for **testing and light usage only**. It is not recommended for use at scale or with production traffic. For best results, we recommend calling the AssemblyAI API directly via HTTP request. See our [official documentation](https://www.assemblyai.com/docs) for more information, including HTTP code examples.
-
 ## Claude Code
 
 This repository includes a [`CLAUDE.md`](CLAUDE.md) file that provides context to Claude Code about this SDK — key APIs, common patterns, and gotchas. When you open this repo in Claude Code, it automatically reads this file to give better assistance.
