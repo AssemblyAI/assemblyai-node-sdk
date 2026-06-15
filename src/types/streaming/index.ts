@@ -172,6 +172,7 @@ export type StreamingSpeechModel =
   | "u3-rt-pro"
   | "u3-rt-pro-beta-1"
   | "whisper-rt"
+  | "universal-3-5-pro"
   | "u3-pro";
 
 export type StreamingDomain = "medical-v1";
