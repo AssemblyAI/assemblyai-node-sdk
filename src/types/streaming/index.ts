@@ -76,6 +76,22 @@ export type StreamingTranscriberParams = {
   websocketBaseUrl?: string;
   apiKey?: string;
   token?: string;
+  /**
+   * Milliseconds to wait for the streaming handshake (socket open + server
+   * `Begin`) before treating the attempt as failed. Defaults to 1000.
+   */
+  connectTimeout?: number;
+  /**
+   * Number of additional connection attempts after the first one fails on a
+   * transient error (timeout, network drop, unexpected close). 0 disables
+   * retries. Permanent failures (auth, insufficient funds, malformed config)
+   * are never retried. Defaults to 2.
+   */
+  maxConnectionRetries?: number;
+  /**
+   * Milliseconds to wait between connection attempts. Defaults to 500.
+   */
+  connectionRetryDelay?: number;
   sampleRate: number;
   encoding?: AudioEncoding;
   endOfTurnConfidenceThreshold?: number;
@@ -349,6 +365,10 @@ export type StreamingForceEndpoint = {
   type: "ForceEndpoint";
 };
 
+export type StreamingKeepAlive = {
+  type: "KeepAlive";
+};
+
 export type ErrorEvent = {
   type: "Error";
   error_code?: number;
@@ -405,4 +425,5 @@ export type StreamingEventMessage =
 export type StreamingOperationMessage =
   | StreamingUpdateConfiguration
   | StreamingForceEndpoint
+  | StreamingKeepAlive
   | StreamingTerminateSession;

@@ -59,6 +59,23 @@ describe("streaming", () => {
     WS.clean();
   }
 
+  // Leave the shared `rt`/`server` in a connected state so the trailing
+  // afterEach `cleanup()` (which expects a live session) succeeds after a
+  // test that deliberately drove `rt` into a failed/closed connection.
+  async function reestablish() {
+    WS.clean();
+    server = new WS(websocketBaseUrl);
+    rt = new StreamingTranscriber({
+      websocketBaseUrl,
+      apiKey: "123",
+      sampleRate: 16_000,
+      speechModel: "universal-streaming-english",
+    });
+    onOpen = jest.fn();
+    rt.on("open", onOpen);
+    await connect(rt, server);
+  }
+
   it("noop", async () => {});
 
   it("should include speaker_labels in connection URL", async () => {
@@ -210,6 +227,15 @@ describe("streaming", () => {
       JSON.stringify({
         type: "UpdateConfiguration",
         agent_context: "What is your account number?",
+      }),
+    );
+  });
+
+  it("should send KeepAlive message on keepAlive()", async () => {
+    rt.keepAlive();
+    await expect(server).toReceiveMessage(
+      JSON.stringify({
+        type: "KeepAlive",
       }),
     );
   });
@@ -485,5 +511,109 @@ describe("streaming", () => {
     expect(event.revisions[0].words.map((w) => w.speaker)).toEqual(["B", "A"]);
     expect(event.revisions[1].speaker_label).toBe("A");
     expect(event.revisions[1].words).toEqual([]);
+  });
+
+  it("rejects when the handshake times out (retries disabled)", async () => {
+    await cleanup();
+    WS.clean();
+    server = new WS(websocketBaseUrl);
+
+    // Connect but never send `Begin`; the attempt should time out and reject.
+    const failing = new StreamingTranscriber({
+      websocketBaseUrl,
+      token: "123",
+      sampleRate: 16_000,
+      speechModel: "universal-streaming-english",
+      connectTimeout: 30,
+      maxConnectionRetries: 0,
+    });
+    await expect(failing.connect()).rejects.toThrow(/timed out/i);
+
+    await reestablish();
+  });
+
+  it("does not retry a permanent auth failure", async () => {
+    await cleanup();
+    WS.clean();
+    server = new WS(websocketBaseUrl);
+
+    const failing = new StreamingTranscriber({
+      websocketBaseUrl,
+      token: "123",
+      sampleRate: 16_000,
+      speechModel: "universal-streaming-english",
+      connectTimeout: 1000,
+      maxConnectionRetries: 5,
+      connectionRetryDelay: 0,
+    });
+    const connectPromise = failing.connect();
+    await server.connected;
+    // Server rejects the handshake with an auth close before `Begin`.
+    server.close({
+      code: 4001,
+      reason: null as unknown as string,
+      wasClean: false,
+    });
+
+    // Rejects with the auth error (code 4001) rather than retrying until a
+    // timeout — proving the permanent-failure short-circuit.
+    await expect(connectPromise).rejects.toMatchObject({ code: 4001 });
+
+    await reestablish();
+  });
+
+  it("retries a transient handshake failure and then succeeds", async () => {
+    await cleanup();
+    WS.clean();
+    server = new WS(websocketBaseUrl);
+
+    // Drive the underlying mock-socket server per-connection: close the first
+    // connection with a transient code (no `Begin`), then accept the retry by
+    // sending `Begin`. Deterministic — no reliance on retry/connection timing.
+    let connectionCount = 0;
+    const mockServer = (
+      server as unknown as {
+        server: {
+          on: (
+            event: "connection",
+            cb: (socket: {
+              close: (options: {
+                code: number;
+                reason: string;
+                wasClean: boolean;
+              }) => void;
+              send: (data: string) => void;
+            }) => void,
+          ) => void;
+        };
+      }
+    ).server;
+    mockServer.on("connection", (socket) => {
+      connectionCount++;
+      if (connectionCount === 1) {
+        socket.close({ code: 1011, reason: "transient", wasClean: false });
+      } else {
+        socket.send(JSON.stringify(sessionBeginsMessage));
+      }
+    });
+
+    rt = new StreamingTranscriber({
+      websocketBaseUrl,
+      token: "123",
+      sampleRate: 16_000,
+      speechModel: "universal-streaming-english",
+      connectTimeout: 1000,
+      maxConnectionRetries: 2,
+      connectionRetryDelay: 0,
+    });
+    onOpen = jest.fn();
+    rt.on("open", onOpen);
+
+    const begin = await rt.connect();
+
+    expect(begin.type).toBe("Begin");
+    expect(connectionCount).toBeGreaterThanOrEqual(2);
+    expect(onOpen).toHaveBeenCalled();
+    // Leaves rt/server connected for the shared afterEach cleanup.
   });
 });
