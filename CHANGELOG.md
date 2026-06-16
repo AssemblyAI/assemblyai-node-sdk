@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.34.6]
+
+- Add `keepAlive()` method to `StreamingTranscriber` — sends a `KeepAlive` message to reset the server's inactivity timer when `inactivityTimeout` is configured
+
 ## [4.33.0]
 
 - Add streaming parameters to match the Python SDK:

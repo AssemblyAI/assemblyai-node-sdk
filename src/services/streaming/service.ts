@@ -18,12 +18,17 @@ import {
   SpeakerRevisionEvent,
   StreamingUpdateConfiguration,
   StreamingForceEndpoint,
+  StreamingKeepAlive,
   WarningEvent,
 } from "../..";
 import type { VadDetector, VadFrame } from "../../types/streaming/dual-channel";
 import { EnergyVad } from "./energy-vad";
 import { attributeTurn, rollUpTurnChannel, VadTimeline } from "./label-mapper";
-import { StreamingError, StreamingErrorMessages } from "../../utils/errors";
+import {
+  StreamingError,
+  StreamingErrorMessages,
+  StreamingErrorType,
+} from "../../utils/errors";
 import { StreamingErrorTypeCodes } from "../../utils/errors/streaming";
 
 /**
@@ -57,6 +62,30 @@ function toInt16View(audio: AudioData): Int16Array {
 
 const defaultStreamingUrl = "wss://streaming.assemblyai.com/v3/ws";
 const terminateSessionMessage = `{"type":"Terminate"}`;
+
+const DEFAULT_CONNECT_TIMEOUT_MS = 1000;
+const DEFAULT_MAX_CONNECTION_RETRIES = 2;
+const DEFAULT_CONNECTION_RETRY_DELAY_MS = 500;
+
+/**
+ * Close/error codes that signal a permanent client-side problem (auth,
+ * billing, malformed config). A retry would hit the same failure, so the
+ * connection is never retried on these.
+ */
+const NON_RETRYABLE_CLOSE_CODES = new Set<number>([
+  StreamingErrorType.BadSampleRate,
+  StreamingErrorType.AuthFailed,
+  StreamingErrorType.InsufficientFunds,
+  StreamingErrorType.FreeTierUser,
+  StreamingErrorType.BadSchema,
+]);
+
+/** Error from a single connection attempt, tagged for retry handling. */
+type ConnectionAttemptError = Error & { code?: number; retryable: boolean };
+
+function isRetryableCloseCode(code: number): boolean {
+  return code !== 1000 && !NON_RETRYABLE_CLOSE_CODES.has(code);
+}
 
 /**
  * Per-send chunk cap in milliseconds for the dual-channel mixer. The streaming
@@ -432,13 +461,90 @@ export class StreamingTranscriber {
     this.listeners[event] = listener;
   }
 
-  connect() {
-    return new Promise<BeginEvent>((resolve) => {
-      if (this.socket) {
-        throw new Error("Already connected");
-      }
+  /**
+   * Open the streaming session.
+   *
+   * Resolves with the server's `Begin` event once the handshake completes. A
+   * single attempt is bounded by `connectTimeout` (default 1000ms); transient
+   * failures (timeout, network drop, unexpected close) are retried up to
+   * `maxConnectionRetries` times (default 2), waiting `connectionRetryDelay`
+   * (default 500ms) between attempts. Permanent failures (auth, insufficient
+   * funds, malformed config) are not retried.
+   *
+   * Unlike previously, a failed connection now rejects this promise rather
+   * than only invoking the `error` listener — necessary for the caller (and
+   * the retry loop) to observe the failure.
+   */
+  async connect(): Promise<BeginEvent> {
+    if (this.socket) {
+      throw new Error("Already connected");
+    }
 
+    const maxRetries =
+      this.params.maxConnectionRetries ?? DEFAULT_MAX_CONNECTION_RETRIES;
+    const retryDelay =
+      this.params.connectionRetryDelay ?? DEFAULT_CONNECTION_RETRY_DELAY_MS;
+
+    let lastError: Error | undefined;
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        return await this.connectOnce();
+      } catch (err) {
+        lastError = err as Error;
+        const retryable = (err as ConnectionAttemptError).retryable === true;
+        if (!retryable || attempt === maxRetries) {
+          throw err;
+        }
+        console.warn(
+          `Streaming connect attempt ${attempt + 1}/${maxRetries + 1} failed (${(err as Error).message}); retrying`,
+        );
+        if (retryDelay > 0) {
+          await new Promise((resolve) => setTimeout(resolve, retryDelay));
+        }
+      }
+    }
+    // The loop above always returns or throws; this only satisfies the type
+    // checker that a value is produced on every path.
+    throw lastError ?? new Error("Failed to connect to streaming server");
+  }
+
+  private connectOnce(): Promise<BeginEvent> {
+    return new Promise<BeginEvent>((resolve, reject) => {
       const url = this.connectionUrl();
+      const timeoutMs =
+        this.params.connectTimeout ?? DEFAULT_CONNECT_TIMEOUT_MS;
+
+      // `settled` flips once this attempt has resolved (`Begin`) or rejected
+      // (timeout / pre-`Begin` close / error). Before it flips the socket
+      // handlers drive this promise; after it flips they revert to normal
+      // runtime dispatch (close / error / message listeners).
+      let settled = false;
+      let timer: ReturnType<typeof setTimeout> | undefined;
+
+      const failAttempt = (error: ConnectionAttemptError) => {
+        if (settled) return;
+        settled = true;
+        if (timer) clearTimeout(timer);
+        this.discardPendingSocket();
+        reject(error);
+      };
+
+      const succeed = (begin: BeginEvent) => {
+        if (settled) return;
+        settled = true;
+        if (timer) clearTimeout(timer);
+        resolve(begin);
+      };
+
+      if (timeoutMs > 0) {
+        timer = setTimeout(() => {
+          const err = new StreamingError(
+            `Streaming connection timed out after ${timeoutMs}ms`,
+          ) as ConnectionAttemptError;
+          err.retryable = true;
+          failAttempt(err);
+        }, timeoutMs);
+      }
 
       if (this.token) {
         this.socket = polyfillWebSocketFactory(url.toString());
@@ -465,6 +571,17 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
             reason = StreamingErrorMessages[code as StreamingErrorTypeCodes];
           }
         }
+        // A close before `Begin` is a failed connection attempt — reject so
+        // connect() can retry (or surface a permanent failure).
+        if (!settled) {
+          const err = new StreamingError(
+            reason || `Streaming connection closed (code=${code})`,
+          ) as ConnectionAttemptError;
+          err.code = code;
+          err.retryable = isRetryableCloseCode(code);
+          failAttempt(err);
+          return;
+        }
         // Stop the flush timer when the socket is gone (server-initiated close,
         // network drop, etc.) — otherwise subsequent ticks call send() on a
         // closed socket and spam the error listener.
@@ -476,18 +593,34 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
       };
 
       this.socket.onerror = (event: ErrorEvent) => {
-        if (event.error) this.listeners.error?.(event.error as Error);
-        else this.listeners.error?.(new Error(event.message));
+        const error = (event.error as Error) ?? new Error(event.message);
+        // A socket error before `Begin` is a failed attempt → reject/retry.
+        if (!settled) {
+          (error as ConnectionAttemptError).retryable = true;
+          failAttempt(error as ConnectionAttemptError);
+          return;
+        }
+        this.listeners.error?.(error);
       };
 
       this.socket.onmessage = ({ data }: MessageEvent) => {
         const message = JSON.parse(data.toString()) as StreamingEventMessage;
 
         if ("error" in message) {
-          const err = new StreamingError(message.error);
+          const err = new StreamingError(message.error) as StreamingError & {
+            code?: number;
+          };
           if ("error_code" in message) {
-            (err as StreamingError & { code?: number }).code =
-              message.error_code;
+            err.code = message.error_code;
+          }
+          // A server error frame before `Begin` fails the attempt; the code
+          // decides whether a retry is worthwhile.
+          if (!settled) {
+            const attemptErr = err as ConnectionAttemptError;
+            attemptErr.retryable =
+              err.code === undefined ? true : isRetryableCloseCode(err.code);
+            failAttempt(attemptErr);
+            return;
           }
           this.listeners.error?.(err);
           return;
@@ -495,7 +628,7 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
 
         switch (message.type) {
           case "Begin": {
-            resolve(message);
+            succeed(message);
             this.listeners.open?.(message);
             break;
           }
@@ -546,6 +679,18 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
         }
       };
     });
+  }
+
+  /** Tear down a half-open socket from a failed connection attempt. */
+  private discardPendingSocket(): void {
+    if (!this.socket) return;
+    try {
+      if (this.socket.removeAllListeners) this.socket.removeAllListeners();
+      this.socket.close();
+    } catch {
+      // Best-effort cleanup; a half-open socket may throw on close.
+    }
+    this.socket = undefined;
   }
 
   /**
@@ -825,6 +970,17 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
   forceEndpoint() {
     const message: StreamingForceEndpoint = {
       type: "ForceEndpoint",
+    };
+    this.send(JSON.stringify(message));
+  }
+
+  /**
+   * Reset the server's inactivity timer. Only needed when the session was
+   * created with `inactivityTimeout` and no audio is being sent.
+   */
+  keepAlive() {
+    const message: StreamingKeepAlive = {
+      type: "KeepAlive",
     };
     this.send(JSON.stringify(message));
   }
