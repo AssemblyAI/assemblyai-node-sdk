@@ -313,13 +313,13 @@ const res = await client.transcripts.delete(transcript.id);
 
 ### Transcribe streaming audio
 
-Refer to [AssemblyAI's streaming documentation](https://www.assemblyai.com/docs/getting-started/transcribe-streaming-audio) for full code examples.
+Refer to [AssemblyAI's streaming documentation](https://www.assemblyai.com/docs/streaming/getting-started/transcribe-streaming-audio) for full code examples.
 
 Create the streaming transcriber.
 
 ```typescript
 const transcriber = client.streaming.transcriber({
-  speechModel: "u3-rt-pro",
+  speechModel: "universal-3-5-pro",
   sampleRate: 16_000,
   formatTurns: true,
 });

@@ -151,7 +151,7 @@ async function start(): Promise<void> {
   transcriber = new StreamingTranscriber({
     token,
     sampleRate: 16_000,
-    speechModel: "u3-rt-pro",
+    speechModel: "universal-3-5-pro",
     speakerLabels: true,
     ...(maxSpeakers !== undefined && { maxSpeakers }),
     continuousPartials: true,
