@@ -227,7 +227,7 @@ const systemVad = await MicVAD.new({
 })
 
 const transcriber = client.streaming.transcriber({
-  speechModel: "u3-rt-pro",
+  speechModel: "universal-3-5-pro",
   sampleRate: 16_000,
   channels: [{ name: "mic" }, { name: "system" }],
   channelAttribution: {
