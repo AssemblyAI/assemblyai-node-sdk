@@ -231,6 +231,26 @@ describe("streaming", () => {
     );
   });
 
+  it("should include language_codes in updateConfiguration message", async () => {
+    rt.updateConfiguration({ language_codes: ["en", "es"] });
+    await expect(server).toReceiveMessage(
+      JSON.stringify({
+        type: "UpdateConfiguration",
+        language_codes: ["en", "es"],
+      }),
+    );
+  });
+
+  it("should send an empty language_codes array in updateConfiguration to clear steering", async () => {
+    rt.updateConfiguration({ language_codes: [] });
+    await expect(server).toReceiveMessage(
+      JSON.stringify({
+        type: "UpdateConfiguration",
+        language_codes: [],
+      }),
+    );
+  });
+
   it("should send KeepAlive message on keepAlive()", async () => {
     rt.keepAlive();
     await expect(server).toReceiveMessage(
@@ -346,6 +366,47 @@ describe("streaming", () => {
     rt.on("open", onOpen);
     await connect(rt, server);
   });
+
+  it("should include language_codes in connection URL", async () => {
+    await cleanup();
+    WS.clean();
+
+    const languageCodes = ["en", "es"];
+    const wsUrl =
+      `${websocketBaseUrl}?token=123&sample_rate=16000&speech_model=universal-3-5-pro` +
+      `&language_codes=${encodeURIComponent(JSON.stringify(languageCodes))}`;
+    server = new WS(wsUrl);
+    rt = new StreamingTranscriber({
+      websocketBaseUrl,
+      token: "123",
+      sampleRate: 16_000,
+      speechModel: "universal-3-5-pro",
+      languageCodes: ["en", "es"],
+    });
+    onOpen = jest.fn();
+    rt.on("open", onOpen);
+    await connect(rt, server);
+  });
+
+  it.each(["opus", "ogg_opus"] as const)(
+    "should include %s encoding in connection URL",
+    async (encoding) => {
+      await cleanup();
+      WS.clean();
+
+      const wsUrl = `${websocketBaseUrl}?token=123&sample_rate=16000&encoding=${encoding}`;
+      server = new WS(wsUrl);
+      rt = new StreamingTranscriber({
+        websocketBaseUrl,
+        token: "123",
+        sampleRate: 16_000,
+        encoding,
+      });
+      onOpen = jest.fn();
+      rt.on("open", onOpen);
+      await connect(rt, server);
+    },
+  );
 
   it("should include whisper-rt speech model in connection URL", async () => {
     await cleanup();

@@ -1,5 +1,17 @@
 # Changelog
 
+## [4.35.3]
+
+- Allow `language_codes` in `updateConfiguration()` — re-steer the transcription language mid-stream without reconnecting; pass `[]` to clear steering and restore the model's default multilingual code-switching (Universal-3.5 Pro Streaming only)
+
+## [4.35.2]
+
+- Add `opus` and `ogg_opus` streaming `encoding` values — accepts compressed Opus audio (raw packet-per-message or Ogg-encapsulated). `sampleRate` is ignored for both; the Opus stream is self-describing
+
+## [4.35.1]
+
+- Add `languageCodes` streaming parameter — steers transcription toward a set of languages (Universal-3.5 Pro Streaming only). Recommended replacement for `languageCode`, which is now deprecated but still supported
+
 ## [4.34.6]
 
 - Add `keepAlive()` method to `StreamingTranscriber` — sends a `KeepAlive` message to reset the server's inactivity timer when `inactivityTimeout` is configured

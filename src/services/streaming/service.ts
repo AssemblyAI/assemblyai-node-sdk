@@ -313,7 +313,17 @@ export class StreamingTranscriber {
     }
 
     if (this.params.languageCode !== undefined) {
+      console.warn(
+        "[Deprecation Warning] `languageCode` is deprecated and will be removed in a future release. Please use `languageCodes` instead.",
+      );
       searchParams.set("language_code", this.params.languageCode);
+    }
+
+    if (this.params.languageCodes !== undefined) {
+      searchParams.set(
+        "language_codes",
+        JSON.stringify(this.params.languageCodes),
+      );
     }
 
     if (this.params.languageDetection !== undefined) {

@@ -129,7 +129,7 @@ const audioFile = "https://assembly.ai/sports_injuries.mp3";
 
 const params = {
   audio: audioFile,
-  speech_models: ["universal-3-pro", "universal-2"],
+  speech_models: ["universal-3-5-pro", "universal-2"],
   language_detection: true,
 };
 
@@ -151,7 +151,7 @@ If you don't want to wait until the transcript is ready, you can use `submit`:
 ```js
 let transcript = await client.transcripts.submit({
   audio: "https://assembly.ai/espn.m4a",
-  speech_models: ["universal-3-pro", "universal-2"],
+  speech_models: ["universal-3-5-pro", "universal-2"],
   language_detection: true,
 });
 ```
@@ -167,7 +167,7 @@ When you create a transcript, you can either pass in a URL to an audio file or u
 // Upload a file via local path and transcribe
 let transcript = await client.transcripts.transcribe({
   audio: "./news.mp4",
-  speech_models: ["universal-3-pro", "universal-2"],
+  speech_models: ["universal-3-5-pro", "universal-2"],
   language_detection: true,
 });
 ```
@@ -182,7 +182,7 @@ If you don't want to wait until the transcript is ready, you can use `submit`:
 ```js
 let transcript = await client.transcripts.submit({
   audio: "./news.mp4",
-  speech_models: ["universal-3-pro", "universal-2"],
+  speech_models: ["universal-3-5-pro", "universal-2"],
   language_detection: true,
 });
 ```
@@ -206,7 +206,7 @@ const audioFile = "https://assembly.ai/wildfires.mp3";
 
 const params = {
   audio: audioFile,
-  speech_models: ["universal-3-pro", "universal-2"],
+  speech_models: ["universal-3-5-pro", "universal-2"],
   language_detection: true,
   speaker_labels: true,
 };
@@ -321,7 +321,6 @@ Create the streaming transcriber.
 const transcriber = client.streaming.transcriber({
   speechModel: "universal-3-5-pro",
   sampleRate: 16_000,
-  formatTurns: true,
 });
 ```
 
