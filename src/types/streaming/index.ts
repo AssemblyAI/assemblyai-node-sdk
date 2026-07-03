@@ -109,7 +109,19 @@ export type StreamingTranscriberParams = {
   prompt?: string;
   agentContext?: string;
   speechModel?: StreamingSpeechModel;
+  /**
+   * @deprecated Use `languageCodes` instead (pass a single-element array, e.g. `["es"]`,
+   * for the same behavior). Still supported for backward compatibility.
+   */
   languageCode?: string;
+  /**
+   * Recommended way to select languages. Steers transcription toward a set of
+   * languages by biasing output toward them on a per-token basis while still
+   * allowing native code-switching among them. Pass the languages you expect
+   * (e.g. `["en", "es"]`), or a single-element array (e.g. `["es"]`) for a
+   * monolingual session. Universal-3.5 Pro Streaming only.
+   */
+  languageCodes?: string[];
   languageDetection?: boolean;
   domain?: StreamingDomain;
   inactivityTimeout?: number;
@@ -359,6 +371,12 @@ export type StreamingUpdateConfiguration = {
   filter_profanity?: boolean;
   interruption_delay?: number;
   turn_left_pad_ms?: number;
+  /**
+   * Steer transcription toward a set of languages mid-stream. Pass an empty
+   * array (`[]`) to clear steering and restore the model's default
+   * multilingual code-switching. Universal-3.5 Pro Streaming only.
+   */
+  language_codes?: string[];
 };
 
 export type StreamingForceEndpoint = {
