@@ -92,7 +92,12 @@ export type StreamingTranscriberParams = {
    * Milliseconds to wait between connection attempts. Defaults to 500.
    */
   connectionRetryDelay?: number;
-  sampleRate: number;
+  /**
+   * Required for PCM encodings (and for dual-channel mode). May be omitted
+   * for Opus encodings (`opus`, `ogg_opus`) — the stream is self-describing
+   * and the server ignores the value.
+   */
+  sampleRate?: number;
   encoding?: AudioEncoding;
   endOfTurnConfidenceThreshold?: number;
   /**
