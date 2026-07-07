@@ -408,6 +408,55 @@ describe("streaming", () => {
     },
   );
 
+  it.each(["opus", "ogg_opus"] as const)(
+    "should allow omitting sampleRate for %s encoding",
+    async (encoding) => {
+      await cleanup();
+      WS.clean();
+
+      const wsUrl = `${websocketBaseUrl}?token=123&encoding=${encoding}`;
+      server = new WS(wsUrl);
+      rt = new StreamingTranscriber({
+        websocketBaseUrl,
+        token: "123",
+        encoding,
+      });
+      onOpen = jest.fn();
+      rt.on("open", onOpen);
+      await connect(rt, server);
+    },
+  );
+
+  it("should throw when sampleRate is omitted for non-Opus encodings", () => {
+    expect(
+      () =>
+        new StreamingTranscriber({
+          websocketBaseUrl,
+          token: "123",
+        }),
+    ).toThrow("`sampleRate` is required");
+    expect(
+      () =>
+        new StreamingTranscriber({
+          websocketBaseUrl,
+          token: "123",
+          encoding: "pcm_mulaw",
+        }),
+    ).toThrow("`sampleRate` is required");
+  });
+
+  it("should throw when sampleRate is omitted in dual-channel mode even with Opus", () => {
+    expect(
+      () =>
+        new StreamingTranscriber({
+          websocketBaseUrl,
+          token: "123",
+          encoding: "ogg_opus",
+          channels: [{ name: "mic" }, { name: "system" }],
+        }),
+    ).toThrow("`sampleRate` is required");
+  });
+
   it("should include whisper-rt speech model in connection URL", async () => {
     await cleanup();
     WS.clean();

@@ -164,6 +164,13 @@ export class StreamingTranscriber {
       throw new Error("API key or temporary token is required.");
     }
 
+    const isOpus = params.encoding === "opus" || params.encoding === "ogg_opus";
+    if (params.sampleRate === undefined && (!isOpus || params.channels)) {
+      throw new Error(
+        '`sampleRate` is required; it may only be omitted when `encoding` is "opus" or "ogg_opus" (the Opus stream is self-describing) and dual-channel mode is not used.',
+      );
+    }
+
     if (params.channels) {
       if (params.channels.length !== 2) {
         throw new Error(
@@ -194,15 +201,17 @@ export class StreamingTranscriber {
       ) {
         this.speakerHistory = new Map();
       }
-      // 20 ms VAD frames at the transcriber's target sample rate.
-      this.vadFrameSamples = Math.max(1, Math.round(params.sampleRate * 0.02));
+      // 20 ms VAD frames at the transcriber's target sample rate. The
+      // constructor check above guarantees sampleRate in dual-channel mode.
+      const sampleRate = params.sampleRate!;
+      this.vadFrameSamples = Math.max(1, Math.round(sampleRate * 0.02));
       this.minChunkSamples = Math.max(
         1,
-        Math.round(params.sampleRate * (MIN_CHUNK_MS / 1000)),
+        Math.round(sampleRate * (MIN_CHUNK_MS / 1000)),
       );
       this.maxChunkSamples = Math.max(
         this.minChunkSamples,
-        Math.round(params.sampleRate * (MAX_CHUNK_MS / 1000)),
+        Math.round(sampleRate * (MAX_CHUNK_MS / 1000)),
       );
       this.channelBuffers = new Map(names.map((n) => [n, [] as number[]]));
       this.channelSamplesReceived = new Map(names.map((n) => [n, 0]));
@@ -230,7 +239,9 @@ export class StreamingTranscriber {
       searchParams.set("token", this.token);
     }
 
-    searchParams.set("sample_rate", this.params.sampleRate.toString());
+    if (this.params.sampleRate !== undefined) {
+      searchParams.set("sample_rate", this.params.sampleRate.toString());
+    }
 
     if (this.params.endOfTurnConfidenceThreshold) {
       searchParams.set(
@@ -753,7 +764,7 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
     let vadIdx = this.channelVadBufferIdx!.get(name)!;
     let received = this.channelSamplesReceived!.get(name)!;
     const vad = this.channelVads!.get(name)!;
-    const sampleRate = this.params.sampleRate;
+    const sampleRate = this.params.sampleRate!;
     const frameSize = this.vadFrameSamples;
 
     for (let i = 0; i < samples.length; i++) {

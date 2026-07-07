@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.35.4]
+
+- `sampleRate` is now optional when `encoding` is `opus` or `ogg_opus` (the Opus stream is self-describing and the server ignores the value). It remains required for PCM encodings and for dual-channel mode; omitting it there now throws at construction time
+
 ## [4.35.3]
 
 - Allow `language_codes` in `updateConfiguration()` — re-steer the transcription language mid-stream without reconnecting; pass `[]` to clear steering and restore the model's default multilingual code-switching (Universal-3.5 Pro Streaming only)
