@@ -1,3 +1,5 @@
+export { SyncTranscriptError } from "./sync";
+
 export {
   RealtimeError,
   RealtimeErrorType,

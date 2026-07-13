@@ -1,4 +1,6 @@
 import { BaseServiceParams } from "..";
+import { SyncTranscriber } from "./sync";
+import { SyncTranscriptError } from "../utils/errors";
 import { LemurService } from "./lemur";
 import {
   RealtimeTranscriber,
@@ -23,6 +25,7 @@ import {
 
 const defaultBaseUrl = "https://api.assemblyai.com";
 const defaultStreamingUrl = "https://streaming.assemblyai.com";
+const defaultSyncUrl = "https://sync.assemblyai.com";
 
 class AssemblyAI {
   /**
@@ -51,6 +54,11 @@ class AssemblyAI {
   public streaming: StreamingTranscriberFactory;
 
   /**
+   * The synchronous transcription service.
+   */
+  public sync: SyncTranscriber;
+
+  /**
    * Create a new AssemblyAI client.
    * @param params - The parameters for the service, including the API key and base URL, if any.
    */
@@ -69,11 +77,22 @@ class AssemblyAI {
       ...params,
       baseUrl: params.streamingBaseUrl || defaultStreamingUrl,
     });
+
+    let syncBaseUrl = params.syncBaseUrl || defaultSyncUrl;
+    if (syncBaseUrl.endsWith("/")) {
+      syncBaseUrl = syncBaseUrl.slice(0, -1);
+    }
+    this.sync = new SyncTranscriber({
+      ...params,
+      baseUrl: syncBaseUrl,
+    });
   }
 }
 
 export {
   AssemblyAI,
+  SyncTranscriber,
+  SyncTranscriptError,
   LemurService,
   RealtimeTranscriberFactory,
   RealtimeTranscriber,

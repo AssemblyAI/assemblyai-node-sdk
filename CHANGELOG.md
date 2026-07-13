@@ -1,5 +1,25 @@
 # Changelog
 
+## [4.36.3]
+
+- Target the canonical `/v1` sync API routes (`/v1/transcribe`, `/v1/warm`); the unprefixed paths remain served for older SDK versions
+
+## [4.36.2]
+
+- Add opt-in `timestamps` sync config option — when `true`, sync words carry accurate `start`/`end` timings at a small latency cost. By default no timings are computed or returned; `SyncWord.start`/`end` are now optional and absent unless requested
+
+## [4.36.1]
+
+- Rename the sync transcription surface introduced in 4.36.0 (never published under the old names): `client.direct` → `client.sync`, `Direct*` types → `Sync*`, `directBaseUrl` → `syncBaseUrl`; `word_boost` → `keyterms_prompt`
+- The default sync speech model is now `universal-3-5-pro` (sent as the `X-AAI-Model` routing header)
+
+## [4.36.0]
+
+- Add `client.sync` — synchronous transcription: audio in, transcript out, one request against the sync API host, with no job id or polling. Accepts a local file path, raw bytes, a Blob, or a readable stream (not URLs), plus config for `prompt`, `keyterms_prompt`, `conversation_context`, `language_codes`, and raw PCM (`sample_rate` + `channels`)
+- Add `SyncTranscriber.warm()` — pre-opens the connection to the sync API so the next `transcribe()` skips the DNS + TCP + TLS handshake
+- Add `SyncTranscriptError` with `status`, machine-readable `errorCode`, and `retryAfter` (seconds) on 429/503 responses
+- Add `syncBaseUrl` client option (defaults to `https://sync.assemblyai.com`)
+
 ## [4.35.4]
 
 - `sampleRate` is now optional when `encoding` is `opus` or `ogg_opus` (the Opus stream is self-describing and the server ignores the value). It remains required for PCM encodings and for dual-channel mode; omitting it there now throws at construction time
