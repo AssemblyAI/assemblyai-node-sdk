@@ -311,6 +311,104 @@ const res = await client.transcripts.delete(transcript.id);
 
 </details>
 
+### Transcribe audio synchronously
+
+`client.sync` posts a whole audio file and returns the finished transcript in one
+round trip — no job id, no polling. Use it for short clips where you want the answer
+inline; use `client.transcripts` for long-form audio, URLs, or the rich
+audio-intelligence features the sync API doesn't expose.
+
+```typescript
+const result = await client.sync.transcribe("./call.wav");
+console.log(result.text, result.session_id);
+```
+
+The input can be a local file path, raw audio bytes, a Blob, or a readable
+stream — but not a URL.
+
+<details>
+<summary>Configure the transcription</summary>
+
+```typescript
+const result = await client.sync.transcribe("./call.wav", {
+  prompt: "Transcribe verbatim. Preserve disfluencies.", // max 4096 chars
+  keyterms_prompt: ["AssemblyAI", "Lemur"], // max 2048 chars total
+  language_codes: ["es"], // or e.g. ["en", "es"] for multilingual; defaults to English
+  conversation_context: [
+    // prior turns, oldest first
+    "I'd like to book a flight to Denver.",
+    "Sure, what date were you thinking?",
+  ],
+});
+```
+
+Raw S16LE PCM audio needs `sample_rate` and `channels`; WAV reads them from its
+header.
+
+```typescript
+const result = await client.sync.transcribe(rawPcmBytes, {
+  sample_rate: 16_000,
+  channels: 1,
+});
+```
+
+</details>
+
+<details>
+<summary>Get word timestamps</summary>
+
+Word timestamps are opt-in. By default each word in `result.words` carries
+`text` and `confidence` only — `start`/`end` are absent. Set `timestamps: true`
+to get accurate per-word timings at a small latency cost.
+
+```typescript
+const result = await client.sync.transcribe("./call.wav", {
+  timestamps: true,
+});
+for (const word of result.words) {
+  console.log(word.text, word.start, word.end); // milliseconds
+}
+```
+
+</details>
+
+<details>
+<summary>Pre-warm the connection</summary>
+
+The sync API is a single request/response, so a `transcribe()` that connects on
+demand pays the full DNS + TCP + TLS handshake on the critical path. Call `warm()`
+as soon as you know audio is coming — for example while it is still being
+recorded — so the next `transcribe()` reuses the open connection.
+
+```typescript
+await client.sync.warm(); // fire as recording starts
+const audio = await recordUntilDone();
+const result = await client.sync.transcribe(audio); // reuses the hot connection
+```
+
+</details>
+
+<details>
+<summary>Handle errors</summary>
+
+Failures throw a `SyncTranscriptError` with the HTTP `status`, a machine-readable
+`errorCode` (`bad_audio`, `audio_too_large`, `capacity_exceeded`, …), and
+`retryAfter` (seconds) on 429/503 responses.
+
+```typescript
+import { SyncTranscriptError } from "assemblyai";
+
+try {
+  const result = await client.sync.transcribe("./call.wav");
+} catch (error) {
+  if (error instanceof SyncTranscriptError) {
+    console.error(error.status, error.errorCode, error.retryAfter);
+  }
+}
+```
+
+</details>
+
 ### Transcribe streaming audio
 
 Refer to [AssemblyAI's streaming documentation](https://www.assemblyai.com/docs/streaming/getting-started/transcribe-streaming-audio) for full code examples.

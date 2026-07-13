@@ -16,4 +16,8 @@ export function requestMatches(params: {
 }
 
 export const createClient = () =>
-  new AssemblyAI({ baseUrl: defaultBaseUrl, apiKey: defaultApiKey });
+  new AssemblyAI({
+    baseUrl: defaultBaseUrl,
+    syncBaseUrl: defaultBaseUrl,
+    apiKey: defaultApiKey,
+  });

@@ -1,3 +1,4 @@
+export * from "./sync";
 export * from "./files";
 export * from "./transcripts";
 export * from "./realtime";

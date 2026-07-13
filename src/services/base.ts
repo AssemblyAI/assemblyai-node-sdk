@@ -19,26 +19,29 @@ export abstract class BaseService {
       this.userAgent = buildUserAgent(params.userAgent || {});
     }
   }
-  protected async fetch(
+  protected async fetchResponse(
     input: string,
     init?: RequestInit | undefined,
   ): Promise<Response> {
     init = { ...DEFAULT_FETCH_INIT, ...init };
-    let headers = {
+    let headers: Record<string, string> = {
       Authorization: this.params.apiKey,
-      "Content-Type": "application/json",
     };
+    // FormData bodies must let fetch set the multipart boundary itself.
+    if (!(init.body instanceof FormData)) {
+      headers["Content-Type"] = "application/json";
+    }
     if (DEFAULT_FETCH_INIT?.headers)
       headers = { ...headers, ...DEFAULT_FETCH_INIT.headers };
-    if (init?.headers) headers = { ...headers, ...init.headers };
+    if (init?.headers)
+      headers = { ...headers, ...(init.headers as Record<string, string>) };
 
     if (this.userAgent) {
-      (headers as Record<string, string>)["User-Agent"] = this.userAgent;
+      headers["User-Agent"] = this.userAgent;
       if (conditions.browser || conditions.default) {
         // chromium browsers have a bug where the user agent can't be modified
         if (typeof window !== "undefined" && "chrome" in window) {
-          (headers as Record<string, string>)["AssemblyAI-Agent"] =
-            this.userAgent;
+          headers["AssemblyAI-Agent"] = this.userAgent;
         }
       }
     }
@@ -46,7 +49,14 @@ export abstract class BaseService {
 
     if (!input.startsWith("http")) input = this.params.baseUrl + input;
 
-    const response = await fetch(input, init);
+    return await fetch(input, init);
+  }
+
+  protected async fetch(
+    input: string,
+    init?: RequestInit | undefined,
+  ): Promise<Response> {
+    const response = await this.fetchResponse(input, init);
 
     if (response.status >= 400) {
       let json: JsonError | undefined;
