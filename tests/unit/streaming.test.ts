@@ -38,6 +38,18 @@ async function close(rt: StreamingTranscriber, server: WS) {
   await server.closed;
 }
 
+// Read the actual URL the transcriber connected with. `jest-websocket-mock`
+// (via mock-socket) trims the query string before matching a server, so
+// `new WS(fullUrl)` cannot verify query params — the connection matches on the
+// base URL regardless. Inspect the real URL the client passed to the socket
+// instead, which is `connectionUrl().toString()`.
+function connectUrlParams(transcriber: StreamingTranscriber): URLSearchParams {
+  const socketUrl = (transcriber as unknown as { socket?: { url: string } })
+    .socket?.url;
+  if (!socketUrl) throw new Error("transcriber has no open socket");
+  return new URL(socketUrl).searchParams;
+}
+
 describe("streaming", () => {
   beforeEach(async () => {
     server = new WS(websocketBaseUrl);
@@ -408,7 +420,7 @@ describe("streaming", () => {
     },
   );
 
-  it.each(["opus", "ogg_opus"] as const)(
+  it.each(["opus", "ogg_opus", "aac"] as const)(
     "should allow omitting sampleRate for %s encoding",
     async (encoding) => {
       await cleanup();
@@ -725,5 +737,125 @@ describe("streaming", () => {
     expect(connectionCount).toBeGreaterThanOrEqual(2);
     expect(onOpen).toHaveBeenCalled();
     // Leaves rt/server connected for the shared afterEach cleanup.
+  });
+
+  it("should include encoding=aac in connection URL and allow omitting sampleRate", async () => {
+    await cleanup();
+    WS.clean();
+
+    // AAC (ADTS) is self-describing, so sampleRate is omitted here — this also
+    // guards that the constructor's sampleRate validation exempts aac.
+    const wsUrl = `${websocketBaseUrl}?token=123&encoding=aac`;
+    server = new WS(wsUrl);
+    rt = new StreamingTranscriber({
+      websocketBaseUrl,
+      token: "123",
+      encoding: "aac",
+    });
+    onOpen = jest.fn();
+    rt.on("open", onOpen);
+    await connect(rt, server);
+
+    const params = connectUrlParams(rt);
+    expect(params.get("encoding")).toBe("aac");
+    expect(params.has("sample_rate")).toBe(false);
+  });
+
+  it("should include session_heartbeat=true in connection URL", async () => {
+    await cleanup();
+    WS.clean();
+
+    const wsUrl = `${websocketBaseUrl}?token=123&sample_rate=16000&session_heartbeat=true`;
+    server = new WS(wsUrl);
+    rt = new StreamingTranscriber({
+      websocketBaseUrl,
+      token: "123",
+      sampleRate: 16_000,
+      sessionHeartbeat: true,
+    });
+    onOpen = jest.fn();
+    rt.on("open", onOpen);
+    await connect(rt, server);
+
+    expect(connectUrlParams(rt).get("session_heartbeat")).toBe("true");
+  });
+
+  it("should include session_heartbeat=false in connection URL when explicitly disabled", async () => {
+    await cleanup();
+    WS.clean();
+
+    // Serialization uses `!== undefined`, so an explicit `false` is still emitted.
+    const wsUrl = `${websocketBaseUrl}?token=123&sample_rate=16000&session_heartbeat=false`;
+    server = new WS(wsUrl);
+    rt = new StreamingTranscriber({
+      websocketBaseUrl,
+      token: "123",
+      sampleRate: 16_000,
+      sessionHeartbeat: false,
+    });
+    onOpen = jest.fn();
+    rt.on("open", onOpen);
+    await connect(rt, server);
+
+    expect(connectUrlParams(rt).get("session_heartbeat")).toBe("false");
+  });
+
+  it("should omit session_heartbeat from connection URL when unset", async () => {
+    await cleanup();
+    WS.clean();
+
+    const wsUrl = `${websocketBaseUrl}?token=123&sample_rate=16000`;
+    server = new WS(wsUrl);
+    rt = new StreamingTranscriber({
+      websocketBaseUrl,
+      token: "123",
+      sampleRate: 16_000,
+    });
+    onOpen = jest.fn();
+    rt.on("open", onOpen);
+    await connect(rt, server);
+
+    expect(connectUrlParams(rt).has("session_heartbeat")).toBe(false);
+  });
+
+  it("should parse and dispatch Heartbeat event", async () => {
+    const handler = jest.fn();
+    const heartbeatPromise = new Promise<{
+      type: string;
+      total_audio_received_ms: number;
+      total_duration_ms: number;
+      realtime_factor: number;
+      max_speech_probability: number;
+    }>((resolve) => {
+      rt.on("heartbeat", (event) => {
+        handler(event);
+        resolve(event);
+      });
+    });
+
+    const heartbeat = {
+      type: "Heartbeat",
+      total_audio_received_ms: 45000,
+      total_duration_ms: 45205,
+      realtime_factor: 0.9964,
+      max_speech_probability: 0.999954,
+    };
+
+    server.send(JSON.stringify(heartbeat));
+
+    const event = await heartbeatPromise;
+    expect(handler).toHaveBeenCalledTimes(1);
+    // snake_case wire payload is passed through verbatim.
+    expect(event).toEqual(heartbeat);
+  });
+
+  it("should include session_heartbeat in updateConfiguration message", async () => {
+    rt.updateConfiguration({ session_heartbeat: true });
+    await expect(server).toReceiveMessage(
+      JSON.stringify({
+        type: "UpdateConfiguration",
+        session_heartbeat: true,
+      }),
+    );
   });
 });

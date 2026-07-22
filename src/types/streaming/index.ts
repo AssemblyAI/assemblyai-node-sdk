@@ -94,8 +94,8 @@ export type StreamingTranscriberParams = {
   connectionRetryDelay?: number;
   /**
    * Required for PCM encodings (and for dual-channel mode). May be omitted
-   * for Opus encodings (`opus`, `ogg_opus`) — the stream is self-describing
-   * and the server ignores the value.
+   * for self-describing encodings (`opus`, `ogg_opus`, `aac`) — the stream
+   * carries its own rate and the server ignores the value.
    */
   sampleRate?: number;
   encoding?: AudioEncoding;
@@ -108,6 +108,7 @@ export type StreamingTranscriberParams = {
   maxTurnSilence?: number;
   vadThreshold?: number;
   formatTurns?: boolean;
+  sessionHeartbeat?: boolean;
   filterProfanity?: boolean;
   keyterms?: string[];
   keytermsPrompt?: string[];
@@ -184,6 +185,7 @@ export type StreamingEvents =
   | "llmGatewayResponse"
   | "speakerRevision"
   | "warning"
+  | "heartbeat"
   | "vad"
   | "error";
 
@@ -195,6 +197,7 @@ export type StreamingListeners = {
   llmGatewayResponse?: (event: LLMGatewayResponseEvent) => void;
   speakerRevision?: (event: SpeakerRevisionEvent) => void;
   warning?: (event: WarningEvent) => void;
+  heartbeat?: (event: HeartbeatEvent) => void;
   vad?: (event: VadFrame) => void;
   error?: (error: Error) => void;
 };
@@ -370,6 +373,7 @@ export type StreamingUpdateConfiguration = {
   max_turn_silence?: number;
   vad_threshold?: number;
   format_turns?: boolean;
+  session_heartbeat?: boolean;
   keyterms_prompt?: string[];
   prompt?: string;
   agent_context?: string;
@@ -402,6 +406,14 @@ export type WarningEvent = {
   type: "Warning";
   warning_code: number;
   warning: string;
+};
+
+export type HeartbeatEvent = {
+  type: "Heartbeat";
+  total_audio_received_ms: number;
+  total_duration_ms: number;
+  realtime_factor: number;
+  max_speech_probability: number;
 };
 
 export type LLMGatewayResponseEvent = {
@@ -443,7 +455,8 @@ export type StreamingEventMessage =
   | LLMGatewayResponseEvent
   | SpeakerRevisionEvent
   | ErrorEvent
-  | WarningEvent;
+  | WarningEvent
+  | HeartbeatEvent;
 
 export type StreamingOperationMessage =
   | StreamingUpdateConfiguration
