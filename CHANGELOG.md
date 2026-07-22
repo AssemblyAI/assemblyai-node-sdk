@@ -1,5 +1,10 @@
 # Changelog
 
+## [4.36.4]
+
+- Add `aac` to the streaming `encoding` options — accepts an AAC stream in ADTS framing. Like `opus`/`ogg_opus`, AAC is self-describing, so `sampleRate` is optional for it (it remains required for PCM encodings and for dual-channel mode)
+- Add opt-in `sessionHeartbeat` streaming param — when enabled, the server emits a periodic `Heartbeat` message, surfaced via the new `heartbeat` event with `total_audio_received_ms`, `total_duration_ms`, `realtime_factor`, and `max_speech_probability`. Requires the `universal-3-5-pro` streaming model
+
 ## [4.36.3]
 
 - Target the canonical `/v1` sync API routes (`/v1/transcribe`, `/v1/warm`); the unprefixed paths remain served for older SDK versions

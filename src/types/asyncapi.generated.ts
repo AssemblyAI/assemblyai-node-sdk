@@ -25,7 +25,12 @@ export type AudioData = ArrayBufferLike;
  * The encoding of the audio data
  * @defaultValue "pcm_s16"le
  */
-export type AudioEncoding = "pcm_s16le" | "pcm_mulaw" | "opus" | "ogg_opus";
+export type AudioEncoding =
+  | "pcm_s16le"
+  | "pcm_mulaw"
+  | "opus"
+  | "ogg_opus"
+  | "aac";
 
 /**
  * Configure the threshold for how long to wait before ending an utterance. Default is 700ms.

@@ -20,6 +20,7 @@ import {
   StreamingForceEndpoint,
   StreamingKeepAlive,
   WarningEvent,
+  HeartbeatEvent,
 } from "../..";
 import type { VadDetector, VadFrame } from "../../types/streaming/dual-channel";
 import { EnergyVad } from "./energy-vad";
@@ -164,10 +165,16 @@ export class StreamingTranscriber {
       throw new Error("API key or temporary token is required.");
     }
 
-    const isOpus = params.encoding === "opus" || params.encoding === "ogg_opus";
-    if (params.sampleRate === undefined && (!isOpus || params.channels)) {
+    const isSelfDescribing =
+      params.encoding === "opus" ||
+      params.encoding === "ogg_opus" ||
+      params.encoding === "aac";
+    if (
+      params.sampleRate === undefined &&
+      (!isSelfDescribing || params.channels)
+    ) {
       throw new Error(
-        '`sampleRate` is required; it may only be omitted when `encoding` is "opus" or "ogg_opus" (the Opus stream is self-describing) and dual-channel mode is not used.',
+        '`sampleRate` is required; it may only be omitted when `encoding` is "opus", "ogg_opus", or "aac" (these streams are self-describing) and dual-channel mode is not used.',
       );
     }
 
@@ -281,6 +288,13 @@ export class StreamingTranscriber {
 
     if (this.params.formatTurns) {
       searchParams.set("format_turns", this.params.formatTurns.toString());
+    }
+
+    if (this.params.sessionHeartbeat !== undefined) {
+      searchParams.set(
+        "session_heartbeat",
+        this.params.sessionHeartbeat.toString(),
+      );
     }
 
     if (this.params.encoding) {
@@ -474,6 +488,7 @@ export class StreamingTranscriber {
     listener: (event: SpeakerRevisionEvent) => void,
   ): void;
   on(event: "warning", listener: (event: WarningEvent) => void): void;
+  on(event: "heartbeat", listener: (event: HeartbeatEvent) => void): void;
   on(event: "vad", listener: (event: VadFrame) => void): void;
   on(event: "error", listener: (error: Error) => void): void;
   on(event: "close", listener: (code: number, reason: string) => void): void;
@@ -691,6 +706,10 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
               `Streaming warning (code=${warning.warning_code}): ${warning.warning}`,
             );
             this.listeners.warning?.(warning);
+            break;
+          }
+          case "Heartbeat": {
+            this.listeners.heartbeat?.(message);
             break;
           }
           case "Termination": {
