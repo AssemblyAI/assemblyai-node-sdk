@@ -1726,6 +1726,10 @@ export type LanguageDetectionOptions = {
    * The language detection model to use.
    */
   language_detection_model?: string | null;
+  /**
+   * Locale codes (e.g. ["en_au"]) to render detected English in a regional spelling variant. At most one locale per language.
+   */
+  localization?: string[] | null;
 };
 
 /**
