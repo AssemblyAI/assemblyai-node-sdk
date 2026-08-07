@@ -1186,6 +1186,10 @@ export type ParagraphsResponse = {
    * An array of paragraphs in the transcript
    */
   paragraphs: TranscriptParagraph[];
+  /**
+   * The actual speech model that was used for the transcription
+   */
+  speech_model_used?: string | null;
 };
 
 /**
@@ -1430,6 +1434,10 @@ export type SentencesResponse = {
    * An array of sentences in the transcript
    */
   sentences: TranscriptSentence[];
+  /**
+   * The actual speech model that was used for the transcription
+   */
+  speech_model_used?: string | null;
 };
 
 export type Sentiment = "POSITIVE" | "NEUTRAL" | "NEGATIVE";

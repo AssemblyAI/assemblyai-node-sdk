@@ -360,13 +360,18 @@ describe("transcript", () => {
         url: `/v2/transcript/${transcriptId}/paragraphs`,
         method: "GET",
       }),
-      JSON.stringify({ transcriptId, paragraphs: ["paragraph 1"] }),
+      JSON.stringify({
+        transcriptId,
+        paragraphs: ["paragraph 1"],
+        speech_model_used: "universal-2",
+      }),
     );
     const paragraphsResponse =
       await assembly.transcripts.paragraphs(transcriptId);
 
     expect(paragraphsResponse.paragraphs).toBeInstanceOf(Array);
     expect(paragraphsResponse.paragraphs.length).toBeGreaterThan(0);
+    expect(paragraphsResponse.speech_model_used).toBe("universal-2");
   });
 
   it("should get sentences", async () => {
@@ -375,13 +380,18 @@ describe("transcript", () => {
         url: `/v2/transcript/${transcriptId}/sentences`,
         method: "GET",
       }),
-      JSON.stringify({ transcriptId, sentences: ["sentence 1"] }),
+      JSON.stringify({
+        transcriptId,
+        sentences: ["sentence 1"],
+        speech_model_used: "universal-2",
+      }),
     );
     const sentencesResponse =
       await assembly.transcripts.sentences(transcriptId);
 
     expect(sentencesResponse.sentences).toBeInstanceOf(Array);
     expect(sentencesResponse.sentences.length).toBeGreaterThan(0);
+    expect(sentencesResponse.speech_model_used).toBe("universal-2");
   });
 
   it("should get srt subtitles", async () => {
