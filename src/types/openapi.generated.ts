@@ -1509,6 +1509,11 @@ export type SeverityScoreSummary = {
 export type SpeakerType = "role" | "name";
 
 /**
+ * Effort level for speaker identification
+ */
+export type SpeakerIdentificationEffort = "low" | "medium";
+
+/**
  * Speaker identification configuration for speech understanding
  */
 export type SpeakerIdentificationRequest = {
@@ -1520,6 +1525,14 @@ export type SpeakerIdentificationRequest = {
    * Known speaker values (required when speaker_type is 'role')
    */
   known_values?: string[];
+  /**
+   * How much effort to spend identifying speakers. Use 'medium' for higher complexity
+   * audio, such as meetings with interruptions or transcripts where names aren't
+   * clearly stated, at a higher cost.
+   *
+   * @defaultValue "low"
+   */
+  effort?: SpeakerIdentificationEffort;
 };
 
 /**
