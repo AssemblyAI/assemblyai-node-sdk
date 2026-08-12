@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.36.6]
+
+- Add `effort` to the speech understanding feature requests (`SpeakerIdentificationRequest`, `TranslationRequest`, `CustomFormattingRequest`) — `"low"` (default) or `"medium"`, set per task, typed as the new `SpeechUnderstandingEffort`. The field was already accepted by the API but missing from the SDK types, so setting it failed to type check
+
 ## [4.36.4]
 
 - Add `aac` to the streaming `encoding` options — accepts an AAC stream in ADTS framing. Like `opus`/`ogg_opus`, AAC is self-describing, so `sampleRate` is optional for it (it remains required for PCM encodings and for dual-channel mode)

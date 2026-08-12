@@ -1509,6 +1509,12 @@ export type SeverityScoreSummary = {
 export type SpeakerType = "role" | "name";
 
 /**
+ * How much processing power to spend on a speech understanding task. 'medium' produces
+ * higher quality results on harder audio at a higher cost.
+ */
+export type SpeechUnderstandingEffort = "low" | "medium";
+
+/**
  * Speaker identification configuration for speech understanding
  */
 export type SpeakerIdentificationRequest = {
@@ -1520,6 +1526,12 @@ export type SpeakerIdentificationRequest = {
    * Known speaker values (required when speaker_type is 'role')
    */
   known_values?: string[];
+  /**
+   * How much effort to spend on this task
+   *
+   * @defaultValue "low"
+   */
+  effort?: SpeechUnderstandingEffort;
 };
 
 /**
@@ -1538,6 +1550,12 @@ export type TranslationRequest = {
    * Whether to match the original utterance structure in translations (default: false)
    */
   match_original_utterance?: boolean;
+  /**
+   * How much effort to spend on this task
+   *
+   * @defaultValue "low"
+   */
+  effort?: SpeechUnderstandingEffort;
 };
 
 /**
@@ -1556,6 +1574,12 @@ export type CustomFormattingRequest = {
    * Custom email format pattern (e.g., 'username\@domain.com')
    */
   email?: string;
+  /**
+   * How much effort to spend on this task
+   *
+   * @defaultValue "low"
+   */
+  effort?: SpeechUnderstandingEffort;
 };
 
 /**
