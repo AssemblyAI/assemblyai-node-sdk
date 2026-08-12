@@ -1509,9 +1509,10 @@ export type SeverityScoreSummary = {
 export type SpeakerType = "role" | "name";
 
 /**
- * Effort level for speaker identification
+ * How much processing power to spend on a speech understanding task. 'medium' produces
+ * higher quality results on harder audio at a higher cost.
  */
-export type SpeakerIdentificationEffort = "low" | "medium";
+export type SpeechUnderstandingEffort = "low" | "medium";
 
 /**
  * Speaker identification configuration for speech understanding
@@ -1526,13 +1527,11 @@ export type SpeakerIdentificationRequest = {
    */
   known_values?: string[];
   /**
-   * How much effort to spend identifying speakers. Use 'medium' for higher complexity
-   * audio, such as meetings with interruptions or transcripts where names aren't
-   * clearly stated, at a higher cost.
+   * How much effort to spend on this task
    *
    * @defaultValue "low"
    */
-  effort?: SpeakerIdentificationEffort;
+  effort?: SpeechUnderstandingEffort;
 };
 
 /**
@@ -1551,6 +1550,12 @@ export type TranslationRequest = {
    * Whether to match the original utterance structure in translations (default: false)
    */
   match_original_utterance?: boolean;
+  /**
+   * How much effort to spend on this task
+   *
+   * @defaultValue "low"
+   */
+  effort?: SpeechUnderstandingEffort;
 };
 
 /**
@@ -1569,6 +1574,12 @@ export type CustomFormattingRequest = {
    * Custom email format pattern (e.g., 'username\@domain.com')
    */
   email?: string;
+  /**
+   * How much effort to spend on this task
+   *
+   * @defaultValue "low"
+   */
+  effort?: SpeechUnderstandingEffort;
 };
 
 /**

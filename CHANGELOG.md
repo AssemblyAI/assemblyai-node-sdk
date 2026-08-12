@@ -2,7 +2,7 @@
 
 ## [4.36.6]
 
-- Add `effort` to `SpeakerIdentificationRequest` — `"low"` (default) or `"medium"`, matching the [speaker identification docs](https://www.assemblyai.com/docs/speech-understanding/speaker-identification#controlling-effort). The field was already accepted by the API but missing from the SDK types, so setting it failed to type check
+- Add `effort` to the speech understanding feature requests (`SpeakerIdentificationRequest`, `TranslationRequest`, `CustomFormattingRequest`) — `"low"` (default) or `"medium"`, set per task, typed as the new `SpeechUnderstandingEffort`. The field was already accepted by the API but missing from the SDK types, so setting it failed to type check
 
 ## [4.36.4]
 
