@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.36.7]
+
+- Fix `StreamingTranscriber.close()` and `RealtimeTranscriber.close()` hanging forever when the socket closes without a `Termination` message — `onclose` now releases the pending wait, and the wait is bounded by a new optional `terminationTimeout` parameter on `close()` (5000ms default; `0` waits indefinitely). The socket is closed either way
+
 ## [4.36.6]
 
 - Add `effort` to the speech understanding feature requests (`SpeakerIdentificationRequest`, `TranslationRequest`, `CustomFormattingRequest`) — `"low"` (default) or `"medium"`, set per task, typed as the new `SpeechUnderstandingEffort`. The field was already accepted by the API but missing from the SDK types, so setting it failed to type check

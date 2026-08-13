@@ -65,6 +65,14 @@ const defaultStreamingUrl = "wss://streaming.assemblyai.com/v3/ws";
 const terminateSessionMessage = `{"type":"Terminate"}`;
 
 const DEFAULT_CONNECT_TIMEOUT_MS = 1000;
+
+/**
+ * How long `close()` waits for the server's `Termination` frame before giving
+ * up. The socket is closed either way, so this only bounds the wait. A server
+ * that drops the connection without replying resolves the wait immediately
+ * through `onclose`; this timeout covers a server that goes silent instead.
+ */
+const DEFAULT_TERMINATION_TIMEOUT_MS = 5000;
 const DEFAULT_MAX_CONNECTION_RETRIES = 2;
 const DEFAULT_CONNECTION_RETRY_DELAY_MS = 500;
 
@@ -231,6 +239,19 @@ export class StreamingTranscriber {
       );
       this.timeline = new VadTimeline(this.attributionParams.timelineWindowMs);
     }
+  }
+
+  /**
+   * Releases a `close()` that is waiting for the session to terminate.
+   *
+   * Called from the `Termination` frame and from `onclose`. Without the
+   * `onclose` call, a socket that dies without a `Termination` frame leaves
+   * `close()` awaiting forever.
+   */
+  private resolveSessionTermination(): void {
+    const resolve = this.sessionTerminatedResolve;
+    this.sessionTerminatedResolve = undefined;
+    resolve?.();
   }
 
   private connectionUrl(): URL {
@@ -625,6 +646,9 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
           clearInterval(this.flushTimer);
           this.flushTimer = undefined;
         }
+        // The socket is gone, so no `Termination` frame is coming. Release a
+        // `close()` that is waiting for one.
+        this.resolveSessionTermination();
         this.listeners.close?.(code, reason);
       };
 
@@ -713,7 +737,7 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
             break;
           }
           case "Termination": {
-            this.sessionTerminatedResolve?.();
+            this.resolveSessionTermination();
             break;
           }
         }
@@ -1025,6 +1049,30 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
     this.send(JSON.stringify(message));
   }
 
+  /** Awaits the session-termination frame, bounded by `timeoutMs`. */
+  private async waitForTermination(
+    sessionTerminated: Promise<void>,
+    timeoutMs: number,
+  ): Promise<void> {
+    if (timeoutMs <= 0) {
+      await sessionTerminated;
+      return;
+    }
+
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      await Promise.race([
+        sessionTerminated,
+        new Promise<void>((resolve) => {
+          timer = setTimeout(resolve, timeoutMs);
+        }),
+      ]);
+    } finally {
+      if (timer) clearTimeout(timer);
+      this.sessionTerminatedResolve = undefined;
+    }
+  }
+
   private send(data: BufferLike) {
     if (!this.socket || this.socket.readyState !== this.socket.OPEN) {
       throw new Error("Socket is not open for communication");
@@ -1032,7 +1080,18 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
     this.socket.send(data);
   }
 
-  async close(waitForSessionTermination = true) {
+  /**
+   * Close the connection to the server.
+   * @param waitForSessionTermination - Wait for the server's `Termination`
+   * frame before closing the socket. While waiting you still receive the final
+   * transcript and the session information.
+   * @param terminationTimeout - How long to wait for that frame, in
+   * milliseconds. `0` waits indefinitely. The socket closes either way.
+   */
+  async close(
+    waitForSessionTermination = true,
+    terminationTimeout = DEFAULT_TERMINATION_TIMEOUT_MS,
+  ) {
     if (this.flushTimer) {
       clearInterval(this.flushTimer);
       this.flushTimer = undefined;
@@ -1049,7 +1108,10 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
             this.sessionTerminatedResolve = resolve;
           });
           this.socket.send(terminateSessionMessage);
-          await sessionTerminatedPromise;
+          await this.waitForTermination(
+            sessionTerminatedPromise,
+            terminationTimeout,
+          );
         } else {
           this.socket.send(terminateSessionMessage);
         }
