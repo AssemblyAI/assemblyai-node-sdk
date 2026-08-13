@@ -25,6 +25,12 @@ const defaultRealtimeUrl = "wss://api.assemblyai.com/v2/realtime/ws";
 const forceEndOfUtteranceMessage = `{"force_end_utterance":true}`;
 const terminateSessionMessage = `{"terminate_session":true}`;
 
+/**
+ * How long `close()` waits for the server's `SessionTerminated` message before
+ * giving up. The socket is closed either way, so this only bounds the wait.
+ */
+const DEFAULT_TERMINATION_TIMEOUT_MS = 5000;
+
 type BufferLike =
   | string
   | Buffer
@@ -222,6 +228,9 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
             reason = RealtimeErrorMessages[code as RealtimeErrorTypeCodes];
           }
         }
+        // The socket is gone, so no `SessionTerminated` message is coming.
+        // Release a `close()` that is waiting for one.
+        this.resolveSessionTermination();
         this.listeners.close?.(code, reason);
       };
 
@@ -265,7 +274,7 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
             break;
           }
           case "SessionTerminated": {
-            this.sessionTerminatedResolve?.();
+            this.resolveSessionTermination();
             break;
           }
         }
@@ -317,11 +326,53 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
   }
 
   /**
+   * Releases a `close()` that is waiting for the session to terminate.
+   *
+   * Called from the `SessionTerminated` message and from `onclose`. Without the
+   * `onclose` call, a socket that dies without that message leaves `close()`
+   * awaiting forever.
+   */
+  private resolveSessionTermination(): void {
+    const resolve = this.sessionTerminatedResolve;
+    this.sessionTerminatedResolve = undefined;
+    resolve?.();
+  }
+
+  /** Awaits the session-termination message, bounded by `timeoutMs`. */
+  private async waitForTermination(
+    sessionTerminated: Promise<void>,
+    timeoutMs: number,
+  ): Promise<void> {
+    if (timeoutMs <= 0) {
+      await sessionTerminated;
+      return;
+    }
+
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      await Promise.race([
+        sessionTerminated,
+        new Promise<void>((resolve) => {
+          timer = setTimeout(resolve, timeoutMs);
+        }),
+      ]);
+    } finally {
+      if (timer) clearTimeout(timer);
+      this.sessionTerminatedResolve = undefined;
+    }
+  }
+
+  /**
    * Close the connection to the server.
    * @param waitForSessionTermination - If true, the method will wait for the session to be terminated before closing the connection.
    * While waiting for the session to be terminated, you will receive the final transcript and session information.
+   * @param terminationTimeout - How long to wait for that message, in
+   * milliseconds. `0` waits indefinitely. The socket closes either way.
    */
-  async close(waitForSessionTermination = true) {
+  async close(
+    waitForSessionTermination = true,
+    terminationTimeout = DEFAULT_TERMINATION_TIMEOUT_MS,
+  ) {
     if (this.socket) {
       if (this.socket.readyState === this.socket.OPEN) {
         if (waitForSessionTermination) {
@@ -329,7 +380,10 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
             this.sessionTerminatedResolve = resolve;
           });
           this.socket.send(terminateSessionMessage);
-          await sessionTerminatedPromise;
+          await this.waitForTermination(
+            sessionTerminatedPromise,
+            terminationTimeout,
+          );
         } else {
           this.socket.send(terminateSessionMessage);
         }
