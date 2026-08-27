@@ -1,7 +1,6 @@
 import { BaseServiceParams } from "..";
 import { SyncTranscriber } from "./sync";
 import { SyncTranscriptError } from "../utils/errors";
-import { LemurService } from "./lemur";
 import {
   RealtimeTranscriber,
   RealtimeTranscriberFactory,
@@ -39,11 +38,6 @@ class AssemblyAI {
   public transcripts: TranscriptService;
 
   /**
-   * The LeMUR service.
-   */
-  public lemur: LemurService;
-
-  /**
    * The realtime service.
    */
   public realtime: RealtimeTranscriberFactory;
@@ -70,7 +64,6 @@ class AssemblyAI {
 
     this.files = new FileService(params);
     this.transcripts = new TranscriptService(params, this.files);
-    this.lemur = new LemurService(params);
     this.realtime = new RealtimeTranscriberFactory(params);
 
     this.streaming = new StreamingTranscriberFactory({
@@ -93,7 +86,6 @@ export {
   AssemblyAI,
   SyncTranscriber,
   SyncTranscriptError,
-  LemurService,
   RealtimeTranscriberFactory,
   RealtimeTranscriber,
   RealtimeServiceFactory,
