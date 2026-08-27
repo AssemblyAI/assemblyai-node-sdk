@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.36.8]
+
+- Fix an uncaught exception that killed the process when a still-connecting socket was torn down — on a connection-attempt timeout or a `close()` racing `connect()`, `ws` emits `error` on the next tick after the SDK had removed all listeners. Teardown now keeps an error sink attached, and a timed-out `connect()` rejects into the caller's `catch` instead of crashing first
+
 ## [4.36.7]
 
 - Fix `StreamingTranscriber.close()` and `RealtimeTranscriber.close()` hanging forever when the socket closes without a `Termination` message — `onclose` now releases the pending wait, and the wait is bounded by a new optional `terminationTimeout` parameter on `close()` (5000ms default; `0` waits indefinitely). The socket is closed either way

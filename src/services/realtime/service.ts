@@ -388,7 +388,13 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
           this.socket.send(terminateSessionMessage);
         }
       }
-      if (this.socket?.removeAllListeners) this.socket.removeAllListeners();
+      if (this.socket?.removeAllListeners) {
+        this.socket.removeAllListeners();
+        // Closing a still-CONNECTING socket (close() racing connect()) makes
+        // `ws` emit `error` on the next tick; keep a sink attached so that
+        // emit cannot become an uncaughtException.
+        this.socket.onerror = () => {};
+      }
       this.socket.close();
     }
 

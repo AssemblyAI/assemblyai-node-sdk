@@ -749,7 +749,15 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
   private discardPendingSocket(): void {
     if (!this.socket) return;
     try {
-      if (this.socket.removeAllListeners) this.socket.removeAllListeners();
+      if (this.socket.removeAllListeners) {
+        this.socket.removeAllListeners();
+        // `ws` aborts a still-CONNECTING handshake by emitting `error` on the
+        // next tick, and an `error` emit with no listener crashes the process
+        // as an uncaughtException — outside this try/catch and any caller's.
+        // Keep a sink attached; the failure is already reported through the
+        // rejected connect() promise.
+        this.socket.onerror = () => {};
+      }
       this.socket.close();
     } catch {
       // Best-effort cleanup; a half-open socket may throw on close.
@@ -1116,7 +1124,13 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
           this.socket.send(terminateSessionMessage);
         }
       }
-      if (this.socket?.removeAllListeners) this.socket.removeAllListeners();
+      if (this.socket?.removeAllListeners) {
+        this.socket.removeAllListeners();
+        // Closing a still-CONNECTING socket (close() racing connect()) makes
+        // `ws` emit `error` on the next tick; keep a sink attached so that
+        // emit cannot become an uncaughtException.
+        this.socket.onerror = () => {};
+      }
       this.socket.close();
     }
 
