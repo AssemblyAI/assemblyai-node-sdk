@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.37.0]
+
+- Remove LeMUR support — the LeMUR API has been shut down and its endpoints answer 404. `client.lemur`, `LemurService`, and all Lemur request/response types are removed. For LeMUR-style workloads, use the LLM Gateway (`llm-gateway.assemblyai.com/v1/chat/completions`); it takes transcript text rather than `transcript_ids`
+
 ## [4.36.8]
 
 - Fix an uncaught exception that killed the process when a still-connecting socket was torn down — on a connection-attempt timeout or a `close()` racing `connect()`, `ws` emits `error` on the next tick after the SDK had removed all listeners. Teardown now keeps an error sink attached, and a timed-out `connect()` rejects into the caller's `catch` instead of crashing first
