@@ -1,7 +1,7 @@
 {
   "name": "assemblyai",
-  "version": "4.36.8",
-  "description": "The AssemblyAI JavaScript SDK provides an easy-to-use interface for interacting with the AssemblyAI API, which supports async and real-time transcription, as well as the latest LeMUR models.",
+  "version": "4.37.0",
+  "description": "The AssemblyAI JavaScript SDK provides an easy-to-use interface for interacting with the AssemblyAI API, which supports async and real-time transcription.",
   "engines": {
     "node": ">=18"
   },
