@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.37.1]
+
+- Add `universal-3-6-pro` to the streaming `speechModel` options (`StreamingSpeechModel`)
+
 ## [4.37.0]
 
 - Remove LeMUR support — the LeMUR API has been shut down and its endpoints answer 404. `client.lemur`, `LemurService`, and all Lemur request/response types are removed. For LeMUR-style workloads, use the LLM Gateway (`llm-gateway.assemblyai.com/v1/chat/completions`); it takes transcript text rather than `transcript_ids`
