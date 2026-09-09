@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.38.0]
+
+- Add `client.llmGateway` for the LLM Gateway API: `chatCompletions()` (OpenAI-compatible, non-streaming only for now), `listModels()`, `understanding()`, and `validateUnderstanding()` for Speech Understanding. Targets `llm-gateway.assemblyai.com`, overridable with the new `llmGatewayBaseUrl` client option. Failures throw the new `LlmGatewayError` (`.status`, `.requestId`, `.errors`)
+
 ## [4.37.1]
 
 - Add `universal-3-6-pro` to the streaming `speechModel` options (`StreamingSpeechModel`)

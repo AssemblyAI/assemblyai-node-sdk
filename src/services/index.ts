@@ -1,6 +1,7 @@
 import { BaseServiceParams } from "..";
 import { SyncTranscriber } from "./sync";
-import { SyncTranscriptError } from "../utils/errors";
+import { LlmGatewayService } from "./llm-gateway";
+import { SyncTranscriptError, LlmGatewayError } from "../utils/errors";
 import {
   RealtimeTranscriber,
   RealtimeTranscriberFactory,
@@ -25,6 +26,7 @@ import {
 const defaultBaseUrl = "https://api.assemblyai.com";
 const defaultStreamingUrl = "https://streaming.assemblyai.com";
 const defaultSyncUrl = "https://sync.assemblyai.com";
+const defaultLlmGatewayUrl = "https://llm-gateway.assemblyai.com";
 
 class AssemblyAI {
   /**
@@ -53,6 +55,11 @@ class AssemblyAI {
   public sync: SyncTranscriber;
 
   /**
+   * The LLM Gateway service.
+   */
+  public llmGateway: LlmGatewayService;
+
+  /**
    * Create a new AssemblyAI client.
    * @param params - The parameters for the service, including the API key and base URL, if any.
    */
@@ -79,6 +86,15 @@ class AssemblyAI {
       ...params,
       baseUrl: syncBaseUrl,
     });
+
+    let llmGatewayBaseUrl = params.llmGatewayBaseUrl || defaultLlmGatewayUrl;
+    if (llmGatewayBaseUrl.endsWith("/")) {
+      llmGatewayBaseUrl = llmGatewayBaseUrl.slice(0, -1);
+    }
+    this.llmGateway = new LlmGatewayService({
+      ...params,
+      baseUrl: llmGatewayBaseUrl,
+    });
   }
 }
 
@@ -86,6 +102,8 @@ export {
   AssemblyAI,
   SyncTranscriber,
   SyncTranscriptError,
+  LlmGatewayService,
+  LlmGatewayError,
   RealtimeTranscriberFactory,
   RealtimeTranscriber,
   RealtimeServiceFactory,

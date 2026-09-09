@@ -1,4 +1,5 @@
 export { SyncTranscriptError } from "./sync";
+export { LlmGatewayError } from "./llm-gateway";
 
 export {
   RealtimeError,
