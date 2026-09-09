@@ -19,5 +19,6 @@ export const createClient = () =>
   new AssemblyAI({
     baseUrl: defaultBaseUrl,
     syncBaseUrl: defaultBaseUrl,
+    llmGatewayBaseUrl: defaultBaseUrl,
     apiKey: defaultApiKey,
   });

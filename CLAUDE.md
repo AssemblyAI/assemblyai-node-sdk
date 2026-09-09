@@ -44,6 +44,9 @@ const client = new AssemblyAI({
 - `client.transcripts.delete(id)` — Delete a transcript
 - `client.sync.transcribe(audio, config?, options?)` — Synchronous transcription: audio in, transcript out, one request (no polling)
 - `client.streaming.transcriber(params)` — Create a real-time streaming session
+- `client.llmGateway.chatCompletions(request)` — OpenAI-compatible chat completions
+- `client.llmGateway.listModels()` — List models available on the LLM Gateway
+- `client.llmGateway.understanding(request)` / `client.llmGateway.validateUnderstanding(request)` — Run or validate a Speech Understanding request
 
 ## Common patterns
 
@@ -251,6 +254,36 @@ idles out after a few seconds.
 
 **Client-side timeout**: third argument — `client.sync.transcribe(audio, {}, { timeout: 30_000 })`
 (default 60 s, kept above the server's 30 s deadline).
+
+## LLM Gateway
+
+`client.llmGateway` targets the LLM Gateway host (`llm-gateway.assemblyai.com`, override with the
+`llmGatewayBaseUrl` client option). It exposes an OpenAI-compatible chat completions API and
+AssemblyAI's Speech Understanding endpoints.
+
+```typescript
+const completion = await client.llmGateway.chatCompletions({
+  model: "claude-haiku-4-5-20251001",
+  messages: [{ role: "user", content: "Summarize this call." }],
+});
+console.log(completion.choices[0].message.content);
+
+const { data: models } = await client.llmGateway.listModels();
+```
+
+`stream: true` is not supported yet — `chatCompletions()` throws before sending the request.
+Speech Understanding runs curated prompt pipelines (e.g. `summarization`, `translation`) over a
+transcript, referenced by `transcript_id`:
+
+```typescript
+const result = await client.llmGateway.understanding({
+  transcript_id: transcript.id,
+  speech_understanding: { request: { summarization: { version: "v1" } } },
+});
+```
+
+Failures throw `LlmGatewayError` with `.status`, `.requestId`, and `.errors` (validation detail
+strings, when present).
 
 ## Important gotchas
 
