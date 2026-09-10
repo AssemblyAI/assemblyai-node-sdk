@@ -1,5 +1,5 @@
 import { BaseServiceParams } from "..";
-import { SyncTranscriber } from "./sync";
+import { SyncTranscriber, SyncLiveSession } from "./sync";
 import { LlmGatewayService } from "./llm-gateway";
 import { SyncTranscriptError, LlmGatewayError } from "../utils/errors";
 import {
@@ -101,6 +101,7 @@ class AssemblyAI {
 export {
   AssemblyAI,
   SyncTranscriber,
+  SyncLiveSession,
   SyncTranscriptError,
   LlmGatewayService,
   LlmGatewayError,
