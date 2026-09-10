@@ -1,5 +1,10 @@
 # Changelog
 
+## [4.39.0]
+
+- Add `client.sync.transcribeLive(audio, config?, options?)` — sync transcription that uploads audio while it is still being recorded, from an async iterable (Node streams included), a sync iterable, or a web `ReadableStream`. The request starts before the audio exists, so authorization, the upload and every speech segment but the last resolve while the caller is still recording. Audio already held whole (bytes, a Blob, a path) is rejected by name — it belongs in `transcribe()`, which is faster for it
+- Add `client.sync.openLive(config?, options?)` — the push-style counterpart, for sources that deliver audio through a callback. Returns the new `SyncLiveSession` (`write()`, `close()`, `result()`, `abort()`, `closed`, `stream()`), exported from the package root alongside the `SyncLiveAudioInput` and `SyncLiveOptions` types. Both live methods take a `timeout` (default 180 000 ms) that is a total deadline spanning the upload, and an optional `signal`. `session.write()` is safe to call from a capture callback: after the session ends it drops the chunk rather than throwing, so a callback that outlives teardown cannot crash the process
+
 ## [4.38.0]
 
 - Add `client.llmGateway` for the LLM Gateway API: `chatCompletions()` (OpenAI-compatible, non-streaming only for now), `listModels()`, `understanding()`, and `validateUnderstanding()` for Speech Understanding. Targets `llm-gateway.assemblyai.com`, overridable with the new `llmGatewayBaseUrl` client option. Failures throw the new `LlmGatewayError` (`.status`, `.requestId`, `.errors`)

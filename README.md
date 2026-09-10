@@ -314,9 +314,10 @@ const res = await client.transcripts.delete(transcript.id);
 ### Transcribe audio synchronously
 
 `client.sync` posts a whole audio file and returns the finished transcript in one
-round trip — no job id, no polling. Use it for short clips where you want the answer
-inline; use `client.transcripts` for long-form audio, URLs, or the rich
-audio-intelligence features the sync API doesn't expose.
+round trip — no job id, no polling — or uploads the audio live, as it is still
+being recorded (`transcribeLive()` / `openLive()`). Use it for short clips where
+you want the answer inline; use `client.transcripts` for long-form audio, URLs,
+or the rich audio-intelligence features the sync API doesn't expose.
 
 ```typescript
 const result = await client.sync.transcribe("./call.wav");
@@ -385,6 +386,132 @@ await client.sync.warm(); // fire as recording starts
 const audio = await recordUntilDone();
 const result = await client.sync.transcribe(audio); // reuses the hot connection
 ```
+
+</details>
+
+<details>
+<summary>Transcribe live audio as it is recorded (`openLive()`)</summary>
+
+`openLive()` starts the request before the audio exists and uploads chunks as
+they arrive, so authorization, the upload and every speech segment but the last
+resolve while you are still recording. What is left to wait for once the speaker
+stops is the final segment. It is built for callback-driven sources: a
+microphone library, a WebRTC track, a telephony media stream.
+
+```typescript
+import { spawn } from "node:child_process";
+import { AssemblyAI } from "assemblyai";
+
+const client = new AssemblyAI({ apiKey: process.env.ASSEMBLYAI_API_KEY });
+const sampleRate = 16_000;
+
+// The SoX recorder the samples use (see samples/sync-live-from-mic), capturing
+// raw 16-bit mono PCM on stdout.
+const recorder = spawn("sox", [
+  "--default-device",
+  "--no-show-progress",
+  "--rate",
+  String(sampleRate),
+  "--channels",
+  "1",
+  "--encoding",
+  "signed-integer",
+  "--bits",
+  "16",
+  "--type",
+  "raw",
+  "-",
+]);
+
+await client.sync.warm(); // open the connection ahead of time
+
+// The request starts here. Raw PCM carries no header, so the sample rate and
+// channel count go in the config.
+const session = client.sync.openLive({ sample_rate: sampleRate, channels: 1 });
+
+// write() never blocks, so it is safe to call from a capture callback.
+recorder.stdout.on("data", (chunk) => session.write(chunk));
+recorder.stdout.on("end", () => session.close()); // ends the audio
+
+process.on("SIGINT", () => recorder.kill()); // stop speaking, stop recording
+
+const result = await session.result(); // closes if needed, then waits
+console.log(result.text);
+```
+
+`result()` rejects with a `SyncTranscriptError` when the server rejects the
+request. To drop the upload instead — the user cancelled, the call ended — use
+`await session.abort()`; `result()` rejects afterwards. `session.closed` reports
+whether the audio has ended, and `session.stream()` returns a `WritableStream`
+so a web stream of audio can be piped straight in (`source.pipeTo(session.stream())`),
+closing the session when it closes.
+
+> This is not the streaming API. `client.streaming` returns words while the
+> speaker is still talking; a live sync upload returns one finished transcript
+> when the audio ends. The caveats below apply to `openLive()` unchanged.
+
+</details>
+
+<details>
+<summary>Transcribe live audio from a stream (`transcribeLive()`)</summary>
+
+`transcribeLive()` is the pull-style counterpart of `openLive()`, for sources
+that already are streams: an async iterable (Node streams included), a sync
+iterable, or a web `ReadableStream<Uint8Array>`. It takes the same config as
+`transcribe()` and returns the same transcript.
+
+A file already on disk is the wrong source. Streaming it is **slower** than
+`transcribe()`, which uploads it in one piece, and the live route rejects bytes,
+a Blob or a path by name:
+
+```typescript
+import { createReadStream } from "node:fs";
+
+// Don't: the audio already exists, so there is nothing to overlap with.
+await client.sync.transcribeLive(createReadStream("./call.wav"));
+
+// Do: transcribe() uploads the whole file at once.
+await client.sync.transcribe("./call.wav");
+```
+
+A recorder process, or any producer that has not finished yet, is the right
+source:
+
+```typescript
+const recorder = spawn("sox", soxArgs); // still recording
+const controller = new AbortController();
+
+const result = await client.sync.transcribeLive(
+  recorder.stdout, // a Node Readable; a web ReadableStream works too
+  { sample_rate: 16_000, channels: 1 },
+  { timeout: 180_000, signal: controller.signal },
+);
+console.log(result.text);
+```
+
+`options.timeout` (default 180 000 ms) is a **total** deadline spanning the
+whole upload, unlike `transcribe()`'s 60 s, so it has to exceed the length of
+the recording as well as the transcription. `options.signal` drops the request
+from outside, the way `abort()` does for a session.
+
+Caveats, for both live entry points:
+
+- The win is overlapping the upload with the recording, so it needs audio that
+  is genuinely still being produced, and enough of it to have segments to
+  release early — below roughly a minute only the elided upload counts. On a
+  paced 7-second clip, the wait after the speaker stopped fell from ~380 ms to
+  ~180 ms
+- The same 120 s audio cap applies
+- Keep sending until you are done: an upload that goes silent for long enough
+  is aborted server-side. Finish by ending the stream (or `close()`), not by
+  pausing it
+- Auth, rate-limit and capacity failures can surface part-way through the
+  upload rather than only at the end, as a `SyncTranscriptError` from
+  `result()` (or from the awaited `transcribeLive()`). A malformed key is
+  rejected at once; a key that fails deeper checks can surface a few seconds
+  in, once the server reaches its first segment
+- Raw PCM needs `sample_rate` and `channels` in the config; WAV reads them from
+  its header
 
 </details>
 

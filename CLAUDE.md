@@ -43,6 +43,8 @@ const client = new AssemblyAI({
 - `client.transcripts.list()` — List transcripts with pagination
 - `client.transcripts.delete(id)` — Delete a transcript
 - `client.sync.transcribe(audio, config?, options?)` — Synchronous transcription: audio in, transcript out, one request (no polling)
+- `client.sync.transcribeLive(audio, config?, options?)` — Sync transcription that uploads a stream or iterable of audio chunks while the audio is still being recorded
+- `client.sync.openLive(config?, options?)` — Open a live sync upload that audio is pushed into (`write()` / `close()` / `result()`), for callback-driven sources
 - `client.streaming.transcriber(params)` — Create a real-time streaming session
 - `client.llmGateway.chatCompletions(request)` — OpenAI-compatible chat completions
 - `client.llmGateway.listModels()` — List models available on the LLM Gateway
@@ -252,8 +254,43 @@ it is still being recorded); it returns `true` once the socket is open, `false` 
 a transport failure. Call it shortly before `transcribe()` — the pooled connection
 idles out after a few seconds.
 
+**Live upload**: `transcribeLive()` and `openLive()` post to `/v1/transcribe/stream` with a
+chunked multipart body, so the request starts before the audio exists and chunks upload as they
+arrive. Authorization, the upload and every speech segment but the last resolve while the caller
+is still recording; only the final segment is left to wait for. `transcribeLive()` pulls from an
+async iterable (Node streams included), a sync iterable, or a web `ReadableStream` — bytes, a
+Blob or a path are rejected with a TypeError pointing at `transcribe()`. `openLive()` is the
+push-style counterpart for callback-driven sources (microphone library, WebRTC track, telephony
+media stream) and returns a `SyncLiveSession`: `write(chunk)` (never blocks), `close()` (ends the
+audio, idempotent), `result()` (closes if needed, then waits), `abort()` (drops the request),
+`closed`, and `stream()` for `source.pipeTo(session.stream())`. This is not `client.streaming`,
+which returns words mid-utterance; a live upload returns one finished transcript when the audio
+ends.
+
+```typescript
+await client.sync.warm(); // open the connection ahead of time (does not validate the key)
+
+const session = client.sync.openLive({ sample_rate: 16_000, channels: 1 });
+
+mic.on("data", (chunk) => session.write(chunk));
+mic.on("end", () => session.close());
+
+const result = await session.result();
+console.log(result.text);
+// Or pull-style, from a stream that is still being written:
+// await client.sync.transcribeLive(recorder.stdout, { sample_rate: 16_000, channels: 1 });
+```
+
+The win is overlapping the upload with the recording, so it needs audio that is genuinely still
+being produced — streaming a file already on disk is slower than `transcribe()`, and below roughly
+a minute only the elided upload counts. Keep sending until done (an upload that goes silent for
+long enough is aborted server-side); auth, rate-limit and capacity failures can surface part-way
+through the upload rather than only at the end (a malformed key at once, a key that fails deeper
+checks a few seconds in), and `warm()` opens the connection but does not validate the key.
+
 **Client-side timeout**: third argument — `client.sync.transcribe(audio, {}, { timeout: 30_000 })`
-(default 60 s, kept above the server's 30 s deadline).
+(default 60 s, kept above the server's 30 s deadline). Live requests take `SyncLiveOptions`
+instead — `{ timeout, signal }`.
 
 ## LLM Gateway
 
@@ -291,6 +328,7 @@ strings, when present).
 - **speech_models takes an array** with fallback ordering: ["universal-3-5-pro", "universal-2"]
 - **Streaming uses universal-3-5-pro** as the speech model
 - **Never expose API keys client-side** — use temporary auth tokens for browser streaming
+- **Live upload timeout is a total deadline** — `transcribeLive()`/`openLive()` default to 180 s covering the whole recording plus transcription (not per-response like `transcribe()`'s 60 s), and the sync API still caps audio at 120 s
 - **Node >= 18 required**
 - **Only runtime dependency**: ws (WebSocket library)
 - **Multi-runtime support**: Works in Node.js, Deno, Bun, Cloudflare Workers, and browsers

@@ -3,6 +3,8 @@ import { BaseService } from "../base";
 import {
   BaseServiceParams,
   SyncAudioInput,
+  SyncLiveAudioInput,
+  SyncLiveOptions,
   SyncTranscribeOptions,
   SyncTranscriptResponse,
   SyncTranscriptionConfig,
@@ -10,14 +12,27 @@ import {
 import { defaultSyncSpeechModel } from "../../types/sync";
 import { SyncTranscriptError } from "../../utils/errors/sync";
 import { getPath } from "../../utils/path";
+import {
+  SyncLiveSession,
+  checkLiveInput,
+  liveBody,
+  liveChunks,
+  multipartBoundary,
+  multipartClosing,
+  multipartHead,
+} from "./live";
 
 // Canonical paths since the sync API gained a /v1 prefix (#18103); the
 // unprefixed routes remain served for SDK versions that predate it.
 const transcribeEndpoint = "/v1/transcribe";
+const transcribeLiveEndpoint = "/v1/transcribe/stream";
 const warmEndpoint = "/v1/warm";
 const modelHeader = "X-AAI-Model";
 // Kept above the server's 30 s deadline so the client doesn't race it.
 const defaultTimeoutMs = 60_000;
+// A fetch deadline spans the whole request, upload included, so the live
+// default must clear the 120 s audio cap plus the final segment.
+const defaultLiveTimeoutMs = 180_000;
 const warmTimeoutMs = 10_000;
 const maxPromptLength = 4096;
 const maxKeytermsPromptLength = 2048;
@@ -82,6 +97,140 @@ export class SyncTranscriber extends BaseService {
       signal: AbortSignal.timeout(options.timeout ?? defaultTimeoutMs),
     });
     if (response.status !== 200) throw await errorFromResponse(response);
+    return (await response.json()) as SyncTranscriptResponse;
+  }
+
+  /**
+   * Transcribe audio uploaded as it is produced.
+   *
+   * Where `transcribe()` needs the whole clip before it can send anything,
+   * this starts the request immediately and uploads chunks as they arrive,
+   * so authorization, the upload and every speech segment but the last
+   * resolve while the caller is still recording. What is left to wait for
+   * once they stop is the final segment.
+   *
+   * That only pays off when the audio is genuinely still being produced: a
+   * live microphone, an in-progress call. Streaming a file already on disk
+   * is slower than `transcribe()`, which uploads it in one piece. The saving
+   * also needs enough audio to have segments to release early; below roughly
+   * a minute only the elided upload counts. The same 120 s audio cap applies.
+   *
+   * The caller must keep producing: an upload that goes silent for long
+   * enough is aborted server-side. Stop by ending the stream, not by pausing
+   * it. For sources that deliver audio through a callback rather than a
+   * stream, see `openLive()`.
+   * @param audio - An async iterable (Node streams included), a sync
+   * iterable, or a web `ReadableStream` of audio chunks. Raw PCM also
+   * requires `sample_rate` and `channels` on the config. Audio you already
+   * hold whole belongs in `transcribe()`.
+   * @param config - Options for this transcription request.
+   * @param options - Client-side options: the request deadline, which must
+   * cover the recording, and an optional abort signal.
+   * @returns A promise that resolves to the finished transcript.
+   * @throws TypeError when `audio` is bytes, a Blob or a path rather than a
+   * stream, or when a chunk is not bytes.
+   * @throws SyncTranscriptError when the request fails. Auth, rate-limit and
+   * capacity failures can surface part-way through the upload. Anything the
+   * producer throws propagates unchanged; the connection is dropped.
+   */
+  async transcribeLive(
+    audio: SyncLiveAudioInput,
+    config: SyncTranscriptionConfig = {},
+    options: SyncLiveOptions = {},
+  ): Promise<SyncTranscriptResponse> {
+    checkLiveInput(audio);
+    const signal = deadlineSignal(
+      options.timeout ?? defaultLiveTimeoutMs,
+      options.signal,
+    );
+    return await this.postLive(liveChunks(audio), audio, config, signal);
+  }
+
+  /**
+   * Open a live upload that audio is pushed into.
+   *
+   * The push-style counterpart of `transcribeLive()`, for sources that
+   * deliver audio through a callback rather than a stream. The request starts
+   * immediately; call `session.write(chunk)` from the callback, then
+   * `await session.result()` for the transcript once the speaker stops. See
+   * `SyncLiveSession`.
+   * @param config - Options for this transcription request. Raw PCM requires
+   * `sample_rate` and `channels`.
+   * @param options - Client-side options: the request deadline, which must
+   * cover the recording.
+   * @returns The open session.
+   * @example
+   * ```ts
+   * const session = client.sync.openLive({ sample_rate: 16000, channels: 1 });
+   * mic.on("data", (chunk) => session.write(chunk));
+   * mic.on("end", () => session.close());
+   * const { text } = await session.result();
+   * ```
+   */
+  openLive(
+    config: SyncTranscriptionConfig = {},
+    options: SyncLiveOptions = {},
+  ): SyncLiveSession {
+    return new SyncLiveSession((chunks, abortSignal) =>
+      this.postLive(
+        chunks,
+        undefined,
+        config,
+        deadlineSignal(options.timeout ?? defaultLiveTimeoutMs, abortSignal),
+      ),
+    );
+  }
+
+  /**
+   * Post a live upload whose audio arrives from `chunks`. `source` is the
+   * caller's original input, consulted only for a file name.
+   */
+  private async postLive(
+    chunks: AsyncIterable<Uint8Array>,
+    source: unknown,
+    config: SyncTranscriptionConfig,
+    signal: AbortSignal,
+  ): Promise<SyncTranscriptResponse> {
+    const { filename, contentType } = resolveLiveFormat(source, config);
+    const boundary = multipartBoundary();
+    const body = liveBody({
+      head: multipartHead({
+        boundary,
+        config: buildConfigJson(config),
+        filename,
+        contentType,
+      }),
+      chunks,
+      closing: multipartClosing(boundary),
+    });
+
+    let response: Response;
+    try {
+      response = await this.fetchResponse(transcribeLiveEndpoint, {
+        method: "POST",
+        body: body.stream,
+        headers: {
+          [modelHeader]: config.model ?? defaultSyncSpeechModel,
+          "Content-Type": `multipart/form-data; boundary=${boundary}`,
+        },
+        // Required by fetch for a streaming request body; it is what lets the
+        // request start before the audio exists.
+        duplex: "half",
+        signal,
+      } as RequestInit);
+    } catch (error) {
+      // fetch reports a failed request body as an opaque "fetch failed";
+      // surface what the producer actually threw.
+      throw body.error ?? error;
+    }
+    if (response.status !== 200) {
+      // The server can reject while the upload is still in flight (auth,
+      // rate limit, capacity). fetch resolves with the status at once but
+      // withholds the response body until the request body ends, so end it
+      // now rather than streaming the rest of a rejected recording.
+      body.finish();
+      throw await errorFromResponse(response);
+    }
     return (await response.json()) as SyncTranscriptResponse;
   }
 
@@ -179,6 +328,23 @@ async function resolveAudio(
     throw new TypeError("unsupported audio input type");
   }
 
+  return { bytes, ...resolveFormat(config, suffix, filename) };
+}
+
+/**
+ * Decide the multipart file name and content type for the audio part.
+ *
+ * PCM is selected when `suffix` is a PCM extension or when
+ * `sample_rate`/`channels` are set on the config (the fields the sync API
+ * requires only for raw PCM), and both must then be present. Everything else
+ * is treated as a WAV container. Needs no audio bytes, so it serves the live
+ * path as well as the buffered one.
+ */
+function resolveFormat(
+  config: SyncTranscriptionConfig,
+  suffix: string,
+  filename?: string,
+): { filename: string; contentType: string } {
   const wantsPcm =
     config.sample_rate !== undefined || config.channels !== undefined;
   const isPcm = pcmSuffixes.includes(suffix) || wantsPcm;
@@ -192,9 +358,42 @@ async function resolveAudio(
   }
 
   const contentType = isPcm ? "audio/pcm" : "audio/wav";
-  if (!filename) filename = isPcm ? "audio.pcm" : "audio.wav";
+  return {
+    filename: filename ?? (isPcm ? "audio.pcm" : "audio.wav"),
+    contentType,
+  };
+}
 
-  return { bytes, filename, contentType };
+/**
+ * The format for a live source, which has no bytes to inspect: only the
+ * config and, for an `fs.ReadStream`, the path it was opened from.
+ */
+function resolveLiveFormat(
+  source: unknown,
+  config: SyncTranscriptionConfig,
+): { filename: string; contentType: string } {
+  const path = (source as { path?: unknown } | undefined)?.path;
+  const filename = typeof path === "string" ? basename(path) : undefined;
+  return resolveFormat(config, filename ? extname(filename) : "", filename);
+}
+
+/**
+ * A signal that aborts when `timeoutMs` elapses or when `external` aborts,
+ * whichever comes first. `AbortSignal.any` would do this but needs Node 20.
+ */
+function deadlineSignal(
+  timeoutMs: number,
+  external?: AbortSignal,
+): AbortSignal {
+  const timeout = AbortSignal.timeout(timeoutMs);
+  if (!external) return timeout;
+  const controller = new AbortController();
+  const forward = (signal: AbortSignal) => () =>
+    controller.abort(signal.reason);
+  if (external.aborted) controller.abort(external.reason);
+  external.addEventListener("abort", forward(external), { once: true });
+  timeout.addEventListener("abort", forward(timeout), { once: true });
+  return controller.signal;
 }
 
 /**

@@ -27,6 +27,21 @@ export type SyncAudioInput =
   | NodeJS.ReadableStream;
 
 /**
+ * Audio for a live upload (`client.sync.transcribeLive()`): pieces delivered
+ * as the producer has them ready — an async iterable (Node streams included),
+ * a sync iterable, or a web `ReadableStream` of `Uint8Array` chunks.
+ *
+ * Audio you already hold whole (bytes, a Blob, a file path) belongs in
+ * `client.sync.transcribe()`, which is faster for it; the live route rejects
+ * those by name.
+ */
+export type SyncLiveAudioInput =
+  | AsyncIterable<Uint8Array>
+  | Iterable<Uint8Array>
+  | ReadableStream<Uint8Array>
+  | NodeJS.ReadableStream;
+
+/**
  * Options for a synchronous transcription request.
  *
  * `sample_rate` and `channels` are required only for raw PCM audio — WAV
@@ -92,6 +107,26 @@ export type SyncTranscribeOptions = {
    * above the server's 30 s deadline so the client doesn't race it.
    */
   timeout?: number;
+};
+
+/**
+ * Client-side options for a live upload (`transcribeLive()` / `openLive()`).
+ * These are not sent to the server.
+ */
+export type SyncLiveOptions = {
+  /**
+   * The request deadline in milliseconds, measured from the start of the
+   * request. Unlike the buffered path this spans the whole upload, so it
+   * must exceed the length of the recording as well as the transcription.
+   * Defaults to 180 000; the sync API caps audio at 120 seconds.
+   */
+  timeout?: number;
+  /**
+   * An `AbortSignal` that drops the request when aborted. `openLive()`
+   * sessions manage their own; pass one here to cancel a `transcribeLive()`
+   * call from outside.
+   */
+  signal?: AbortSignal;
 };
 
 /**
