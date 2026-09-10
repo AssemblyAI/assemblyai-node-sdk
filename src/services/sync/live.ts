@@ -394,7 +394,9 @@ export class SyncLiveSession {
    * @returns A promise that resolves once the request has been let go of.
    */
   async abort(): Promise<void> {
-    if (this.isAborted) return;
+    // A no-op once the request has finished: the transcript (or its error) is
+    // already available through result(), so aborting must not mask it.
+    if (this.isAborted || this.isSettled) return;
     this.isAborted = true;
     this.isClosed = true;
     this.queue.end();

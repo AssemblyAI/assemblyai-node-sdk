@@ -462,6 +462,17 @@ describe("sync live session", () => {
     expect(() => session.write(bytes("later"))).not.toThrow();
   });
 
+  it("should treat abort() after completion as a no-op", async () => {
+    mockOk();
+    const session = assembly.sync.openLive();
+    session.write(bytes("RIFF"));
+    const result = await session.result();
+
+    // The request already finished, so aborting must not mask the transcript.
+    await session.abort();
+    expect(await session.result()).toBe(result);
+  });
+
   it("should surface a server error from result()", async () => {
     mockError(503, {
       status: 503,
