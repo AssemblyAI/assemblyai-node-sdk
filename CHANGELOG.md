@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.39.1]
+
+- Raise the `client.sync` config caps to match the service (the API raised them; the SDK was rejecting values the server now accepts): `prompt` 4096 → 6000 characters, `keyterms_prompt` 2048 → 8000 characters, and `conversation_context` 100 → 500 turns / 4096 → 16 000 characters. `keyterms_prompt` also gains the server's 100-term cap, which the SDK did not enforce
+
 ## [4.39.0]
 
 - Add `client.sync.transcribeLive(audio, config?, options?)` — sync transcription that uploads audio while it is still being recorded, from an async iterable (Node streams included), a sync iterable, or a web `ReadableStream`. The request starts before the audio exists, so authorization, the upload and every speech segment but the last resolve while the caller is still recording. Audio already held whole (bytes, a Blob, a path) is rejected by name — it belongs in `transcribe()`, which is faster for it

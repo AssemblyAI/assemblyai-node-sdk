@@ -332,8 +332,8 @@ stream — but not a URL.
 
 ```typescript
 const result = await client.sync.transcribe("./call.wav", {
-  prompt: "Transcribe verbatim. Preserve disfluencies.", // max 4096 chars
-  keyterms_prompt: ["AssemblyAI", "Lemur"], // max 2048 chars total
+  prompt: "Transcribe verbatim. Preserve disfluencies.", // max 6000 chars
+  keyterms_prompt: ["AssemblyAI", "Lemur"], // max 100 terms / 8000 chars total
   language_codes: ["es"], // or e.g. ["en", "es"] for multilingual; defaults to English
   conversation_context: [
     // prior turns, oldest first

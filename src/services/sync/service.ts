@@ -34,10 +34,14 @@ const defaultTimeoutMs = 60_000;
 // default must clear the 120 s audio cap plus the final segment.
 const defaultLiveTimeoutMs = 180_000;
 const warmTimeoutMs = 10_000;
-const maxPromptLength = 4096;
-const maxKeytermsPromptLength = 2048;
-const maxContextTurns = 100;
-const maxContextLength = 4096;
+// Caps mirror the sync service's `config` part. `prompt` and
+// `keyterms_prompt` over their caps are rejected; `conversation_context` over
+// its caps is trimmed, oldest turns first.
+const maxPromptLength = 6000;
+const maxKeytermsPromptLength = 8000;
+const maxKeytermsCount = 100;
+const maxContextTurns = 500;
+const maxContextLength = 16000;
 // Extensions that signal raw S16LE PCM rather than a WAV container.
 const pcmSuffixes = [".pcm", ".raw"];
 
@@ -434,6 +438,11 @@ function normalizeKeytermsPrompt(
   const terms = keytermsPrompt
     .map((term) => term.trim())
     .filter((term) => term.length > 0);
+  if (terms.length > maxKeytermsCount) {
+    throw new Error(
+      `keyterms_prompt exceeds ${maxKeytermsCount} terms (got ${terms.length})`,
+    );
+  }
   const total = terms.reduce((sum, term) => sum + term.length, 0);
   if (total > maxKeytermsPromptLength) {
     throw new Error(

@@ -146,15 +146,15 @@ describe("sync", () => {
   it("should trim the oldest conversation turns over the char cap", async () => {
     mockOk();
     await assembly.sync.transcribe(fakeWavBytes, {
-      conversation_context: ["a".repeat(3000), "b".repeat(3000)],
+      conversation_context: ["a".repeat(10000), "b".repeat(10000)],
     });
     const config = await configPart();
-    expect(config?.conversation_context).toEqual(["b".repeat(3000)]);
+    expect(config?.conversation_context).toEqual(["b".repeat(10000)]);
   });
 
   it("should trim the oldest conversation turns over the turn cap", async () => {
     mockOk();
-    const turns = Array.from({ length: 120 }, (_, i) => `turn ${i}`);
+    const turns = Array.from({ length: 520 }, (_, i) => `turn ${i}`);
     await assembly.sync.transcribe(fakeWavBytes, {
       conversation_context: turns,
     });
@@ -165,7 +165,7 @@ describe("sync", () => {
   it("should trim to nothing when a single turn is over the char cap", async () => {
     mockOk();
     await assembly.sync.transcribe(fakeWavBytes, {
-      conversation_context: ["a".repeat(5000)],
+      conversation_context: ["a".repeat(20000)],
     });
     expect(requestBody().get("config")).toBeNull();
   });
@@ -294,15 +294,24 @@ describe("sync", () => {
   it("should reject an oversized keyterms_prompt", async () => {
     await expect(
       assembly.sync.transcribe(fakeWavBytes, {
-        keyterms_prompt: ["x".repeat(3000)],
+        keyterms_prompt: ["x".repeat(9000)],
       }),
     ).rejects.toThrow("keyterms_prompt exceeds");
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("should reject a keyterms_prompt over the term count", async () => {
+    await expect(
+      assembly.sync.transcribe(fakeWavBytes, {
+        keyterms_prompt: Array.from({ length: 101 }, (_, i) => `term ${i}`),
+      }),
+    ).rejects.toThrow("keyterms_prompt exceeds 100 terms");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("should reject an oversized prompt", async () => {
     await expect(
-      assembly.sync.transcribe(fakeWavBytes, { prompt: "x".repeat(5000) }),
+      assembly.sync.transcribe(fakeWavBytes, { prompt: "x".repeat(7000) }),
     ).rejects.toThrow("prompt exceeds");
     expect(fetchMock).not.toHaveBeenCalled();
   });
