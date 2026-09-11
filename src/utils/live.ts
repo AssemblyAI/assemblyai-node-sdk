@@ -2,10 +2,9 @@
  * Multipart framing, streaming request bodies and the push-style session
  * behind every live upload route.
  *
- * A buffered request hands fetch a `FormData` and lets it encode the whole
- * body up front. A live upload cannot: the audio does not exist yet when the
- * request starts. This module emits the framing itself as a `ReadableStream`,
- * so the `config` part goes out immediately and audio follows as it arrives.
+ * The audio does not exist yet when the request starts, so this module emits
+ * the framing itself as a `ReadableStream`: the `config` part goes out
+ * immediately and audio follows as it arrives.
  *
  * Part order is significant and is enforced here by construction. The server
  * decodes audio as it lands, so it needs `sample_rate` and `channels` before
@@ -32,12 +31,19 @@ export function multipartBoundary(): string {
 }
 
 /**
- * Escape a value for a quoted `Content-Disposition` parameter, as
- * `FormData` serialization does: `"` becomes `%22`, CR and LF become `%0D`
- * and `%0A`, so a file name cannot break out of the part header.
+ * Escape a value for a quoted `Content-Disposition` parameter, per the HTML5
+ * multipart form-encoding rules: `"` becomes `%22`, `\` is doubled to `\\`,
+ * and every control character U+0000-U+001F other than ESC (U+001B) becomes
+ * `%XX` (two uppercase hex digits), so a file name cannot break out of the
+ * part header.
  */
 function escapeFormParam(value: string): string {
-  return value.replace(/"/g, "%22").replace(/\r/g, "%0D").replace(/\n/g, "%0A");
+  // eslint-disable-next-line no-control-regex -- control characters are the escape target
+  return value.replace(/["\\\x00-\x1a\x1c-\x1f]/g, (char) => {
+    if (char === '"') return "%22";
+    if (char === "\\") return "\\\\";
+    return `%${char.charCodeAt(0).toString(16).toUpperCase().padStart(2, "0")}`;
+  });
 }
 
 /**
@@ -448,7 +454,9 @@ export class LiveSession<TResult> {
 /**
  * Build a product error from a non-200 response. The primary format is an
  * RFC 9457 problem-details body (`status`/`title`/`detail`); legacy
- * `{error_code, message}` and `{detail}`-only bodies are also accepted.
+ * `{error_code, message}` and `{error_code, error}` bodies are also accepted.
+ * The message is taken from `detail`, then `message`, then `error`, in that
+ * order of precedence.
  * @typeParam TError - The product's error class.
  * @param response - The failed response, whose body is read here.
  * @param factory - The error class to construct.
@@ -479,6 +487,7 @@ export async function errorFromResponse<TError extends Error>(
       }
       if (typeof body.detail === "string") message = body.detail;
       else if (typeof body.message === "string") message = body.message;
+      else if (typeof body.error === "string") message = body.error;
     }
   } catch {
     if (text) message = text;
@@ -509,8 +518,8 @@ const defaultContentType = "audio/wav";
  * `sample_rate`/`channels` are set on the config (the fields these APIs
  * require only for raw PCM), and both must then be present. Any other suffix
  * takes the content type `contentTypes` maps it to, and `audio/wav` when it
- * is unknown or absent. Needs no audio bytes, so it serves a live upload as
- * well as a buffered one.
+ * is unknown or absent. Decided from the config and file name alone, before
+ * any audio bytes are available.
  * @param config - The request config, read for `sample_rate` and `channels`.
  * @param suffix - The source's lowercased file extension, with the dot, or
  * `""`.
