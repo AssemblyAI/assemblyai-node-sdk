@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.41.1]
+
+- Add `universal-3-6` to the streaming `speechModel` options (`StreamingSpeechModel`)
+
 ## [4.41.0]
 
 - `client.sync.transcribe()` now sends audio over the same live connection as `transcribeLive()` / `openLive()`: `POST /v1/transcribe/live` (also served at `/v1/transcribe/stream`), chunked multipart, `config` first (always present, `{}` when empty) then `audio`. A clip already held is sent as a single chunk. There is no separate buffered request any more — nothing posts to `/v1/transcribe`
