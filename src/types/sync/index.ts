@@ -55,19 +55,19 @@ export type SyncTranscriptionConfig = {
    */
   model?: SyncSpeechModel;
   /**
-   * Custom transcription instruction. Maximum 4096 characters — longer
+   * Custom transcription instruction. Maximum 6000 characters — longer
    * prompts are rejected.
    */
   prompt?: string;
   /**
    * Terms to bias the decoder towards. Whitespace is stripped and empty
-   * terms are dropped. Maximum 2048 characters in total — longer lists are
-   * rejected.
+   * terms are dropped. Maximum 100 terms and 8000 characters in total —
+   * longer lists are rejected.
    */
   keyterms_prompt?: string[];
   /**
    * Prior turns from the same conversation, oldest first, most recent last.
-   * A single string is treated as one turn. Capped at 100 turns and 4096
+   * A single string is treated as one turn. Capped at 500 turns and 16000
    * characters in total — over-cap context is trimmed (oldest turns dropped
    * first), not rejected.
    */
@@ -103,10 +103,15 @@ export type SyncTranscriptionConfig = {
  */
 export type SyncTranscribeOptions = {
   /**
-   * The request timeout in milliseconds. Defaults to 60 000, which is kept
-   * above the server's 30 s deadline so the client doesn't race it.
+   * The request deadline in milliseconds, measured from the start of the
+   * request. Spans the upload and the transcription. Defaults to 180 000;
+   * the sync API caps audio at 120 seconds.
    */
   timeout?: number;
+  /**
+   * An `AbortSignal` that drops the request when aborted.
+   */
+  signal?: AbortSignal;
 };
 
 /**
@@ -116,9 +121,8 @@ export type SyncTranscribeOptions = {
 export type SyncLiveOptions = {
   /**
    * The request deadline in milliseconds, measured from the start of the
-   * request. Unlike the buffered path this spans the whole upload, so it
-   * must exceed the length of the recording as well as the transcription.
-   * Defaults to 180 000; the sync API caps audio at 120 seconds.
+   * request. Spans the upload and the transcription. Defaults to 180 000;
+   * the sync API caps audio at 120 seconds.
    */
   timeout?: number;
   /**

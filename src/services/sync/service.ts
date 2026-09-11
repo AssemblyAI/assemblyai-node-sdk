@@ -31,22 +31,24 @@ import {
 } from "../../utils/live";
 import { SyncLiveSession, checkLiveInput } from "./live";
 
-// Canonical paths since the sync API gained a /v1 prefix (#18103); the
-// unprefixed routes remain served for SDK versions that predate it.
-const transcribeEndpoint = "/v1/transcribe";
-const transcribeLiveEndpoint = "/v1/transcribe/stream";
+// The one endpoint the client posts audio to. The service also serves it at
+// /v1/transcribe/stream.
+const transcribeLiveEndpoint = "/v1/transcribe/live";
 const warmEndpoint = "/v1/warm";
 const modelHeader = "X-AAI-Model";
-// Kept above the server's 30 s deadline so the client doesn't race it.
-const defaultTimeoutMs = 60_000;
-// A fetch deadline spans the whole request, upload included, so the live
-// default must clear the 120 s audio cap plus the final segment.
+// A fetch deadline spans the whole request, upload included, so this must
+// clear the 120 s audio cap plus the final segment. It is the default for
+// every transcription request.
 const defaultLiveTimeoutMs = 180_000;
 const warmTimeoutMs = 10_000;
-const maxPromptLength = 4096;
-const maxKeytermsPromptLength = 2048;
-const maxContextTurns = 100;
-const maxContextLength = 4096;
+// Caps mirror the sync service's `config` part. `prompt` and
+// `keyterms_prompt` over their caps are rejected; `conversation_context` over
+// its caps is trimmed, oldest turns first.
+const maxPromptLength = 6000;
+const maxKeytermsPromptLength = 8000;
+const maxKeytermsCount = 100;
+const maxContextTurns = 500;
+const maxContextLength = 16000;
 // The sync route decodes a WAV container or raw S16LE PCM, so no extension
 // maps to a container content type of its own.
 const contentTypes: Record<string, string> = {};
@@ -54,14 +56,16 @@ const contentTypes: Record<string, string> = {};
 const configName = "the config";
 
 /**
- * The synchronous transcription service: audio in, transcript out,
- * one request.
+ * The synchronous transcription service: audio in, transcript out, one
+ * connection.
  *
  * Unlike `client.transcripts` (which submits a job to the async API and
- * polls for completion), `SyncTranscriber` posts the audio to the sync
- * API and returns the finished transcript in the HTTP response. There is no
- * job id or status to poll. Accepts a local file path, raw audio bytes, a
- * Blob, or a readable stream — but not a URL.
+ * polls for completion), `SyncTranscriber` posts audio over a live upload to
+ * the sync API and returns the finished transcript in the HTTP response.
+ * There is no job id or status to poll. `transcribe()` accepts a local file
+ * path, raw audio bytes, a Blob, or a readable stream — but not a URL — and
+ * sends it as a single chunk over the same connection `transcribeLive()` and
+ * `openLive()` use for audio still being produced.
  */
 export class SyncTranscriber extends BaseService {
   /**
@@ -74,11 +78,19 @@ export class SyncTranscriber extends BaseService {
 
   /**
    * Transcribe audio and return the finished transcript in one request.
+   *
+   * The audio travels as a single chunk over the same live upload
+   * `transcribeLive()` uses — this is the ergonomic shape for audio you
+   * already hold whole, rather than audio still being produced.
    * @param audio - A local file path, raw audio bytes, a Blob, or a readable
    * stream. Raw PCM also requires `sample_rate` and `channels` on the config.
    * @param config - Options for this transcription request.
-   * @param options - Client-side options, such as the request timeout.
+   * @param options - Client-side options: the request deadline and an
+   * optional abort signal.
    * @returns A promise that resolves to the finished transcript.
+   * @throws Error when `audio` is a URL, when raw PCM is missing
+   * `sample_rate` or `channels`, or when `prompt` or `keyterms_prompt`
+   * exceeds its cap.
    * @throws SyncTranscriptError when the request fails.
    */
   async transcribe(
@@ -87,47 +99,32 @@ export class SyncTranscriber extends BaseService {
     options: SyncTranscribeOptions = {},
   ): Promise<SyncTranscriptResponse> {
     const { bytes, filename, contentType } = await resolveAudio(audio, config);
-
-    const body = new FormData();
-    body.append(
-      "audio",
-      new Blob([bytes as BlobPart], { type: contentType }),
-      filename,
+    const signal = deadlineSignal(
+      options.timeout ?? defaultLiveTimeoutMs,
+      options.signal,
     );
-    const configJson = buildConfigJson(config);
-    if (configJson) {
-      body.append(
-        "config",
-        new Blob([JSON.stringify(configJson)], { type: "application/json" }),
-      );
-    }
-
-    const response = await this.fetchResponse(transcribeEndpoint, {
-      method: "POST",
-      body,
-      headers: { [modelHeader]: config.model ?? defaultSyncSpeechModel },
-      signal: AbortSignal.timeout(options.timeout ?? defaultTimeoutMs),
+    return await this.postLive(singleChunk(bytes), audio, config, signal, {
+      filename,
+      contentType,
     });
-    if (response.status !== 200) {
-      throw await syncError(response);
-    }
-    return (await response.json()) as SyncTranscriptResponse;
   }
 
   /**
    * Transcribe audio uploaded as it is produced.
    *
-   * Where `transcribe()` needs the whole clip before it can send anything,
-   * this starts the request immediately and uploads chunks as they arrive,
-   * so authorization, the upload and every speech segment but the last
-   * resolve while the caller is still recording. What is left to wait for
-   * once they stop is the final segment.
+   * For audio that is still being produced — a live microphone, an
+   * in-progress call — this starts the request immediately and uploads
+   * chunks as they arrive, so authorization, the upload and every speech
+   * segment but the last resolve while the caller is still recording. What
+   * is left to wait for once they stop is the final segment. Audio already
+   * held whole travels the same connection as a single chunk in
+   * `transcribe()`, the ergonomic shape for that case.
    *
-   * That only pays off when the audio is genuinely still being produced: a
-   * live microphone, an in-progress call. Streaming a file already on disk
-   * is slower than `transcribe()`, which uploads it in one piece. The saving
-   * also needs enough audio to have segments to release early; below roughly
-   * a minute only the elided upload counts. The same 120 s audio cap applies.
+   * The saving only pays off when the audio is genuinely still being
+   * produced; audio you already hold whole belongs in `transcribe()`. It
+   * also needs enough audio to have segments to release early; below
+   * roughly a minute only the elided upload counts. The same 120 s audio
+   * cap applies.
    *
    * The caller must keep producing: an upload that goes silent for long
    * enough is aborted server-side. Stop by ending the stream, not by pausing
@@ -197,15 +194,18 @@ export class SyncTranscriber extends BaseService {
 
   /**
    * Post a live upload whose audio arrives from `chunks`. `source` is the
-   * caller's original input, consulted only for a file name.
+   * caller's original input, consulted only for a file name when `format` is
+   * not already resolved.
    */
   private async postLive(
     chunks: AsyncIterable<Uint8Array>,
     source: unknown,
     config: SyncTranscriptionConfig,
     signal: AbortSignal,
+    format?: { filename: string; contentType: string },
   ): Promise<SyncTranscriptResponse> {
-    const { filename, contentType } = resolveLiveFormat(source, config);
+    const { filename, contentType } =
+      format ?? resolveLiveFormat(source, config);
     const boundary = multipartBoundary();
     const body = liveBody({
       head: multipartHead({
@@ -283,6 +283,11 @@ type ResolvedAudio = {
   filename: string;
   contentType: string;
 };
+
+/** Presents audio that is already complete as the upload's one chunk. */
+async function* singleChunk(bytes: Uint8Array): AsyncGenerator<Uint8Array> {
+  yield bytes;
+}
 
 /**
  * Read the audio input into bytes and decide its multipart content type.
@@ -371,7 +376,8 @@ function resolveLiveFormat(
  * Serialize the config to the JSON `config` part, validating and normalizing
  * field values to match the server's caps. The routing `model` is never
  * included — it travels in the `X-AAI-Model` header. Returns `undefined`
- * when there is nothing to send, so the part can be omitted entirely.
+ * when there are no options; the multipart head then sends an empty `{}`
+ * part.
  */
 function buildConfigJson(
   config: SyncTranscriptionConfig,
@@ -405,6 +411,11 @@ function normalizeKeytermsPrompt(
   const terms = keytermsPrompt
     .map((term) => term.trim())
     .filter((term) => term.length > 0);
+  if (terms.length > maxKeytermsCount) {
+    throw new Error(
+      `keyterms_prompt exceeds ${maxKeytermsCount} terms (got ${terms.length})`,
+    );
+  }
   const total = terms.reduce((sum, term) => sum + term.length, 0);
   if (total > maxKeytermsPromptLength) {
     throw new Error(
