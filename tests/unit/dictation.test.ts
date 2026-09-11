@@ -1,5 +1,6 @@
-import { createReadStream } from "fs";
+import { createReadStream, mkdtempSync, rmSync, writeFileSync } from "fs";
 import fetchMock from "jest-fetch-mock";
+import { tmpdir } from "os";
 import path from "path";
 import { Readable } from "stream";
 import { AssemblyAI, DictationError, SyncTranscriptError } from "../../src";
@@ -209,6 +210,37 @@ describe("dictation upload", () => {
     expect(parts.map((p) => p.name)).toEqual(["config", "audio"]);
     expect(parts[1].filename).toBe("we%22ird%0D%0Aname.wav");
     expect(decode(parts[1].body)).toBe("RIFF");
+  });
+
+  it("should escape a tab in a real path file name, passing ESC through", async () => {
+    mockOk();
+    const dir = mkdtempSync(path.join(tmpdir(), "aai-dictation-"));
+    // A tab and an ESC control character — both valid bytes in a POSIX file
+    // name. No backslash here: the SDK's basename() splits a path on both
+    // `/` and `\`, so a path input can never carry one into the file name
+    // (see the File-based test below for that case).
+    const weirdName = `b\tc\x1bd.wav`;
+    const filePath = path.join(dir, weirdName);
+    writeFileSync(filePath, Buffer.from("RIFFfake"));
+    try {
+      await assembly.dictation.transcribeLive(filePath);
+      const parts = await requestParts();
+      expect(parts[1].filename).toBe(`b%09c\x1bd.wav`);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("should escape a quote and tab in a File name", async () => {
+    mockOk();
+    // basename() is applied to a File/Blob `.name` the same as a path, so a
+    // backslash in it is also split off rather than reaching the escaper —
+    // there is no public input that carries a backslash through to it.
+    const file: NamedBlob = new Blob([bytes("RIFFfake") as BlobPart]);
+    file.name = `b"c\td.wav`;
+    await assembly.dictation.transcribeLive(file);
+    const parts = await requestParts();
+    expect(parts[1].filename).toBe(`b%22c%09d.wav`);
   });
 });
 
@@ -434,10 +466,19 @@ describe("dictation config", () => {
   it("should reject an oversized stt_prompt before any request", async () => {
     await expect(
       assembly.dictation.transcribeLive(chunks(bytes("RIFF")), {
-        stt_prompt: "a".repeat(4097),
+        stt_prompt: "a".repeat(6001),
       }),
-    ).rejects.toThrow("stt_prompt exceeds 4096 characters (got 4097)");
+    ).rejects.toThrow("stt_prompt exceeds");
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("should accept a 5000-char stt_prompt", async () => {
+    mockOk();
+    const sttPrompt = "a".repeat(5000);
+    await assembly.dictation.transcribeLive(chunks(bytes("RIFF")), {
+      stt_prompt: sttPrompt,
+    });
+    expect(await configPart()).toEqual({ stt_prompt: sttPrompt });
   });
 
   it("should reject an oversized llm_instruction before any request", async () => {
@@ -452,10 +493,30 @@ describe("dictation config", () => {
   it("should reject an oversized keyterms_prompt before any request", async () => {
     await expect(
       assembly.dictation.transcribeLive(chunks(bytes("RIFF")), {
-        keyterms_prompt: ["a".repeat(1024), "b".repeat(1025)],
+        keyterms_prompt: ["a".repeat(4000), "b".repeat(4001)],
       }),
-    ).rejects.toThrow("keyterms_prompt exceeds 2048 characters (got 2049)");
+    ).rejects.toThrow("characters");
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("should reject more than 100 keyterms_prompt terms", async () => {
+    const terms = Array.from({ length: 101 }, (_, i) => `term${i}`);
+    await expect(
+      assembly.dictation.transcribeLive(chunks(bytes("RIFF")), {
+        keyterms_prompt: terms,
+      }),
+    ).rejects.toThrow("keyterms_prompt exceeds 100 terms");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("should accept exactly 100 keyterms_prompt terms", async () => {
+    mockOk();
+    const terms = Array.from({ length: 100 }, (_, i) => `term${i}`);
+    await assembly.dictation.transcribeLive(chunks(bytes("RIFF")), {
+      keyterms_prompt: terms,
+    });
+    const config = await configPart();
+    expect(config.keyterms_prompt).toEqual(terms);
   });
 });
 
@@ -533,6 +594,19 @@ describe("dictation errors", () => {
     expect(error.status).toBe(400);
     expect(error.errorCode).toBe("bad_audio");
     expect(error.message).toBe("could not decode");
+  });
+
+  it("should map a bare error/error_code envelope to DictationError", async () => {
+    mockError(401, {
+      error: "Invalid API key",
+      error_code: "unauthorized",
+    });
+    const error = await assembly.dictation
+      .transcribeLive(chunks(bytes("RIFF")))
+      .catch((e) => e);
+    expect(error).toBeInstanceOf(DictationError);
+    expect(error.message).toBe("Invalid API key");
+    expect(error.errorCode).toBe("unauthorized");
   });
 
   it("should map a problem-details envelope to DictationError", async () => {

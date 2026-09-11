@@ -3,7 +3,7 @@ import fetchMock from "jest-fetch-mock";
 import path from "path";
 import { Readable } from "stream";
 import { SyncTranscriptError } from "../../src";
-import { createClient, requestMatches } from "./utils";
+import { createClient, defaultBaseUrl, requestMatches } from "./utils";
 
 fetchMock.enableMocks();
 
@@ -20,7 +20,7 @@ const okResponse = {
   request_time_ms: 243.7,
 };
 
-const liveUrl = "/v1/transcribe/stream";
+const liveUrl = "/v1/transcribe/live";
 
 function mockOk() {
   fetchMock.doMockOnceIf(
@@ -528,5 +528,24 @@ describe("sync live session", () => {
     expect(result.text).toBe("hello world");
     const parts = parseParts(uploaded!);
     expect(decode(parts[1].body)).toBe("RIFFfake");
+  });
+});
+
+describe("sync routing", () => {
+  it("should never request the buffered transcription endpoint", async () => {
+    mockOk();
+    mockOk();
+    mockOk();
+
+    await assembly.sync.transcribe(bytes("RIFFfake"));
+    await assembly.sync.transcribeLive(chunks(bytes("RIFF")));
+    const session = assembly.sync.openLive();
+    session.write(bytes("RIFF"));
+    session.close();
+    await session.result();
+
+    expect(fetchMock.mock.calls).toHaveLength(3);
+    const urls = new Set(fetchMock.mock.calls.map(([url]) => url));
+    expect(urls).toEqual(new Set([defaultBaseUrl + liveUrl]));
   });
 });
