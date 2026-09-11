@@ -190,57 +190,6 @@ let transcript = await client.transcripts.submit({
 </details>
 
 <details>
-  <summary>Handle silent audio with language detection</summary>
-
-Set `language_detection_options.on_no_speech_detected` to `"fallback"` to complete
-a silent recording with empty `text`, the specified `fallback_language`, and a
-warning in `metadata.warnings`. Set `"error"` explicitly to request a failed
-transcript when language detection finds no speech. The SDK leaves omitted
-options unset, preserving the API behavior for your account.
-
-**Billing:** fallback results are successful transcriptions and are charged even
-when the text is empty. Failed transcriptions are not charged. See
-[billing and pricing](https://www.assemblyai.com/docs/billing-and-pricing#how-billing-works).
-
-```ts
-const transcript = await client.transcripts.transcribe({
-  audio: "./recording.flac",
-  speech_models: ["universal-3-5-pro", "universal-2"],
-  language_detection: true,
-  language_detection_options: {
-    on_no_speech_detected: "fallback",
-    fallback_language: "en",
-  },
-});
-
-if (transcript.status === "error") {
-  console.error(transcript.error);
-} else {
-  console.log(transcript.text); // "" for a silent-file fallback
-  for (const warning of transcript.metadata?.warnings ?? []) {
-    console.warn(warning.message);
-  }
-}
-```
-
-The same options work with `client.transcripts.submit()`. Retrieve the finished
-result using `get()` or `waitUntilReady()` to read its warnings. Set an explicit
-`fallback_language`; `"auto"` returns an HTTP 400. The SDK rejects a failed
-submission promise with the API's error message.
-
-The API reference documents `"error"` as the default and instructs callers to set
-a fallback language. Server defaults can differ by account, so set both options
-explicitly for predictable behavior.
-
-Warnings currently contain human-readable `message` fields, without stable codes.
-An empty transcript or the presence of a warning alone does not identify this
-specific fallback. Async errors also lack a documented machine-readable error
-code. See the [API gap and regression notes](./docs/no-speech-detected.md) and
-[Automatic Language Detection guide](https://www.assemblyai.com/docs/pre-recorded-audio/language-detection#handle-audio-with-no-speech).
-
-</details>
-
-<details>
   <summary>Enable additional Speech Understanding models</summary>
 
 You can extract even more insights from the audio by enabling any of our Speech Understanding models using _transcription options_.

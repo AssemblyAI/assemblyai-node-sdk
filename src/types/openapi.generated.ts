@@ -22,7 +22,7 @@ type OneOf<T extends any[]> = T extends [infer Only]
 export type AudioIntelligenceModelStatus = "success" | "unavailable";
 
 export interface TranscriptWarning {
-  /** The human-readable warning message. No machine-readable warning code is provided. */
+  /** The warning message. */
   message: string;
 }
 
@@ -1274,22 +1274,12 @@ export type LanguageDetectionOptions = {
   expected_languages?: string[] | null;
   /**
    * The language to fallback to in case the language detection does not predict any of the expected ones.
-   * Set an explicit language code such as "en" when `on_no_speech_detected` is "fallback".
-   * Using "auto" with no-speech fallback returns an HTTP 400 from the API.
-   * No-speech fallback produces a billable successful transcript, even when its text is empty;
-   * failed transcriptions are not charged.
    */
   fallback_language?: string | null;
   /**
-   * Controls behavior when Automatic Language Detection finds no speech in the audio.
-   * With "error", the transcript fails and the reason is returned in `error`.
-   * With "fallback", it completes with empty `text`, `language_code` set to `fallback_language`,
-   * and an explanatory warning in `metadata.warnings`.
-   * Set an explicit `fallback_language`; using "auto" returns an HTTP 400.
-   * Fallback transcripts are billable successful transcriptions, even when their text is empty;
-   * failed transcriptions are not charged.
-   * The API documents "error" as the default, but account defaults can differ.
-   * The SDK leaves omitted options unset; specify "error" or "fallback" for predictable behavior.
+   * Controls behavior when no speech is detected. "fallback" returns an empty
+   * completed transcript with `metadata.warnings`. Use a specific `fallback_language`;
+   * "auto" is rejected. Successful fallback transcripts are billable.
    */
   on_no_speech_detected?: "error" | "fallback";
   /**
@@ -1301,10 +1291,7 @@ export type LanguageDetectionOptions = {
    */
   code_switching_confidence_threshold?: number | null;
   /**
-   * Regional variants to use when the detected language matches the locale's base language.
-   * Supported locales are "en_au" and "en_uk", with at most one locale per base language.
-   * Base or default-region codes such as "en" and "en_us" return an HTTP 400.
-   * The transcript uses the locale's spelling and returns the regional `language_code`.
+   * Regional variants such as "en_au" or "en_uk", with at most one per base language.
    */
   localization?: string[] | null;
   /**
