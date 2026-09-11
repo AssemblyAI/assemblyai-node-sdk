@@ -43,7 +43,8 @@ describeLive("no speech detected (live, opt-in)", () => {
   let client: AssemblyAI;
   let silentAudioUrl: string;
   let submitSpy:
-    jest.SpiedFunction<AssemblyAI["transcripts"]["submit"]> | undefined;
+    | jest.SpiedFunction<AssemblyAI["transcripts"]["submit"]>
+    | undefined;
   const transcriptIds = new Set<string>();
 
   beforeAll(async () => {

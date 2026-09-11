@@ -1355,7 +1355,11 @@ export type SummaryModel = "informative" | "conversational" | "catchy";
  * The type of summary
  */
 export type SummaryType =
-  "bullets" | "bullets_verbose" | "gist" | "headline" | "paragraph";
+  | "bullets"
+  | "bullets_verbose"
+  | "gist"
+  | "headline"
+  | "paragraph";
 
 /**
  * Timestamp containing a start and end property in milliseconds
@@ -3104,7 +3108,8 @@ export type TranscriptOptionalParams = {
    * Speech understanding configuration/response for LLM Gateway features
    */
   speech_understanding?:
-    SpeechUnderstandingRequest | SpeechUnderstandingResponse;
+    | SpeechUnderstandingRequest
+    | SpeechUnderstandingResponse;
   /**
    * The domain to use for the transcription (e.g. 'medical-v1').
    */
@@ -3497,7 +3502,8 @@ export type TranscriptUtterance = {
  * The notifications sent to the webhook URL.
  */
 export type TranscriptWebhookNotification =
-  TranscriptReadyNotification | RedactedAudioNotification;
+  | TranscriptReadyNotification
+  | RedactedAudioNotification;
 
 /**
  * @example
