@@ -1,5 +1,11 @@
 # Changelog
 
+## [4.40.0]
+
+- Add `client.dictation` — dictation transcription for short spoken notes: `transcribeLive(audio, config?, options?)` uploads audio as it is spoken and resolves with one finished transcript, `openLive(config?, options?)` is the push-style counterpart for callback-driven sources, and `warm()` opens the connection ahead of the request. Targets `dictation.assemblyai.com`, overridable with the new `dictationBaseUrl` client option. Audio is WAV or raw 16-bit PCM, up to 120 s
+- Add `DictationLiveSession` (`write()`, `close()`, `result()`, `abort()`, `closed`, `stream()`), exported from the package root with `DictationTranscriber`, `DictationError`, and the `DictationAudioInput`, `DictationConfig`, `DictationLiveOptions`, `DictationWord` and `DictationResponse` types. `session.write()` drops a chunk written after the session ended rather than throwing, so a capture callback that outlives teardown cannot crash the process
+- `DictationConfig` takes `sample_rate` + `channels` (raw PCM), `language_codes`, `stt_prompt` (max 4096 chars, steers the decoder), `keyterms_prompt` (max 2048 chars total) and `llm_instruction` (max 2048 chars, a follow-up LLM pass whose rewrite comes back as `llm_response` while the raw transcript stays in `text`). Read `result.final_text` for the one to show the user — the rewrite when there is one, the transcript otherwise. Failures throw the new `DictationError` (`.status`, `.errorCode`, `.retryAfter` on 429/503). `options.timeout` (default 300 000 ms) is a total deadline spanning the upload, the transcription and the LLM pass
+
 ## [4.39.0]
 
 - Add `client.sync.transcribeLive(audio, config?, options?)` — sync transcription that uploads audio while it is still being recorded, from an async iterable (Node streams included), a sync iterable, or a web `ReadableStream`. The request starts before the audio exists, so authorization, the upload and every speech segment but the last resolve while the caller is still recording. Audio already held whole (bytes, a Blob, a path) is rejected by name — it belongs in `transcribe()`, which is faster for it
