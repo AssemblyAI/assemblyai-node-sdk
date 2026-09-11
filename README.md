@@ -313,11 +313,13 @@ const res = await client.transcripts.delete(transcript.id);
 
 ### Transcribe audio synchronously
 
-`client.sync` posts a whole audio file and returns the finished transcript in one
-round trip — no job id, no polling — or uploads the audio live, as it is still
-being recorded (`transcribeLive()` / `openLive()`). Use it for short clips where
-you want the answer inline; use `client.transcripts` for long-form audio, URLs,
-or the rich audio-intelligence features the sync API doesn't expose.
+`client.sync` sends audio over one live connection and returns the finished
+transcript in one round trip — no job id, no polling. `transcribe()` sends a
+clip you already hold as a single chunk over that connection;
+`transcribeLive()` / `openLive()` upload it as it is still being recorded. Use
+it for short clips where you want the answer inline; use `client.transcripts`
+for long-form audio, URLs, or the rich audio-intelligence features the sync API
+doesn't expose.
 
 ```typescript
 const result = await client.sync.transcribe("./call.wav");
@@ -332,8 +334,8 @@ stream — but not a URL.
 
 ```typescript
 const result = await client.sync.transcribe("./call.wav", {
-  prompt: "Transcribe verbatim. Preserve disfluencies.", // max 4096 chars
-  keyterms_prompt: ["AssemblyAI", "Lemur"], // max 2048 chars total
+  prompt: "Transcribe verbatim. Preserve disfluencies.", // max 6000 chars
+  keyterms_prompt: ["AssemblyAI", "Lemur"], // max 100 terms, 8000 chars total
   language_codes: ["es"], // or e.g. ["en", "es"] for multilingual; defaults to English
   conversation_context: [
     // prior turns, oldest first
@@ -490,9 +492,9 @@ console.log(result.text);
 ```
 
 `options.timeout` (default 180 000 ms) is a **total** deadline spanning the
-whole upload, unlike `transcribe()`'s 60 s, so it has to exceed the length of
-the recording as well as the transcription. `options.signal` drops the request
-from outside, the way `abort()` does for a session.
+whole upload, so it has to exceed the length of the recording as well as the
+transcription. `options.signal` drops the request from outside, the way
+`abort()` does for a session.
 
 Caveats, for both live entry points:
 
@@ -682,8 +684,8 @@ const result = await client.dictation.transcribeLive(micStream, {
   sample_rate: 16_000, // raw 16-bit PCM only; required together with channels
   channels: 1, // 1 mono, 2 stereo; leave both unset for WAV
   language_codes: ["es"], // ISO 639-1; or e.g. ["en", "es"]; defaults to the server's choice
-  stt_prompt: "A doctor dictating a patient visit note.", // max 4096 chars
-  keyterms_prompt: ["AssemblyAI", "Universal-3"], // max 2048 chars total
+  stt_prompt: "A doctor dictating a patient visit note.", // max 6000 chars
+  keyterms_prompt: ["AssemblyAI", "Universal-3"], // max 100 terms, 8000 chars total
   llm_instruction: "Format this as a SOAP note.", // max 2048 chars
 });
 ```

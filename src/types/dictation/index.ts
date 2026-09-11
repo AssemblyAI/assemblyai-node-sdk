@@ -59,13 +59,13 @@ export type DictationConfig = {
    * e.g. `"A doctor dictating a patient visit note."`. It describes the
    * situation rather than instructing the model, and steers the decoder as it
    * writes the transcript — where `llm_instruction` reshapes the transcript
-   * afterwards. Maximum 4096 characters; longer prompts are rejected.
+   * afterwards. Maximum 6000 characters; longer prompts are rejected.
    */
   stt_prompt?: string;
   /**
    * Terms to bias the decoder towards. Whitespace is stripped and empty terms
-   * are dropped. Maximum 2048 characters in total — longer lists are
-   * rejected.
+   * are dropped. Maximum 100 terms and 8000 characters in total — lists over
+   * either cap are rejected.
    */
   keyterms_prompt?: string[];
   /**

@@ -37,8 +37,11 @@ const warmEndpoint = "/v1/warm";
 // total request budget; the audio itself is capped at 120 s.
 const defaultLiveTimeoutMs = 300_000;
 const warmTimeoutMs = 10_000;
-const maxSttPromptLength = 4096;
-const maxKeytermsPromptLength = 2048;
+// Caps mirror the dictation service's `config` part; a field over its cap is
+// rejected before any request is sent.
+const maxSttPromptLength = 6000;
+const maxKeytermsPromptLength = 8000;
+const maxKeytermsCount = 100;
 const maxLlmInstructionLength = 2048;
 // What to call the config in the message when raw PCM is missing a field.
 const configName = "the config";
@@ -411,6 +414,11 @@ function normalizeKeytermsPrompt(
   const terms = keytermsPrompt
     .map((term) => term.trim())
     .filter((term) => term.length > 0);
+  if (terms.length > maxKeytermsCount) {
+    throw new Error(
+      `keyterms_prompt exceeds ${maxKeytermsCount} terms (got ${terms.length})`,
+    );
+  }
   const total = terms.reduce((sum, term) => sum + term.length, 0);
   if (total > maxKeytermsPromptLength) {
     throw new Error(

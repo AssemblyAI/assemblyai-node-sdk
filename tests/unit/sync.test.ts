@@ -1,8 +1,9 @@
-import { createReadStream } from "fs";
+import { createReadStream, mkdtempSync, rmSync, writeFileSync } from "fs";
 import fetchMock from "jest-fetch-mock";
+import { tmpdir } from "os";
 import path from "path";
 import { SyncTranscriptError } from "../../src";
-import { createClient, requestMatches } from "./utils";
+import { createClient, defaultBaseUrl, requestMatches } from "./utils";
 
 fetchMock.enableMocks();
 
@@ -24,32 +25,127 @@ const okResponse = {
   request_time_ms: 243.7,
 };
 
+// `transcribe()` rides the same chunked-multipart live upload as
+// `transcribeLive()` / `openLive()` — the buffered endpoint is never used.
+const liveUrl = "/v1/transcribe/live";
+
 function mockOk() {
   fetchMock.doMockOnceIf(
-    requestMatches({ url: "/v1/transcribe", method: "POST" }),
+    requestMatches({ url: liveUrl, method: "POST" }),
     JSON.stringify(okResponse),
+  );
+}
+
+/** Behaves like a transport: gives up when the request's signal fires. */
+function mockAbortable() {
+  fetchMock.doMockOnceIf(
+    requestMatches({ url: liveUrl, method: "POST" }),
+    async (request) => {
+      await new Promise<void>((resolve) => {
+        request.signal.addEventListener("abort", () => resolve(), {
+          once: true,
+        });
+      });
+      throw Object.assign(new Error("The operation was aborted."), {
+        name: "AbortError",
+      });
+    },
   );
 }
 
 type NamedBlob = Blob & { name?: string };
 
-function requestBody(): FormData {
-  return fetchMock.mock.calls[0][1]!.body as FormData;
+function requestInit(index = 0): RequestInit & { duplex?: string } {
+  return fetchMock.mock.calls[index][1] as RequestInit & { duplex?: string };
 }
 
-function requestHeaders(): Record<string, string> {
-  return fetchMock.mock.calls[0][1]!.headers as Record<string, string>;
+function requestHeaders(index = 0): Record<string, string> {
+  return requestInit(index).headers as Record<string, string>;
 }
 
-async function configPart(): Promise<Record<string, unknown> | null> {
-  const part = requestBody().get("config");
-  if (part === null) return null;
-  return JSON.parse(await (part as Blob).text());
+/** Drains a `ReadableStream` the way a transport would. */
+async function drainStream(
+  stream: ReadableStream<Uint8Array>,
+): Promise<Uint8Array> {
+  const reader = stream.getReader();
+  const chunks: Uint8Array[] = [];
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+  }
+  const total = chunks.reduce((n, c) => n + c.length, 0);
+  const out = new Uint8Array(total);
+  let offset = 0;
+  for (const c of chunks) {
+    out.set(c, offset);
+    offset += c.length;
+  }
+  return out;
 }
+
+// A `ReadableStream` can only be read once, but several helpers (and
+// several assertions within one test) may each want the drained bytes —
+// cache the drain per request index so any number of calls is safe.
+const bodyBytesCache = new Map<number, Promise<Uint8Array>>();
+
+/** Drains the streamed request body the way a transport would. */
+function requestBodyBytes(index = 0): Promise<Uint8Array> {
+  let cached = bodyBytesCache.get(index);
+  if (!cached) {
+    cached = drainStream(requestInit(index).body as ReadableStream<Uint8Array>);
+    bodyBytesCache.set(index, cached);
+  }
+  return cached;
+}
+
+type Part = {
+  name: string;
+  filename?: string;
+  type?: string;
+  body: Uint8Array;
+};
+
+/** Parses multipart body bytes into their parts, in order. */
+function parseParts(bytes: Uint8Array, index = 0): Part[] {
+  const contentType = requestHeaders(index)["Content-Type"];
+  const boundary = /boundary=([^;]+)/.exec(contentType)![1];
+  const text = new TextDecoder("latin1").decode(bytes);
+  const parts: Part[] = [];
+  for (const raw of text.split(`--${boundary}`)) {
+    if (raw === "" || raw.startsWith("--")) continue;
+    const [headerText, ...rest] = raw.replace(/^\r\n/, "").split("\r\n\r\n");
+    const bodyText = rest.join("\r\n\r\n").replace(/\r\n$/, "");
+    const name = /name="([^"]*)"/.exec(headerText)![1];
+    const filename = /filename="([^"]*)"/.exec(headerText)?.[1];
+    const type = /Content-Type: ([^\r\n]+)/.exec(headerText)?.[1];
+    parts.push({
+      name,
+      filename,
+      type,
+      body: Uint8Array.from(bodyText, (ch) => ch.charCodeAt(0)),
+    });
+  }
+  return parts;
+}
+
+/** Drains the streamed request body and parses it into parts. */
+async function requestParts(index = 0): Promise<Part[]> {
+  return parseParts(await requestBodyBytes(index), index);
+}
+
+/** Parses the JSON `config` part of a request. */
+async function configPart(index = 0): Promise<Record<string, unknown>> {
+  const parts = await requestParts(index);
+  return JSON.parse(decode(parts[0].body));
+}
+
+const decode = (bytes: Uint8Array) => new TextDecoder().decode(bytes);
 
 beforeEach(() => {
   fetchMock.resetMocks();
   fetchMock.doMock();
+  bodyBytesCache.clear();
 });
 
 describe("sync", () => {
@@ -68,20 +164,27 @@ describe("sync", () => {
     const response: Partial<typeof okResponse> = { ...okResponse };
     delete response.request_time_ms;
     fetchMock.doMockOnceIf(
-      requestMatches({ url: "/v1/transcribe", method: "POST" }),
+      requestMatches({ url: liveUrl, method: "POST" }),
       JSON.stringify(response),
     );
     const result = await assembly.sync.transcribe(fakeWavBytes);
     expect(result.request_time_ms).toBeUndefined();
   });
 
-  it("should send the model header and a WAV part", async () => {
+  it("should stream a chunked multipart body with the config part first", async () => {
     mockOk();
     await assembly.sync.transcribe(fakeWavBytes);
+    expect(fetchMock.mock.calls[0][0]).toBe(defaultBaseUrl + liveUrl);
+    expect(requestInit().duplex).toBe("half");
+    expect(requestInit().body).toBeInstanceOf(ReadableStream);
     expect(requestHeaders()["X-AAI-Model"]).toBe("universal-3-5-pro");
-    const audio = requestBody().get("audio") as Blob;
-    expect(audio.type).toBe("audio/wav");
-    expect(requestBody().get("config")).toBeNull();
+    expect(requestHeaders()["Content-Type"]).toMatch(/^multipart\/form-data;/);
+
+    const parts = await requestParts();
+    expect(parts.map((p) => p.name)).toEqual(["config", "audio"]);
+    expect(decode(parts[0].body)).toBe("{}");
+    expect(parts[0].type).toBe("application/json");
+    expect(parts[1].type).toBe("audio/wav");
   });
 
   it("should send the prompt and normalized keyterms_prompt", async () => {
@@ -108,12 +211,12 @@ describe("sync", () => {
     expect(config).not.toHaveProperty("model");
   });
 
-  it("should omit the config part when only the model is set", async () => {
+  it("should send an empty config part when only the model is set", async () => {
     mockOk();
     await assembly.sync.transcribe(fakeWavBytes, {
       model: "some-other-model",
     });
-    expect(requestBody().get("config")).toBeNull();
+    expect(await configPart()).toEqual({});
   });
 
   it("should send conversation_context turns, stripped with empties dropped", async () => {
@@ -146,15 +249,15 @@ describe("sync", () => {
   it("should trim the oldest conversation turns over the char cap", async () => {
     mockOk();
     await assembly.sync.transcribe(fakeWavBytes, {
-      conversation_context: ["a".repeat(3000), "b".repeat(3000)],
+      conversation_context: ["a".repeat(10000), "b".repeat(10000)],
     });
     const config = await configPart();
-    expect(config?.conversation_context).toEqual(["b".repeat(3000)]);
+    expect(config?.conversation_context).toEqual(["b".repeat(10000)]);
   });
 
   it("should trim the oldest conversation turns over the turn cap", async () => {
     mockOk();
-    const turns = Array.from({ length: 120 }, (_, i) => `turn ${i}`);
+    const turns = Array.from({ length: 520 }, (_, i) => `turn ${i}`);
     await assembly.sync.transcribe(fakeWavBytes, {
       conversation_context: turns,
     });
@@ -165,9 +268,10 @@ describe("sync", () => {
   it("should trim to nothing when a single turn is over the char cap", async () => {
     mockOk();
     await assembly.sync.transcribe(fakeWavBytes, {
-      conversation_context: ["a".repeat(5000)],
+      conversation_context: ["a".repeat(20000)],
     });
-    expect(requestBody().get("config")).toBeNull();
+    const config = await configPart();
+    expect(config).not.toHaveProperty("conversation_context");
   });
 
   it("should send a single-element language_codes list", async () => {
@@ -188,10 +292,10 @@ describe("sync", () => {
     expect(config?.language_codes).toEqual(["en", "es"]);
   });
 
-  it("should omit the config part for a default config", async () => {
+  it("should send an empty config part for a default config", async () => {
     mockOk();
     await assembly.sync.transcribe(fakeWavBytes);
-    expect(requestBody().get("config")).toBeNull();
+    expect(await configPart()).toEqual({});
   });
 
   it("should send the timestamps flag when opted in", async () => {
@@ -212,7 +316,7 @@ describe("sync", () => {
       ],
     };
     fetchMock.doMockOnceIf(
-      requestMatches({ url: "/v1/transcribe", method: "POST" }),
+      requestMatches({ url: liveUrl, method: "POST" }),
       JSON.stringify(response),
     );
     const result = await assembly.sync.transcribe(fakeWavBytes);
@@ -228,8 +332,8 @@ describe("sync", () => {
       sample_rate: 16000,
       channels: 1,
     });
-    const audio = requestBody().get("audio") as Blob;
-    expect(audio.type).toBe("audio/pcm");
+    const parts = await requestParts();
+    expect(parts[1].type).toBe("audio/pcm");
     const config = await configPart();
     expect(config).toEqual({ sample_rate: 16000, channels: 1 });
   });
@@ -254,9 +358,9 @@ describe("sync", () => {
       path.join(testDir, "gore-short.wav"),
     );
     expect(result.text).toBe("hello world");
-    const audio = requestBody().get("audio") as NamedBlob;
-    expect(audio.name).toBe("gore-short.wav");
-    expect(audio.type).toBe("audio/wav");
+    const parts = await requestParts();
+    expect(parts[1].filename).toBe("gore-short.wav");
+    expect(parts[1].type).toBe("audio/wav");
   });
 
   it("should transcribe a Node stream and use its file name", async () => {
@@ -264,8 +368,8 @@ describe("sync", () => {
     const stream = createReadStream(path.join(testDir, "gore-short.wav"));
     const result = await assembly.sync.transcribe(stream);
     expect(result.text).toBe("hello world");
-    const audio = requestBody().get("audio") as NamedBlob;
-    expect(audio.name).toBe("gore-short.wav");
+    const parts = await requestParts();
+    expect(parts[1].filename).toBe("gore-short.wav");
   });
 
   it("should transcribe a web ReadableStream", async () => {
@@ -287,22 +391,70 @@ describe("sync", () => {
     file.name = "call.wav";
     const result = await assembly.sync.transcribe(file);
     expect(result.text).toBe("hello world");
-    const audio = requestBody().get("audio") as NamedBlob;
-    expect(audio.name).toBe("call.wav");
+    const parts = await requestParts();
+    expect(parts[1].filename).toBe("call.wav");
+  });
+
+  it("should escape a tab in a real path file name, passing ESC through", async () => {
+    mockOk();
+    const dir = mkdtempSync(path.join(tmpdir(), "aai-sync-"));
+    // A tab and an ESC control character — both valid bytes in a POSIX file
+    // name. No backslash here: the SDK's basename() splits a path on both
+    // `/` and `\`, so a path input can never carry one into the file name
+    // (see the File-based test below for that case).
+    const weirdName = `b\tc\x1bd.wav`;
+    const filePath = path.join(dir, weirdName);
+    writeFileSync(filePath, Buffer.from("RIFFfake"));
+    try {
+      const result = await assembly.sync.transcribe(filePath);
+      expect(result.text).toBe("hello world");
+      const parts = await requestParts();
+      expect(parts[1].filename).toBe(`b%09c\x1bd.wav`);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("should escape a quote and tab in a File name", async () => {
+    mockOk();
+    // basename() is applied to a File/Blob `.name` the same as a path, so a
+    // backslash in it is also split off rather than reaching the escaper —
+    // there is no public input that carries a backslash through to it.
+    const file: NamedBlob = new Blob([fakeWavBytes as BlobPart]);
+    file.name = `b"c\td.wav`;
+    await assembly.sync.transcribe(file);
+    const parts = await requestParts();
+    expect(parts[1].filename).toBe(`b%22c%09d.wav`);
   });
 
   it("should reject an oversized keyterms_prompt", async () => {
-    await expect(
-      assembly.sync.transcribe(fakeWavBytes, {
-        keyterms_prompt: ["x".repeat(3000)],
-      }),
-    ).rejects.toThrow("keyterms_prompt exceeds");
+    const promise = assembly.sync.transcribe(fakeWavBytes, {
+      keyterms_prompt: ["x".repeat(9000)],
+    });
+    await expect(promise).rejects.toThrow("keyterms_prompt exceeds");
+    await expect(promise).rejects.toThrow("characters");
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("should reject more than 100 keyterms_prompt terms", async () => {
+    const terms = Array.from({ length: 101 }, (_, i) => `term${i}`);
+    await expect(
+      assembly.sync.transcribe(fakeWavBytes, { keyterms_prompt: terms }),
+    ).rejects.toThrow("keyterms_prompt exceeds 100 terms");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("should accept exactly 100 keyterms_prompt terms", async () => {
+    mockOk();
+    const terms = Array.from({ length: 100 }, (_, i) => `term${i}`);
+    await assembly.sync.transcribe(fakeWavBytes, { keyterms_prompt: terms });
+    const config = await configPart();
+    expect(config.keyterms_prompt).toEqual(terms);
   });
 
   it("should reject an oversized prompt", async () => {
     await expect(
-      assembly.sync.transcribe(fakeWavBytes, { prompt: "x".repeat(5000) }),
+      assembly.sync.transcribe(fakeWavBytes, { prompt: "x".repeat(7000) }),
     ).rejects.toThrow("prompt exceeds");
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -337,6 +489,48 @@ describe("sync", () => {
     });
   });
 
+  it("should map a bare error/error_code envelope to a SyncTranscriptError", async () => {
+    fetchMock.mockResponseOnce(
+      JSON.stringify({
+        error: "Invalid API key",
+        error_code: "unauthorized",
+      }),
+      { status: 401 },
+    );
+    await expect(assembly.sync.transcribe(fakeWavBytes)).rejects.toMatchObject({
+      message: "Invalid API key",
+      errorCode: "unauthorized",
+    });
+  });
+
+  it("should prefer detail over a bare error field", async () => {
+    fetchMock.mockResponseOnce(
+      JSON.stringify({
+        detail: "detail wins",
+        error: "error field",
+        error_code: "x",
+      }),
+      { status: 400 },
+    );
+    await expect(assembly.sync.transcribe(fakeWavBytes)).rejects.toMatchObject({
+      message: "detail wins",
+    });
+  });
+
+  it("should prefer message over a bare error field", async () => {
+    fetchMock.mockResponseOnce(
+      JSON.stringify({
+        message: "message wins",
+        error: "error field",
+        error_code: "x",
+      }),
+      { status: 400 },
+    );
+    await expect(assembly.sync.transcribe(fakeWavBytes)).rejects.toMatchObject({
+      message: "message wins",
+    });
+  });
+
   it("should surface retryAfter on rate limits", async () => {
     fetchMock.mockResponseOnce(
       JSON.stringify({
@@ -351,6 +545,46 @@ describe("sync", () => {
       errorCode: "too_many_requests",
       retryAfter: 5,
     });
+  });
+
+  it("should surface a rate-limited response and still upload the whole clip as a single chunk", async () => {
+    // Drain the body inside the handler, the way a real transport does, so
+    // the assertion does not race an early response against the writer
+    // still producing the (single) audio chunk.
+    let uploaded: Uint8Array | undefined;
+    fetchMock.doMockOnceIf(
+      requestMatches({ url: liveUrl, method: "POST" }),
+      async () => {
+        uploaded = await requestBodyBytes();
+        return {
+          body: JSON.stringify({
+            status: 429,
+            title: "Too Many Requests",
+            detail: "slow down",
+          }),
+          init: { status: 429, headers: { "Retry-After": "7" } },
+        };
+      },
+    );
+    const error = await assembly.sync.transcribe(fakeWavBytes).catch((e) => e);
+    expect(error).toBeInstanceOf(SyncTranscriptError);
+    expect(error.status).toBe(429);
+    expect(error.errorCode).toBe("too_many_requests");
+    expect(error.retryAfter).toBe(7);
+
+    // The "single chunk" half of the contract holds even on a rejected
+    // request: one config part, then one audio part carrying the whole
+    // input, then the closing boundary.
+    const parts = parseParts(uploaded!);
+    expect(parts.map((p) => p.name)).toEqual(["config", "audio"]);
+    expect(decode(parts[0].body)).toBe("{}");
+    expect(decode(parts[1].body)).toBe(decode(fakeWavBytes));
+
+    const boundary = /boundary=([^;]+)/.exec(
+      requestHeaders()["Content-Type"],
+    )![1];
+    const raw = new TextDecoder("latin1").decode(uploaded!);
+    expect(raw.trimEnd().endsWith(`--${boundary}--`)).toBe(true);
   });
 
   it("should map a detail-only envelope without an error code", async () => {
@@ -385,5 +619,26 @@ describe("sync", () => {
   it("should return false from warm on a transport error", async () => {
     fetchMock.mockRejectOnce(new TypeError("connection refused"));
     expect(await assembly.sync.warm()).toBe(false);
+  });
+});
+
+describe("sync deadlines", () => {
+  it("should honour an external abort signal on transcribe()", async () => {
+    mockAbortable();
+    const controller = new AbortController();
+    const pending = assembly.sync.transcribe(
+      fakeWavBytes,
+      {},
+      { signal: controller.signal },
+    );
+    controller.abort();
+    await expect(pending).rejects.toThrow("aborted");
+  });
+
+  it("should give up once the timeout elapses on transcribe()", async () => {
+    mockAbortable();
+    await expect(
+      assembly.sync.transcribe(fakeWavBytes, {}, { timeout: 1 }),
+    ).rejects.toThrow("aborted");
   });
 });

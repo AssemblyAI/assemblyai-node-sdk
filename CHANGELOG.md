@@ -1,5 +1,14 @@
 # Changelog
 
+## [4.41.0]
+
+- `client.sync.transcribe()` now sends audio over the same live connection as `transcribeLive()` / `openLive()`: `POST /v1/transcribe/live` (also served at `/v1/transcribe/stream`), chunked multipart, `config` first (always present, `{}` when empty) then `audio`. A clip already held is sent as a single chunk. There is no separate buffered request any more — nothing posts to `/v1/transcribe`
+- `transcribe()`'s third argument (`SyncTranscribeOptions`) is now `{ timeout, signal }`, matching the live methods: `timeout` (default 180 000 ms, was 60 000) is a total deadline from the start of the request spanning the upload and the transcription, and `signal` (an `AbortSignal`) drops the request when aborted. `warm()` is unchanged
+- Raise sync config caps to match the service: `prompt` to 6000 characters (was 4096), `keyterms_prompt` to 100 terms and 8000 characters total (was 2048 characters, uncapped terms), and `conversation_context` to 500 turns / 16 000 characters (was 100 / 4096) — still trimmed oldest-first rather than rejected. Over-cap `prompt`/`keyterms_prompt` are still rejected before any request is sent
+- Raise dictation config caps to match the service: `stt_prompt` to 6000 characters (was 4096) and `keyterms_prompt` to 100 terms and 8000 characters total (was 2048, uncapped terms); `llm_instruction` is unchanged at 2048
+- A failure body of the form `{"error": "...", "error_code": "..."}` now surfaces that `error` string as the thrown error's message, for both `SyncTranscriptError` and `DictationError`
+- Multipart file names are now escaped per the HTML5 form-encoding rules, so a `"`, backslash or control character in a file name can no longer break out of the part header
+
 ## [4.40.0]
 
 - Add `client.dictation` — dictation transcription for short spoken notes: `transcribeLive(audio, config?, options?)` uploads audio as it is spoken and resolves with one finished transcript, `openLive(config?, options?)` is the push-style counterpart for callback-driven sources, and `warm()` opens the connection ahead of the request. Targets `dictation.assemblyai.com`, overridable with the new `dictationBaseUrl` client option. Audio is WAV or raw 16-bit PCM, up to 120 s

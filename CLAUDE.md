@@ -185,8 +185,11 @@ const vtt = await client.transcripts.subtitles(id, "vtt");
 
 ## Sync transcription (pre-recorded, single request)
 
-`client.sync` posts a whole audio file and returns the finished transcript in one
-round trip — no job id, no polling, no status enum. It targets the sync API host
+`client.sync` sends audio over one live connection and returns the finished
+transcript in one round trip — no job id, no polling, no status enum.
+`transcribe()` sends a clip you already hold as a single chunk over that
+connection; `transcribeLive()` / `openLive()` upload it as it is still being
+recorded. It targets the sync API host
 (`sync.assemblyai.com`, override with the `syncBaseUrl` client option), distinct
 from `client.transcripts`' async job API. Use it for short clips where you want the
 answer inline; use `client.transcripts` for long-form audio, URLs, or the rich
@@ -209,11 +212,11 @@ a Blob/File, or a readable stream. **Not** a URL — pass a path/bytes or use
 
 ```typescript
 const result = await client.sync.transcribe("./call.wav", {
-  prompt: "Transcribe verbatim. Preserve disfluencies.", // max 4096 chars, rejected over
-  keyterms_prompt: ["AssemblyAI", "Lemur", "U3-Pro"], // max 2048 chars total, rejected over
+  prompt: "Transcribe verbatim. Preserve disfluencies.", // max 6000 chars, rejected over
+  keyterms_prompt: ["AssemblyAI", "Lemur", "U3-Pro"], // max 100 terms, 8000 chars total, rejected over
   language_codes: ["es"], // or e.g. ["en", "es"] for multilingual; defaults to English; ignored when prompt is set
   conversation_context: [
-    // prior turns oldest-first; capped at 100 turns / 4096 chars — trimmed, not rejected
+    // prior turns oldest-first; capped at 500 turns / 16 000 chars — trimmed, not rejected
     "I'd like to book a flight to Denver.",
     "Sure, what date were you thinking?",
   ],
@@ -257,10 +260,13 @@ it is still being recorded); it returns `true` once the socket is open, `false` 
 a transport failure. Call it shortly before `transcribe()` — the pooled connection
 idles out after a few seconds.
 
-**Live upload**: `transcribeLive()` and `openLive()` post to `/v1/transcribe/stream` with a
-chunked multipart body, so the request starts before the audio exists and chunks upload as they
-arrive. Authorization, the upload and every speech segment but the last resolve while the caller
-is still recording; only the final segment is left to wait for. `transcribeLive()` pulls from an
+**Live upload**: `transcribe()`, `transcribeLive()` and `openLive()` all send audio over one live
+connection — `POST /v1/transcribe/live` (also served at `/v1/transcribe/stream`) — with a
+chunked multipart body, `config` sent first (always present, `{}` when
+empty) then `audio`. `transcribe()` sends a clip already held whole as a single chunk. For
+`transcribeLive()`/`openLive()` the request starts before the audio exists and chunks upload as
+they arrive, so authorization, the upload and every speech segment but the last resolve while the
+caller is still recording; only the final segment is left to wait for. `transcribeLive()` pulls from an
 async iterable (Node streams included), a sync iterable, or a web `ReadableStream` — bytes, a
 Blob or a path are rejected with a TypeError pointing at `transcribe()`. `openLive()` is the
 push-style counterpart for callback-driven sources (microphone library, WebRTC track, telephony
@@ -291,9 +297,11 @@ long enough is aborted server-side); auth, rate-limit and capacity failures can 
 through the upload rather than only at the end (a malformed key at once, a key that fails deeper
 checks a few seconds in), and `warm()` opens the connection but does not validate the key.
 
-**Client-side timeout**: third argument — `client.sync.transcribe(audio, {}, { timeout: 30_000 })`
-(default 60 s, kept above the server's 30 s deadline). Live requests take `SyncLiveOptions`
-instead — `{ timeout, signal }`.
+**Client-side timeout**: third argument, `SyncTranscribeOptions` — `{ timeout, signal }`, e.g.
+`client.sync.transcribe(audio, {}, { timeout: 30_000 })`. `timeout` (default 180 000 ms) is a
+total deadline from the start of the request, spanning the upload and the transcription — the
+same basis `transcribeLive()`/`openLive()` use via `SyncLiveOptions`. `signal` drops the request
+when aborted.
 
 ## Dictation (short spoken notes, optional LLM rewrite)
 
@@ -345,8 +353,8 @@ const result = await client.dictation.transcribeLive(mic, {
   sample_rate: 16_000, // raw 16-bit PCM; setting either PCM field requires both; unset for WAV
   channels: 1, // 1 mono / 2 stereo
   language_codes: ["es"], // ISO 639-1; or e.g. ["en", "es"]; unset leaves the language to the server
-  stt_prompt: "A doctor dictating a patient visit note.", // max 4096 chars; describes the recording
-  keyterms_prompt: ["AssemblyAI", "U3-Pro"], // whitespace stripped, empties dropped, max 2048 chars total
+  stt_prompt: "A doctor dictating a patient visit note.", // max 6000 chars; describes the recording
+  keyterms_prompt: ["AssemblyAI", "U3-Pro"], // whitespace stripped, empties dropped, max 100 terms, 8000 chars total
   llm_instruction: "Format this as a SOAP note.", // max 2048 chars; follow-up LLM pass over the transcript
 });
 ```
@@ -418,7 +426,7 @@ strings, when present).
 - **speech_models takes an array** with fallback ordering: ["universal-3-5-pro", "universal-2"]
 - **Streaming uses universal-3-5-pro** as the speech model
 - **Never expose API keys client-side** — use temporary auth tokens for browser streaming
-- **Live upload timeout is a total deadline** — `transcribeLive()`/`openLive()` default to 180 s covering the whole recording plus transcription (not per-response like `transcribe()`'s 60 s), and the sync API still caps audio at 120 s
+- **Sync timeout is a total deadline** — `transcribe()`, `transcribeLive()` and `openLive()` all default to a 180 s deadline spanning the whole request (upload plus transcription), and the sync API still caps audio at 120 s
 - **Dictation timeout is a total 300 s deadline** — `client.dictation` spans the upload, the transcription and the LLM pass in one deadline; the service caps audio at 120 s and accepts WAV or raw 16-bit PCM only
 - **Node >= 18 required**
 - **Only runtime dependency**: ws (WebSocket library)
