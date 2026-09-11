@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+- Add typed `language_detection_options.on_no_speech_detected` (`"error"` or `"fallback"`) to transcript submission and polling helpers. Omitted options retain existing API behavior. Use an explicit `fallback_language` with fallback, which returns an empty completed transcript with `metadata.warnings`. Fallback transcripts are billable successful transcriptions; failed transcriptions are not charged.
+- Add `language_detection_options.localization` for regional language variants.
+- Document the existing structured warning response, async error-code gap, and live no-speech regression tests.
+
 ## [4.39.0]
 
 - Add `client.sync.transcribeLive(audio, config?, options?)` — sync transcription that uploads audio while it is still being recorded, from an async iterable (Node streams included), a sync iterable, or a web `ReadableStream`. The request starts before the audio exists, so authorization, the upload and every speech segment but the last resolve while the caller is still recording. Audio already held whole (bytes, a Blob, a path) is rejected by name — it belongs in `transcribe()`, which is faster for it

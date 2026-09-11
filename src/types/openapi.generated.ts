@@ -22,7 +22,7 @@ type OneOf<T extends any[]> = T extends [infer Only]
 export type AudioIntelligenceModelStatus = "success" | "unavailable";
 
 export interface TranscriptWarning {
-  /** The warning message. */
+  /** The human-readable warning message. No machine-readable warning code is provided. */
   message: string;
 }
 
@@ -1274,8 +1274,24 @@ export type LanguageDetectionOptions = {
   expected_languages?: string[] | null;
   /**
    * The language to fallback to in case the language detection does not predict any of the expected ones.
+   * Set an explicit language code such as "en" when `on_no_speech_detected` is "fallback".
+   * Using "auto" with no-speech fallback returns an HTTP 400 from the API.
+   * No-speech fallback produces a billable successful transcript, even when its text is empty;
+   * failed transcriptions are not charged.
    */
   fallback_language?: string | null;
+  /**
+   * Controls behavior when Automatic Language Detection finds no speech in the audio.
+   * With "error", the transcript fails and the reason is returned in `error`.
+   * With "fallback", it completes with empty `text`, `language_code` set to `fallback_language`,
+   * and an explanatory warning in `metadata.warnings`.
+   * Set an explicit `fallback_language`; using "auto" returns an HTTP 400.
+   * Fallback transcripts are billable successful transcriptions, even when their text is empty;
+   * failed transcriptions are not charged.
+   * The API documents "error" as the default, but account defaults can differ.
+   * The SDK leaves omitted options unset; specify "error" or "fallback" for predictable behavior.
+   */
+  on_no_speech_detected?: "error" | "fallback";
   /**
    * Should code switching be enabled for this transcription.
    */
@@ -1284,6 +1300,13 @@ export type LanguageDetectionOptions = {
    * The confidence threshold for the automatically detected code switching language.
    */
   code_switching_confidence_threshold?: number | null;
+  /**
+   * Regional variants to use when the detected language matches the locale's base language.
+   * Supported locales are "en_au" and "en_uk", with at most one locale per base language.
+   * Base or default-region codes such as "en" and "en_us" return an HTTP 400.
+   * The transcript uses the locale's spelling and returns the regional `language_code`.
+   */
+  localization?: string[] | null;
   /**
    * Controls behavior when language confidence is below threshold. Either "error" (default) or "fallback".
    */
@@ -1332,11 +1355,7 @@ export type SummaryModel = "informative" | "conversational" | "catchy";
  * The type of summary
  */
 export type SummaryType =
-  | "bullets"
-  | "bullets_verbose"
-  | "gist"
-  | "headline"
-  | "paragraph";
+  "bullets" | "bullets_verbose" | "gist" | "headline" | "paragraph";
 
 /**
  * Timestamp containing a start and end property in milliseconds
@@ -3085,8 +3104,7 @@ export type TranscriptOptionalParams = {
    * Speech understanding configuration/response for LLM Gateway features
    */
   speech_understanding?:
-    | SpeechUnderstandingRequest
-    | SpeechUnderstandingResponse;
+    SpeechUnderstandingRequest | SpeechUnderstandingResponse;
   /**
    * The domain to use for the transcription (e.g. 'medical-v1').
    */
@@ -3479,8 +3497,7 @@ export type TranscriptUtterance = {
  * The notifications sent to the webhook URL.
  */
 export type TranscriptWebhookNotification =
-  | TranscriptReadyNotification
-  | RedactedAudioNotification;
+  TranscriptReadyNotification | RedactedAudioNotification;
 
 /**
  * @example
