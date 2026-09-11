@@ -1,4 +1,5 @@
 export * from "./sync";
+export * from "./dictation";
 export * from "./llm-gateway";
 export * from "./files";
 export * from "./transcripts";

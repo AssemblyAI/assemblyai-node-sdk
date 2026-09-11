@@ -1,7 +1,12 @@
 import { BaseServiceParams } from "..";
 import { SyncTranscriber, SyncLiveSession } from "./sync";
+import { DictationTranscriber, DictationLiveSession } from "./dictation";
 import { LlmGatewayService } from "./llm-gateway";
-import { SyncTranscriptError, LlmGatewayError } from "../utils/errors";
+import {
+  SyncTranscriptError,
+  DictationError,
+  LlmGatewayError,
+} from "../utils/errors";
 import {
   RealtimeTranscriber,
   RealtimeTranscriberFactory,
@@ -26,6 +31,7 @@ import {
 const defaultBaseUrl = "https://api.assemblyai.com";
 const defaultStreamingUrl = "https://streaming.assemblyai.com";
 const defaultSyncUrl = "https://sync.assemblyai.com";
+const defaultDictationUrl = "https://dictation.assemblyai.com";
 const defaultLlmGatewayUrl = "https://llm-gateway.assemblyai.com";
 
 class AssemblyAI {
@@ -53,6 +59,11 @@ class AssemblyAI {
    * The synchronous transcription service.
    */
   public sync: SyncTranscriber;
+
+  /**
+   * The dictation service.
+   */
+  public dictation: DictationTranscriber;
 
   /**
    * The LLM Gateway service.
@@ -87,6 +98,15 @@ class AssemblyAI {
       baseUrl: syncBaseUrl,
     });
 
+    let dictationBaseUrl = params.dictationBaseUrl || defaultDictationUrl;
+    if (dictationBaseUrl.endsWith("/")) {
+      dictationBaseUrl = dictationBaseUrl.slice(0, -1);
+    }
+    this.dictation = new DictationTranscriber({
+      ...params,
+      baseUrl: dictationBaseUrl,
+    });
+
     let llmGatewayBaseUrl = params.llmGatewayBaseUrl || defaultLlmGatewayUrl;
     if (llmGatewayBaseUrl.endsWith("/")) {
       llmGatewayBaseUrl = llmGatewayBaseUrl.slice(0, -1);
@@ -103,6 +123,9 @@ export {
   SyncTranscriber,
   SyncLiveSession,
   SyncTranscriptError,
+  DictationTranscriber,
+  DictationLiveSession,
+  DictationError,
   LlmGatewayService,
   LlmGatewayError,
   RealtimeTranscriberFactory,

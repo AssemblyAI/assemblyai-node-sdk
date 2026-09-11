@@ -5,6 +5,7 @@ type BaseServiceParams = {
   baseUrl?: string;
   streamingBaseUrl?: string;
   syncBaseUrl?: string;
+  dictationBaseUrl?: string;
   llmGatewayBaseUrl?: string;
   /**
    * The AssemblyAI user agent to use for requests.
