@@ -1277,6 +1277,12 @@ export type LanguageDetectionOptions = {
    */
   fallback_language?: string | null;
   /**
+   * Controls behavior when no speech is detected. "fallback" returns an empty
+   * completed transcript with `metadata.warnings`. Use a specific `fallback_language`;
+   * "auto" is rejected. Successful fallback transcripts are billable.
+   */
+  on_no_speech_detected?: "error" | "fallback";
+  /**
    * Should code switching be enabled for this transcription.
    */
   code_switching?: boolean | null;
@@ -1284,6 +1290,10 @@ export type LanguageDetectionOptions = {
    * The confidence threshold for the automatically detected code switching language.
    */
   code_switching_confidence_threshold?: number | null;
+  /**
+   * Regional variants such as "en_au" or "en_uk", with at most one per base language.
+   */
+  localization?: string[] | null;
   /**
    * Controls behavior when language confidence is below threshold. Either "error" (default) or "fallback".
    */

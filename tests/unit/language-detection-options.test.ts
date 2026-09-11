@@ -8,6 +8,12 @@ const assembly = createClient();
 const transcriptId = "transcript_123";
 const remoteAudioURL = "https://assembly.ai/espn.m4a";
 
+const invalidNoSpeechOptions: LanguageDetectionOptions = {
+  // @ts-expect-error Only "error" and "fallback" are valid strategies.
+  on_no_speech_detected: "ignore",
+};
+void invalidNoSpeechOptions;
+
 beforeEach(() => {
   jest.clearAllMocks();
   fetchMock.resetMocks();
@@ -21,6 +27,8 @@ describe("language detection options", () => {
       fallback_language: "en",
       code_switching: true,
       code_switching_confidence_threshold: 0.8,
+      localization: ["en_au"],
+      on_no_speech_detected: "fallback",
     };
 
     fetchMock.doMockOnceIf(
@@ -198,5 +206,65 @@ describe("language detection options", () => {
     expect(
       requestBody.language_detection_options.on_low_language_confidence,
     ).toBe("error");
+  });
+
+  it("should submit with on_no_speech_detected set to error", async () => {
+    const languageDetectionOptions: LanguageDetectionOptions = {
+      on_no_speech_detected: "error",
+    };
+    fetchMock.doMockOnceIf(
+      requestMatches({ url: "/v2/transcript", method: "POST" }),
+      JSON.stringify({ id: transcriptId, status: "queued" }),
+    );
+
+    await assembly.transcripts.submit({
+      audio_url: remoteAudioURL,
+      language_detection: true,
+      language_detection_options: languageDetectionOptions,
+    });
+
+    const requestBody = JSON.parse(fetchMock.mock.calls[0][1]?.body as string);
+    expect(requestBody.language_detection_options).toEqual(
+      languageDetectionOptions,
+    );
+  });
+
+  it("should transcribe with no-speech fallback and preserve an empty result and warnings", async () => {
+    const languageDetectionOptions: LanguageDetectionOptions = {
+      on_no_speech_detected: "fallback",
+      fallback_language: "en",
+    };
+    const completedResponse = {
+      id: transcriptId,
+      status: "completed",
+      text: "",
+      language_code: "en",
+      metadata: {
+        warnings: [{ message: "No speech was detected." }],
+      },
+    };
+    fetchMock.doMockOnceIf(
+      requestMatches({ url: "/v2/transcript", method: "POST" }),
+      JSON.stringify({ id: transcriptId, status: "queued" }),
+    );
+    fetchMock.doMockOnceIf(
+      requestMatches({ url: `/v2/transcript/${transcriptId}`, method: "GET" }),
+      JSON.stringify(completedResponse),
+    );
+
+    const transcript = await assembly.transcripts.transcribe({
+      audio: remoteAudioURL,
+      language_detection: true,
+      language_detection_options: languageDetectionOptions,
+    });
+
+    expect(transcript).toEqual(completedResponse);
+    expect(transcript.metadata?.warnings?.[0].message).toBe(
+      "No speech was detected.",
+    );
+    const requestBody = JSON.parse(fetchMock.mock.calls[0][1]?.body as string);
+    expect(requestBody.language_detection_options).toEqual(
+      languageDetectionOptions,
+    );
   });
 });
