@@ -536,6 +536,207 @@ try {
 
 </details>
 
+### Dictation
+
+`client.dictation` transcribes short spoken notes: a person speaks, the audio
+uploads as it is spoken, and when they stop you get one finished transcript
+back — optionally cleaned up or reformatted by an LLM. There is no job id and no
+polling, and the service takes audio rather than URLs. It targets the dictation
+API host (`https://dictation.assemblyai.com`, override with the
+`dictationBaseUrl` client option).
+
+```typescript
+const result = await client.dictation.transcribeLive(micStream, {
+  sample_rate: 16_000,
+  channels: 1,
+});
+console.log(result.final_text, result.session_id);
+```
+
+`result.final_text` is the one to show the user: the LLM rewrite when an
+`llm_instruction` ran, the raw transcript otherwise. `result.text` always holds
+the raw transcript. Audio must be WAV or raw 16-bit PCM, up to 120 seconds per
+request.
+
+> This is not the streaming API. `client.streaming` returns words while the
+> speaker is still talking; dictation returns one finished transcript when the
+> audio ends.
+
+<details open>
+<summary>Dictate from a microphone (`openLive()`)</summary>
+
+`openLive()` starts the request immediately and takes audio pushed into it, so
+it suits callback-driven sources: a microphone library, a WebRTC track, a
+telephony media stream.
+
+```typescript
+import { AssemblyAI } from "assemblyai";
+
+const client = new AssemblyAI({ apiKey: process.env.ASSEMBLYAI_API_KEY });
+
+await client.dictation.warm(); // open the connection ahead of time
+
+// The request starts here. Raw PCM carries no header, so the sample rate and
+// channel count go in the config.
+const session = client.dictation.openLive({
+  sample_rate: 16_000,
+  channels: 1,
+});
+
+// write() never blocks, so it is safe to call from a capture callback.
+mic.on("data", (chunk) => session.write(chunk));
+mic.on("end", () => session.close()); // ends the audio
+
+const result = await session.result(); // closes if needed, then waits
+console.log(result.final_text);
+```
+
+`result()` rejects with a `DictationError` when the server rejects the request.
+To drop the request instead — the speaker cancelled, the call ended — use
+`session.abort()`; `result()` rejects afterwards. `session.closed` reports
+whether the audio has ended, and `session.stream()` returns a `WritableStream`
+so a web stream of audio can be piped straight in
+(`source.pipeTo(session.stream())`), closing the session when it closes.
+
+A late `write()` after the session ended is dropped rather than thrown, so a
+capture callback that outlives teardown cannot crash the process. Writing
+something other than bytes while the session is open throws a `TypeError`.
+
+</details>
+
+<details>
+<summary>Transcribe from a stream or a file (`transcribeLive()`)</summary>
+
+`transcribeLive()` is the pull-style entry point. It takes audio that is still
+being produced — an async iterable (Node streams included), a sync iterable, or
+a web `ReadableStream<Uint8Array>`:
+
+```typescript
+const recorder = spawn("sox", soxArgs); // still recording
+const controller = new AbortController();
+
+const result = await client.dictation.transcribeLive(
+  recorder.stdout, // a Node Readable; a web ReadableStream works too
+  { sample_rate: 16_000, channels: 1 },
+  { timeout: 300_000, signal: controller.signal },
+);
+console.log(result.final_text);
+```
+
+Audio already held whole works too — a local file path, a data URL, raw bytes
+(`Uint8Array`/`ArrayBuffer`), or a Blob/File — and is sent as a single chunk
+over the same connection:
+
+```typescript
+const result = await client.dictation.transcribeLive("./note.wav");
+console.log(result.final_text);
+```
+
+A URL is rejected with an error pointing at `client.transcripts`, which is where
+URL ingestion lives.
+
+`options.timeout` (default 300 000 ms) is a **total** deadline from the start of
+the request, spanning the upload, the transcription and the LLM pass; the
+service caps the audio itself at 120 seconds. `options.signal` drops the request
+from outside, the way `abort()` does for a session.
+
+Caveats, for both entry points:
+
+- Keep producing audio until you are done: an upload that goes silent for long
+  enough is aborted server-side. Finish by ending the stream (or `close()`), not
+  by pausing it
+- Raw PCM needs `sample_rate` and `channels` in the config; WAV reads them from
+  its header
+- Auth, rate-limit, size and capacity failures can surface part-way through the
+  upload rather than only at the end, as a `DictationError`
+
+</details>
+
+<details>
+<summary>Rewrite the transcript with an LLM</summary>
+
+`llm_instruction` runs a follow-up LLM pass over the transcript. The rewrite
+comes back as `llm_response`; the raw transcript stays in `text`, and
+`final_text` is whichever of the two you should show.
+
+```typescript
+const result = await client.dictation.transcribeLive(micStream, {
+  llm_instruction: "Format this as a SOAP note.", // max 2048 chars
+});
+
+console.log(result.text); // what the speaker said
+console.log(result.llm_response); // the rewrite, or null if no instruction ran
+console.log(result.final_text); // llm_response when there is one, text otherwise
+```
+
+When the LLM pass fails, `llm_response` is `null` and `llm_error` says why — the
+transcript itself still comes back.
+
+</details>
+
+<details>
+<summary>Configure the dictation</summary>
+
+```typescript
+const result = await client.dictation.transcribeLive(micStream, {
+  sample_rate: 16_000, // raw 16-bit PCM only; required together with channels
+  channels: 1, // 1 mono, 2 stereo; leave both unset for WAV
+  language_codes: ["es"], // ISO 639-1; or e.g. ["en", "es"]; defaults to the server's choice
+  stt_prompt: "A doctor dictating a patient visit note.", // max 4096 chars
+  keyterms_prompt: ["AssemblyAI", "Universal-3"], // max 2048 chars total
+  llm_instruction: "Format this as a SOAP note.", // max 2048 chars
+});
+```
+
+`stt_prompt` describes the situation the audio was recorded in and steers the
+decoder as it writes the transcript. Setting either PCM field marks the audio as
+raw 16-bit PCM, and both are then required. Prompts over their cap throw before
+the request is sent.
+
+</details>
+
+<details>
+<summary>Pre-warm the connection</summary>
+
+A request that connects on demand pays the full DNS + TCP + TLS handshake on the
+critical path. Call `warm()` shortly before you expect audio — the pooled
+connection idles out after a few seconds — so the request reuses the open
+socket.
+
+```typescript
+const ready = await client.dictation.warm(); // true once the socket is open
+```
+
+`warm()` returns `true` for any HTTP response, even a non-200 one: it opens the
+connection, it does not validate the API key. It returns `false` on a transport
+failure.
+
+</details>
+
+<details>
+<summary>Handle errors</summary>
+
+Failures throw a `DictationError` with the HTTP `status`, a machine-readable
+`errorCode` (`bad_audio`, `audio_too_large`, `capacity_exceeded`,
+`inference_timeout`, …), and `retryAfter` (seconds) on 429/503 responses.
+
+```typescript
+import { DictationError } from "assemblyai";
+
+try {
+  const result = await client.dictation.transcribeLive(micStream);
+} catch (error) {
+  if (error instanceof DictationError) {
+    console.error(error.status, error.errorCode, error.retryAfter);
+  }
+}
+```
+
+Record `result.session_id` from successful requests so a support conversation
+can be correlated with the request.
+
+</details>
+
 ### Transcribe streaming audio
 
 Refer to [AssemblyAI's streaming documentation](https://www.assemblyai.com/docs/streaming/getting-started/transcribe-streaming-audio) for full code examples.

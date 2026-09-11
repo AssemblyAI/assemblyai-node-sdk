@@ -45,6 +45,9 @@ const client = new AssemblyAI({
 - `client.sync.transcribe(audio, config?, options?)` — Synchronous transcription: audio in, transcript out, one request (no polling)
 - `client.sync.transcribeLive(audio, config?, options?)` — Sync transcription that uploads a stream or iterable of audio chunks while the audio is still being recorded
 - `client.sync.openLive(config?, options?)` — Open a live sync upload that audio is pushed into (`write()` / `close()` / `result()`), for callback-driven sources
+- `client.dictation.transcribeLive(audio, config?, options?)` — Dictation: upload a short spoken note as it is spoken and get one finished transcript back, optionally rewritten by an LLM
+- `client.dictation.openLive(config?, options?)` — Open a dictation upload that audio is pushed into (`write()` / `close()` / `result()`), for callback-driven sources
+- `client.dictation.warm()` — Pre-open the connection to the dictation API so the next request skips the handshake
 - `client.streaming.transcriber(params)` — Create a real-time streaming session
 - `client.llmGateway.chatCompletions(request)` — OpenAI-compatible chat completions
 - `client.llmGateway.listModels()` — List models available on the LLM Gateway
@@ -292,6 +295,93 @@ checks a few seconds in), and `warm()` opens the connection but does not validat
 (default 60 s, kept above the server's 30 s deadline). Live requests take `SyncLiveOptions`
 instead — `{ timeout, signal }`.
 
+## Dictation (short spoken notes, optional LLM rewrite)
+
+`client.dictation` transcribes dictation: a person speaks a short note and gets it back as
+text, optionally cleaned up or reformatted by an LLM. It targets the dictation API host
+(`dictation.assemblyai.com`, override with the `dictationBaseUrl` client option). There is one
+connection and one shape — the live upload: audio is sent as it is spoken, the service
+transcribes each speech segment as it lands, and when the speaker stops what remains is the
+final segment and the LLM pass. No job id, no polling, no URL ingestion. `POST
+/v1/transcribe/live` with a chunked multipart body (the `config` part before `audio`). This is
+not `client.streaming`, which returns words mid-utterance; dictation returns one finished
+transcript when the audio ends.
+
+**Input**: audio still being produced — an async iterable (Node streams included), a sync
+iterable, or a web `ReadableStream<Uint8Array>` — or audio already held whole: a local file path
+(Node/Bun/Deno), a data URL, raw bytes (`Uint8Array`/`ArrayBuffer`), or a Blob/File, which is
+sent as a single chunk over the same connection. **Not** a URL — that throws, pointing at
+`client.transcripts`. Audio must be WAV or raw 16-bit PCM, ≤120 s per request.
+
+```typescript
+await client.dictation.warm(); // open the connection ahead of time (does not validate the key)
+
+const session = client.dictation.openLive({ sample_rate: 16_000, channels: 1 });
+
+mic.on("data", (chunk) => session.write(chunk));
+mic.on("end", () => session.close());
+
+const result = await session.result();
+console.log(result.final_text);
+// Or pull-style, from a stream still being written, or a file already on disk:
+// await client.dictation.transcribeLive(recorder.stdout, { sample_rate: 16_000, channels: 1 });
+// await client.dictation.transcribeLive("./note.wav");
+```
+
+`openLive()` starts the request immediately and is the push-style entry point for
+callback-driven sources (microphone library, WebRTC track, telephony media stream). It returns a
+`DictationLiveSession`: `write(chunk)` (never blocks; a late write after the session ended is
+dropped rather than thrown, so a capture callback outliving teardown cannot crash the process; a
+non-bytes chunk while open throws `TypeError`), `close()` (ends the audio, idempotent),
+`result()` (closes if needed, then resolves with the transcript), `abort()` (drops the request —
+`result()` rejects afterwards, no-op once complete), `closed`, and `stream()` for
+`source.pipeTo(session.stream())`. Keep sending until done: an upload that goes silent for long
+enough is aborted server-side, so finish by ending the stream, not by pausing it.
+
+**Config** (all optional, second argument):
+
+```typescript
+const result = await client.dictation.transcribeLive(mic, {
+  sample_rate: 16_000, // raw 16-bit PCM; setting either PCM field requires both; unset for WAV
+  channels: 1, // 1 mono / 2 stereo
+  language_codes: ["es"], // ISO 639-1; or e.g. ["en", "es"]; unset leaves the language to the server
+  stt_prompt: "A doctor dictating a patient visit note.", // max 4096 chars; describes the recording
+  keyterms_prompt: ["AssemblyAI", "U3-Pro"], // whitespace stripped, empties dropped, max 2048 chars total
+  llm_instruction: "Format this as a SOAP note.", // max 2048 chars; follow-up LLM pass over the transcript
+});
+```
+
+`stt_prompt` steers the decoder as it writes the transcript; `llm_instruction` rewrites it
+afterwards. Over-cap prompts throw before the request is sent. There is no `model`, `prompt`,
+`timestamps` or `conversation_context` — only these fields are sent.
+
+**Result** (`DictationResponse`): `text` (raw transcript), `words` (`{ text, confidence }` — no
+timestamps), `confidence`, `llm_response` (`string | null`, the rewrite when the LLM pass ran),
+`llm_error` (`string | null`, why it failed when it did), `audio_duration_ms`, `session_id`
+(record it to correlate with support), and optional `request_time_ms` / `sync_time_ms`
+(transcription time excluding the LLM pass). **Show `final_text`** — derived by the SDK as
+`llm_response` when there is one, `text` otherwise, so it is safe to read either way.
+
+**Errors**: failures throw `DictationError` (a separate class from `SyncTranscriptError`) with
+`.status`, a machine-readable `.errorCode` (snake_cased problem-details title: `bad_audio`,
+`audio_too_large`, `capacity_exceeded`, `inference_timeout`, …), and `.retryAfter` (seconds) on
+429/503. Auth, rate-limit, size and capacity failures can surface part-way through the upload
+rather than only at the end.
+
+**Pre-warming**: `await client.dictation.warm()` issues a `GET /v1/warm` to take DNS + TCP + TLS
+off the critical path. It returns `true` once the socket is open — any HTTP response counts, even
+a non-200 one, because it does not validate the key — and `false` on a transport failure. Call it
+shortly before the request; the pooled connection idles out after a few seconds.
+
+**Client-side timeout**: third argument, `DictationLiveOptions` — `{ timeout, signal }`.
+`timeout` (default 300 000 ms) is a **total** deadline from the start of the request, spanning the
+upload, the transcription and the LLM pass; the service caps audio at 120 s. `signal` cancels a
+`transcribeLive()` from outside; sessions manage their own.
+
+**Exports** from the package root: `DictationTranscriber`, `DictationLiveSession`,
+`DictationError`, and the `DictationAudioInput`, `DictationConfig`, `DictationLiveOptions`,
+`DictationWord` and `DictationResponse` types.
+
 ## LLM Gateway
 
 `client.llmGateway` targets the LLM Gateway host (`llm-gateway.assemblyai.com`, override with the
@@ -329,6 +419,7 @@ strings, when present).
 - **Streaming uses universal-3-5-pro** as the speech model
 - **Never expose API keys client-side** — use temporary auth tokens for browser streaming
 - **Live upload timeout is a total deadline** — `transcribeLive()`/`openLive()` default to 180 s covering the whole recording plus transcription (not per-response like `transcribe()`'s 60 s), and the sync API still caps audio at 120 s
+- **Dictation timeout is a total 300 s deadline** — `client.dictation` spans the upload, the transcription and the LLM pass in one deadline; the service caps audio at 120 s and accepts WAV or raw 16-bit PCM only
 - **Node >= 18 required**
 - **Only runtime dependency**: ws (WebSocket library)
 - **Multi-runtime support**: Works in Node.js, Deno, Bun, Cloudflare Workers, and browsers

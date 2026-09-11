@@ -13,14 +13,23 @@ import { defaultSyncSpeechModel } from "../../types/sync";
 import { SyncTranscriptError } from "../../utils/errors/sync";
 import { getPath } from "../../utils/path";
 import {
-  SyncLiveSession,
-  checkLiveInput,
+  basename,
+  dataUrlToBytes,
+  deadlineSignal,
+  errorFromResponse,
+  extname,
+  isAsyncIterable,
+  isWebReadableStream,
   liveBody,
   liveChunks,
   multipartBoundary,
   multipartClosing,
   multipartHead,
-} from "./live";
+  readAsyncIterable,
+  readStream,
+  resolveFormat,
+} from "../../utils/live";
+import { SyncLiveSession, checkLiveInput } from "./live";
 
 // Canonical paths since the sync API gained a /v1 prefix (#18103); the
 // unprefixed routes remain served for SDK versions that predate it.
@@ -38,8 +47,11 @@ const maxPromptLength = 4096;
 const maxKeytermsPromptLength = 2048;
 const maxContextTurns = 100;
 const maxContextLength = 4096;
-// Extensions that signal raw S16LE PCM rather than a WAV container.
-const pcmSuffixes = [".pcm", ".raw"];
+// The sync route decodes a WAV container or raw S16LE PCM, so no extension
+// maps to a container content type of its own.
+const contentTypes: Record<string, string> = {};
+// What to call the config in the message when raw PCM is missing a field.
+const configName = "the config";
 
 /**
  * The synchronous transcription service: audio in, transcript out,
@@ -96,7 +108,9 @@ export class SyncTranscriber extends BaseService {
       headers: { [modelHeader]: config.model ?? defaultSyncSpeechModel },
       signal: AbortSignal.timeout(options.timeout ?? defaultTimeoutMs),
     });
-    if (response.status !== 200) throw await errorFromResponse(response);
+    if (response.status !== 200) {
+      throw await syncError(response);
+    }
     return (await response.json()) as SyncTranscriptResponse;
   }
 
@@ -229,7 +243,7 @@ export class SyncTranscriber extends BaseService {
       // withholds the response body until the request body ends, so end it
       // now rather than streaming the rest of a rejected recording.
       body.finish();
-      throw await errorFromResponse(response);
+      throw await syncError(response);
     }
     return (await response.json()) as SyncTranscriptResponse;
   }
@@ -328,39 +342,9 @@ async function resolveAudio(
     throw new TypeError("unsupported audio input type");
   }
 
-  return { bytes, ...resolveFormat(config, suffix, filename) };
-}
-
-/**
- * Decide the multipart file name and content type for the audio part.
- *
- * PCM is selected when `suffix` is a PCM extension or when
- * `sample_rate`/`channels` are set on the config (the fields the sync API
- * requires only for raw PCM), and both must then be present. Everything else
- * is treated as a WAV container. Needs no audio bytes, so it serves the live
- * path as well as the buffered one.
- */
-function resolveFormat(
-  config: SyncTranscriptionConfig,
-  suffix: string,
-  filename?: string,
-): { filename: string; contentType: string } {
-  const wantsPcm =
-    config.sample_rate !== undefined || config.channels !== undefined;
-  const isPcm = pcmSuffixes.includes(suffix) || wantsPcm;
-  if (
-    isPcm &&
-    (config.sample_rate === undefined || config.channels === undefined)
-  ) {
-    throw new Error(
-      "raw PCM audio requires both sample_rate and channels in the config",
-    );
-  }
-
-  const contentType = isPcm ? "audio/pcm" : "audio/wav";
   return {
-    filename: filename ?? (isPcm ? "audio.pcm" : "audio.wav"),
-    contentType,
+    bytes,
+    ...resolveFormat(config, suffix, filename, contentTypes, configName),
   };
 }
 
@@ -374,26 +358,13 @@ function resolveLiveFormat(
 ): { filename: string; contentType: string } {
   const path = (source as { path?: unknown } | undefined)?.path;
   const filename = typeof path === "string" ? basename(path) : undefined;
-  return resolveFormat(config, filename ? extname(filename) : "", filename);
-}
-
-/**
- * A signal that aborts when `timeoutMs` elapses or when `external` aborts,
- * whichever comes first. `AbortSignal.any` would do this but needs Node 20.
- */
-function deadlineSignal(
-  timeoutMs: number,
-  external?: AbortSignal,
-): AbortSignal {
-  const timeout = AbortSignal.timeout(timeoutMs);
-  if (!external) return timeout;
-  const controller = new AbortController();
-  const forward = (signal: AbortSignal) => () =>
-    controller.abort(signal.reason);
-  if (external.aborted) controller.abort(external.reason);
-  external.addEventListener("abort", forward(external), { once: true });
-  timeout.addEventListener("abort", forward(timeout), { once: true });
-  return controller.signal;
+  return resolveFormat(
+    config,
+    filename ? extname(filename) : "",
+    filename,
+    contentTypes,
+    configName,
+  );
 }
 
 /**
@@ -463,106 +434,14 @@ function normalizeConversationContext(
 }
 
 /**
- * Build a SyncTranscriptError from a non-200 response. The primary format
- * is an RFC 9457 problem-details body (`status`/`title`/`detail`); legacy
- * `{error_code, message}` and `{detail}`-only bodies are also accepted.
+ * Build a SyncTranscriptError from a non-200 response.
+ * @param response - The failed response.
+ * @returns A promise that resolves to the error to throw.
  */
-async function errorFromResponse(
-  response: Response,
-): Promise<SyncTranscriptError> {
-  let errorCode: string | undefined;
-  let message: string | undefined;
-
-  const text = await response.text();
-  try {
-    const body = JSON.parse(text);
-    if (body && typeof body === "object" && !Array.isArray(body)) {
-      if (typeof body.error_code === "string") errorCode = body.error_code;
-      if (errorCode === undefined && typeof body.title === "string") {
-        errorCode = body.title.toLowerCase().replace(/ /g, "_");
-      }
-      if (typeof body.detail === "string") message = body.detail;
-      else if (typeof body.message === "string") message = body.message;
-    }
-  } catch {
-    if (text) message = text;
-  }
-  if (!message) {
-    message = `sync transcription failed with status ${response.status}`;
-  }
-
-  const retryHeader = response.headers.get("retry-after");
-  const retryAfter =
-    retryHeader && /^\d+$/.test(retryHeader)
-      ? parseInt(retryHeader, 10)
-      : undefined;
-
-  return new SyncTranscriptError(
-    message,
-    response.status,
-    errorCode,
-    retryAfter,
+async function syncError(response: Response): Promise<SyncTranscriptError> {
+  return await errorFromResponse(
+    response,
+    SyncTranscriptError,
+    "sync transcription",
   );
-}
-
-function basename(path: string): string {
-  return path.split(/[\\/]/).pop() ?? path;
-}
-
-function extname(filename: string): string {
-  const dotIndex = filename.lastIndexOf(".");
-  return dotIndex > 0 ? filename.slice(dotIndex).toLowerCase() : "";
-}
-
-function dataUrlToBytes(dataUrl: string): Uint8Array {
-  const base64 = dataUrl.split(",")[1];
-  const binary = atob(base64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  return bytes;
-}
-
-function isWebReadableStream(
-  input: unknown,
-): input is ReadableStream<Uint8Array> {
-  return typeof (input as ReadableStream<Uint8Array>)?.getReader === "function";
-}
-
-function isAsyncIterable(input: unknown): input is AsyncIterable<Uint8Array> {
-  return (
-    typeof (input as AsyncIterable<Uint8Array>)?.[Symbol.asyncIterator] ===
-    "function"
-  );
-}
-
-async function readStream(
-  stream: ReadableStream<Uint8Array>,
-): Promise<Uint8Array> {
-  const chunks: Uint8Array[] = [];
-  const reader = stream.getReader();
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    chunks.push(value);
-  }
-  return concatChunks(chunks);
-}
-
-async function readAsyncIterable(
-  iterable: AsyncIterable<Uint8Array>,
-): Promise<Uint8Array> {
-  const chunks: Uint8Array[] = [];
-  for await (const chunk of iterable) chunks.push(chunk);
-  return concatChunks(chunks);
-}
-
-function concatChunks(chunks: Uint8Array[]): Uint8Array {
-  const total = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
-  const bytes = new Uint8Array(total);
-  let offset = 0;
-  for (const chunk of chunks) {
-    bytes.set(chunk, offset);
-    offset += chunk.length;
-  }
-  return bytes;
 }
