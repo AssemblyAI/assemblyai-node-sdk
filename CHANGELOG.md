@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.41.3]
+
+- Export the helper types (`LiteralUnion`) from the package root, so a downstream TypeScript package can export a value typed by `Transcript.language_code`, `TranscriptParams.language_code` or `SyncSpeechModel` without its declaration emit failing with TS2742 (the internal path `assemblyai/dist/types/helpers` is not in the `exports` map). No runtime change
+
 ## [4.41.2]
 
 - Add opt-in `acknowledgeSilence` streaming param — when enabled, the server emits a `Silence` message roughly once per second while no speech is transcribed, surfaced via the new `silence` event with `start_ms` and `end_ms` (session-audio positions on the same clock as word timestamps). Requires a U3Pro streaming model, and is also settable mid-stream via `updateConfiguration({ acknowledge_silence })`
