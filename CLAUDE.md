@@ -16,7 +16,7 @@ const client = new AssemblyAI({
 });
 
 const transcript = await client.transcripts.transcribe({
-  audio: "https://example.com/audio.mp3",
+  audio: "https://assembly.ai/wildfires.mp3",
   speech_models: ["universal-3-5-pro", "universal-2"],
   speaker_labels: true,
 });

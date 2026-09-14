@@ -16,7 +16,7 @@ async function transcribeWithSpeakerDiarization() {
   // Example 1: Basic speaker diarization (uses smart defaults)
   // The model automatically detects the optimal number of speakers
   let transcript = await client.transcripts.transcribe({
-    audio: "https://example.com/audio.mp3",
+    audio: "https://assemblyaiassets.com/audios/medical.mp3",
     speaker_labels: true,
   })
 
@@ -25,7 +25,7 @@ async function transcribeWithSpeakerDiarization() {
   // Example 2: Provide a hint with speakers_expected (smart default with guidance)
   // Still uses smart defaults but gives the model a hint about expected speakers
   transcript = await client.transcripts.transcribe({
-    audio: "https://example.com/audio.mp3",
+    audio: "https://assemblyaiassets.com/audios/medical.mp3",
     speaker_labels: true,
     speakers_expected: 3,
   })
@@ -40,7 +40,7 @@ async function transcribeWithSpeakerDiarization() {
   }
 
   transcript = await client.transcripts.transcribe({
-    audio: "https://example.com/audio.mp3",
+    audio: "https://assemblyaiassets.com/audios/medical.mp3",
     speaker_labels: true,
     speaker_options: speakerOptions,
   })
@@ -49,7 +49,7 @@ async function transcribeWithSpeakerDiarization() {
 
   // Note: The following would be INVALID since speakers_expected and speaker_options are mutually exclusive:
   // transcript = await client.transcripts.transcribe({
-  //   audio: "https://example.com/audio.mp3",
+  //   audio: "https://assemblyaiassets.com/audios/medical.mp3",
   //   speaker_labels: true,
   //   speakers_expected: 3, // ❌ Cannot use both
   //   speaker_options: { min_speakers_expected: 2 }, // ❌ Cannot use both
@@ -58,7 +58,7 @@ async function transcribeWithSpeakerDiarization() {
   // Example 4: Edge case handling for challenging audio
   // Use speaker_options when you need precise control over speaker detection
   transcript = await client.transcripts.transcribe({
-    audio: "https://example.com/audio.mp3",
+    audio: "https://assemblyaiassets.com/audios/medical.mp3",
     speaker_labels: true,
     speaker_options: {
       min_speakers_expected: 1, // Handle solo speakers or presentations
