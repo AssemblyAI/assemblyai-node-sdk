@@ -892,4 +892,98 @@ describe("streaming", () => {
       }),
     );
   });
+
+  it("should include acknowledge_silence=true in connection URL", async () => {
+    await cleanup();
+    WS.clean();
+
+    const wsUrl = `${websocketBaseUrl}?token=123&sample_rate=16000&acknowledge_silence=true`;
+    server = new WS(wsUrl);
+    rt = new StreamingTranscriber({
+      websocketBaseUrl,
+      token: "123",
+      sampleRate: 16_000,
+      acknowledgeSilence: true,
+    });
+    onOpen = jest.fn();
+    rt.on("open", onOpen);
+    await connect(rt, server);
+
+    expect(connectUrlParams(rt).get("acknowledge_silence")).toBe("true");
+  });
+
+  it("should include acknowledge_silence=false in connection URL when explicitly disabled", async () => {
+    await cleanup();
+    WS.clean();
+
+    // Serialization uses `!== undefined`, so an explicit `false` is still emitted.
+    const wsUrl = `${websocketBaseUrl}?token=123&sample_rate=16000&acknowledge_silence=false`;
+    server = new WS(wsUrl);
+    rt = new StreamingTranscriber({
+      websocketBaseUrl,
+      token: "123",
+      sampleRate: 16_000,
+      acknowledgeSilence: false,
+    });
+    onOpen = jest.fn();
+    rt.on("open", onOpen);
+    await connect(rt, server);
+
+    expect(connectUrlParams(rt).get("acknowledge_silence")).toBe("false");
+  });
+
+  it("should omit acknowledge_silence from connection URL when unset", async () => {
+    await cleanup();
+    WS.clean();
+
+    const wsUrl = `${websocketBaseUrl}?token=123&sample_rate=16000`;
+    server = new WS(wsUrl);
+    rt = new StreamingTranscriber({
+      websocketBaseUrl,
+      token: "123",
+      sampleRate: 16_000,
+    });
+    onOpen = jest.fn();
+    rt.on("open", onOpen);
+    await connect(rt, server);
+
+    expect(connectUrlParams(rt).has("acknowledge_silence")).toBe(false);
+  });
+
+  it("should parse and dispatch Silence event", async () => {
+    const handler = jest.fn();
+    const silencePromise = new Promise<{
+      type: string;
+      start_ms: number;
+      end_ms: number;
+    }>((resolve) => {
+      rt.on("silence", (event) => {
+        handler(event);
+        resolve(event);
+      });
+    });
+
+    const silence = {
+      type: "Silence",
+      start_ms: 12000,
+      end_ms: 13000,
+    };
+
+    server.send(JSON.stringify(silence));
+
+    const event = await silencePromise;
+    expect(handler).toHaveBeenCalledTimes(1);
+    // snake_case wire payload is passed through verbatim.
+    expect(event).toEqual(silence);
+  });
+
+  it("should include acknowledge_silence in updateConfiguration message", async () => {
+    rt.updateConfiguration({ acknowledge_silence: true });
+    await expect(server).toReceiveMessage(
+      JSON.stringify({
+        type: "UpdateConfiguration",
+        acknowledge_silence: true,
+      }),
+    );
+  });
 });

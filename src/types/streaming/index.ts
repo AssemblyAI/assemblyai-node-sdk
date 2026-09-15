@@ -109,6 +109,12 @@ export type StreamingTranscriberParams = {
   vadThreshold?: number;
   formatTurns?: boolean;
   sessionHeartbeat?: boolean;
+  /**
+   * Opt in to `Silence` messages. While no speech is being transcribed, the
+   * server emits a `Silence` message roughly once per second, surfaced via the
+   * `silence` event. Requires a U3Pro streaming model.
+   */
+  acknowledgeSilence?: boolean;
   filterProfanity?: boolean;
   keyterms?: string[];
   keytermsPrompt?: string[];
@@ -186,6 +192,7 @@ export type StreamingEvents =
   | "speakerRevision"
   | "warning"
   | "heartbeat"
+  | "silence"
   | "vad"
   | "error";
 
@@ -198,6 +205,7 @@ export type StreamingListeners = {
   speakerRevision?: (event: SpeakerRevisionEvent) => void;
   warning?: (event: WarningEvent) => void;
   heartbeat?: (event: HeartbeatEvent) => void;
+  silence?: (event: SilenceEvent) => void;
   vad?: (event: VadFrame) => void;
   error?: (error: Error) => void;
 };
@@ -376,6 +384,7 @@ export type StreamingUpdateConfiguration = {
   vad_threshold?: number;
   format_turns?: boolean;
   session_heartbeat?: boolean;
+  acknowledge_silence?: boolean;
   keyterms_prompt?: string[];
   prompt?: string;
   agent_context?: string;
@@ -418,6 +427,22 @@ export type HeartbeatEvent = {
   max_speech_probability: number;
 };
 
+export type SilenceEvent = {
+  type: "Silence";
+  /**
+   * Start of the silent stretch, in milliseconds of session audio on the same
+   * clock as word timestamps.
+   */
+  start_ms: number;
+  /**
+   * End of the silent stretch, in milliseconds of session audio on the same
+   * clock as word timestamps. A range may overlap audio already reported as
+   * speech, because the gateway replays a short window of audio after a worker
+   * reconnect; track a running maximum and trim ranges against it.
+   */
+  end_ms: number;
+};
+
 export type LLMGatewayResponseEvent = {
   type: "LLMGatewayResponse";
   turn_order: number;
@@ -458,7 +483,8 @@ export type StreamingEventMessage =
   | SpeakerRevisionEvent
   | ErrorEvent
   | WarningEvent
-  | HeartbeatEvent;
+  | HeartbeatEvent
+  | SilenceEvent;
 
 export type StreamingOperationMessage =
   | StreamingUpdateConfiguration
