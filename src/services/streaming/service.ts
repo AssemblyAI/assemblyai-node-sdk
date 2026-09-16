@@ -21,6 +21,7 @@ import {
   StreamingKeepAlive,
   WarningEvent,
   HeartbeatEvent,
+  SilenceEvent,
 } from "../..";
 import type { VadDetector, VadFrame } from "../../types/streaming/dual-channel";
 import { EnergyVad } from "./energy-vad";
@@ -318,6 +319,13 @@ export class StreamingTranscriber {
       );
     }
 
+    if (this.params.acknowledgeSilence !== undefined) {
+      searchParams.set(
+        "acknowledge_silence",
+        this.params.acknowledgeSilence.toString(),
+      );
+    }
+
     if (this.params.encoding) {
       searchParams.set("encoding", this.params.encoding.toString());
     }
@@ -510,6 +518,7 @@ export class StreamingTranscriber {
   ): void;
   on(event: "warning", listener: (event: WarningEvent) => void): void;
   on(event: "heartbeat", listener: (event: HeartbeatEvent) => void): void;
+  on(event: "silence", listener: (event: SilenceEvent) => void): void;
   on(event: "vad", listener: (event: VadFrame) => void): void;
   on(event: "error", listener: (error: Error) => void): void;
   on(event: "close", listener: (code: number, reason: string) => void): void;
@@ -734,6 +743,10 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
           }
           case "Heartbeat": {
             this.listeners.heartbeat?.(message);
+            break;
+          }
+          case "Silence": {
+            this.listeners.silence?.(message);
             break;
           }
           case "Termination": {

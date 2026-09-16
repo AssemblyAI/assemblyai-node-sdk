@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.41.2]
+
+- Add opt-in `acknowledgeSilence` streaming param — when enabled, the server emits a `Silence` message roughly once per second while no speech is transcribed, surfaced via the new `silence` event with `start_ms` and `end_ms` (session-audio positions on the same clock as word timestamps). Requires a U3Pro streaming model, and is also settable mid-stream via `updateConfiguration({ acknowledge_silence })`
+
 ## [4.41.1]
 
 - Add `universal-3-6` to the streaming `speechModel` options (`StreamingSpeechModel`)
