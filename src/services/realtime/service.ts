@@ -65,6 +65,7 @@ export class RealtimeTranscriber {
   private socket?: PolyfillWebSocket;
   private listeners: RealtimeListeners = {};
   private sessionTerminatedResolve?: () => void;
+  private connectReject?: (reason: Error) => void;
 
   /**
    * Create a new RealtimeTranscriber.
@@ -187,10 +188,12 @@ export class RealtimeTranscriber {
    * @returns A promise that resolves when the connection is established and the session begins.
    */
   connect() {
-    return new Promise<SessionBeginsEventData>((resolve) => {
+    return new Promise<SessionBeginsEventData>((resolve, reject) => {
       if (this.socket) {
         throw new Error("Already connected");
       }
+
+      this.connectReject = reject;
 
       const url = this.connectionUrl();
 
@@ -235,8 +238,18 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
       };
 
       this.socket!.onerror = (event: ErrorEvent) => {
-        if (event.error) this.listeners.error?.(event.error as Error);
-        else this.listeners.error?.(new Error(event.message));
+        const error = event.error
+          ? (event.error as Error)
+          : new Error(event.message);
+        // Reject the connect() promise if SessionBegins has not yet resolved it.
+        // This prevents the promise from hanging when the socket fails during
+        // the handshake (fixes #136).
+        const rejectConnect = this.connectReject;
+        if (rejectConnect) {
+          this.connectReject = undefined;
+          rejectConnect(error);
+        }
+        this.listeners.error?.(error);
       };
 
       this.socket!.onmessage = ({ data }: MessageEvent) => {
@@ -251,6 +264,9 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
               sessionId: message.session_id,
               expiresAt: new Date(message.expires_at),
             };
+            // Session started successfully — clear the rejection handler so
+            // subsequent onerror calls (after handshake) only fire listeners.
+            this.connectReject = undefined;
             resolve(openObject);
             this.listeners.open?.(openObject);
             break;
