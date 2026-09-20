@@ -234,6 +234,16 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
         // The socket is gone, so no `SessionTerminated` message is coming.
         // Release a `close()` that is waiting for one.
         this.resolveSessionTermination();
+        const rejectConnect = this.connectReject;
+        if (rejectConnect) {
+          this.connectReject = undefined;
+          this.discardPendingSocket();
+          rejectConnect(
+            new Error(
+              `Realtime connection closed before session started: ${code} ${reason ?? ""}`.trim(),
+            ),
+          );
+        }
         this.listeners.close?.(code, reason);
       };
 
@@ -243,10 +253,11 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
           : new Error(event.message);
         // Reject the connect() promise if SessionBegins has not yet resolved it.
         // This prevents the promise from hanging when the socket fails during
-        // the handshake (fixes #136).
+        // the handshake.
         const rejectConnect = this.connectReject;
         if (rejectConnect) {
           this.connectReject = undefined;
+          this.discardPendingSocket();
           rejectConnect(error);
         }
         this.listeners.error?.(error);
@@ -352,6 +363,26 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
     const resolve = this.sessionTerminatedResolve;
     this.sessionTerminatedResolve = undefined;
     resolve?.();
+  }
+
+  /** Tear down a half-open socket from a failed connection attempt. */
+  private discardPendingSocket(): void {
+    if (!this.socket) return;
+    try {
+      if (this.socket.removeAllListeners) {
+        this.socket.removeAllListeners();
+        // `ws` aborts a still-CONNECTING handshake by emitting `error` on the
+        // next tick, and an `error` emit with no listener crashes the process
+        // as an uncaughtException — outside this try/catch and any caller's.
+        // Keep a sink attached; the failure is already reported through the
+        // rejected connect() promise.
+        this.socket.onerror = () => {};
+      }
+      this.socket.close();
+    } catch {
+      // Best-effort cleanup; a half-open socket may throw on close.
+    }
+    this.socket = undefined;
   }
 
   /** Awaits the session-termination message, bounded by `timeoutMs`. */
