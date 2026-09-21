@@ -84,6 +84,63 @@ describe("realtime", () => {
     );
   });
 
+  // Regression: connect() must reject when a WebSocket error
+  // fires before SessionBegins instead of hanging indefinitely.
+  it("rejects connect() when WebSocket errors before SessionBegins", async () => {
+    const errorUrl = "wss://localhost:9991";
+    const errorServer = new WS(errorUrl);
+    const rtNew = new RealtimeTranscriber({ realtimeUrl: errorUrl, apiKey });
+
+    const connectPromise = rtNew.connect();
+    await errorServer.connected;
+
+    // Simulate a network error before the server sends SessionBegins.
+    errorServer.error({
+      code: 0,
+      reason: "Connection refused",
+      wasClean: false,
+    });
+
+    await expect(connectPromise).rejects.toThrow();
+    WS.clean();
+  });
+
+  // After a failed connect(), this.socket must be dropped so retrying does
+  // not throw "Already connected".
+  it("allows reconnecting after connect() fails", async () => {
+    const errorUrl = "wss://localhost:9992";
+    const errorServer = new WS(errorUrl);
+    const rtNew = new RealtimeTranscriber({ realtimeUrl: errorUrl, apiKey });
+
+    const firstConnect = rtNew.connect();
+    await errorServer.connected;
+    errorServer.error({
+      code: 0,
+      reason: "Connection refused",
+      wasClean: false,
+    });
+    await expect(firstConnect).rejects.toThrow();
+    WS.clean();
+
+    // Reconnecting should not throw "Already connected"
+    const retryServer = new WS(errorUrl);
+    await connect(rtNew, retryServer);
+    await close(rtNew, retryServer);
+    WS.clean();
+  });
+
+  // After SessionBegins, onerror must only fire the error listener — the
+  // already-resolved connect() promise must not be double-rejected.
+  it("does not reject an already-resolved connect() on subsequent errors", async () => {
+    // `rt` is already connected by beforeEach; further errors fire listener only.
+    const onError = jest.fn();
+    rt.on("error", onError);
+
+    server.error({ code: 0, reason: "Post-handshake error", wasClean: false });
+
+    expect(onError).toHaveBeenCalledWith(expect.any(Error));
+  });
+
   it("fails to send audio with closed websocket", async () => {
     await close(rt, server);
     expect(() => rt.sendAudio(new ArrayBuffer(8))).toThrow(

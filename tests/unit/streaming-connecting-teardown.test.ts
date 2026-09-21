@@ -95,6 +95,21 @@ describe("tearing down a CONNECTING socket", () => {
     expect(() => socket.emitDeferredHandshakeAbort()).not.toThrow();
   });
 
+  it("RealtimeTranscriber.discardPendingSocket() leaves an error sink attached", () => {
+    const rt = new RealtimeTranscriber({
+      apiKey: "123",
+      sampleRate: 16_000,
+    });
+    const socket = new FakeConnectingWsSocket();
+    injectSocket(rt, socket);
+
+    (rt as unknown as { discardPendingSocket(): void }).discardPendingSocket();
+
+    expect(socket.closeCalled).toBe(true);
+    expect(socket.listenerCount("error")).toBeGreaterThan(0);
+    expect(() => socket.emitDeferredHandshakeAbort()).not.toThrow();
+  });
+
   it("RealtimeTranscriber.close() leaves an error sink attached", async () => {
     const rt = new RealtimeTranscriber({
       apiKey: "123",

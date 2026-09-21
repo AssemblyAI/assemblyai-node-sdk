@@ -65,6 +65,7 @@ export class RealtimeTranscriber {
   private socket?: PolyfillWebSocket;
   private listeners: RealtimeListeners = {};
   private sessionTerminatedResolve?: () => void;
+  private connectReject?: (reason: Error) => void;
 
   /**
    * Create a new RealtimeTranscriber.
@@ -187,10 +188,12 @@ export class RealtimeTranscriber {
    * @returns A promise that resolves when the connection is established and the session begins.
    */
   connect() {
-    return new Promise<SessionBeginsEventData>((resolve) => {
+    return new Promise<SessionBeginsEventData>((resolve, reject) => {
       if (this.socket) {
         throw new Error("Already connected");
       }
+
+      this.connectReject = reject;
 
       const url = this.connectionUrl();
 
@@ -231,12 +234,33 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
         // The socket is gone, so no `SessionTerminated` message is coming.
         // Release a `close()` that is waiting for one.
         this.resolveSessionTermination();
+        const rejectConnect = this.connectReject;
+        if (rejectConnect) {
+          this.connectReject = undefined;
+          this.discardPendingSocket();
+          rejectConnect(
+            new Error(
+              `Realtime connection closed before session started: ${code} ${reason ?? ""}`.trim(),
+            ),
+          );
+        }
         this.listeners.close?.(code, reason);
       };
 
       this.socket!.onerror = (event: ErrorEvent) => {
-        if (event.error) this.listeners.error?.(event.error as Error);
-        else this.listeners.error?.(new Error(event.message));
+        const error = event.error
+          ? (event.error as Error)
+          : new Error(event.message);
+        // Reject the connect() promise if SessionBegins has not yet resolved it.
+        // This prevents the promise from hanging when the socket fails during
+        // the handshake.
+        const rejectConnect = this.connectReject;
+        if (rejectConnect) {
+          this.connectReject = undefined;
+          this.discardPendingSocket();
+          rejectConnect(error);
+        }
+        this.listeners.error?.(error);
       };
 
       this.socket!.onmessage = ({ data }: MessageEvent) => {
@@ -251,6 +275,9 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
               sessionId: message.session_id,
               expiresAt: new Date(message.expires_at),
             };
+            // Session started successfully — clear the rejection handler so
+            // subsequent onerror calls (after handshake) only fire listeners.
+            this.connectReject = undefined;
             resolve(openObject);
             this.listeners.open?.(openObject);
             break;
@@ -336,6 +363,26 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
     const resolve = this.sessionTerminatedResolve;
     this.sessionTerminatedResolve = undefined;
     resolve?.();
+  }
+
+  /** Tear down a half-open socket from a failed connection attempt. */
+  private discardPendingSocket(): void {
+    if (!this.socket) return;
+    try {
+      if (this.socket.removeAllListeners) {
+        this.socket.removeAllListeners();
+        // `ws` aborts a still-CONNECTING handshake by emitting `error` on the
+        // next tick, and an `error` emit with no listener crashes the process
+        // as an uncaughtException — outside this try/catch and any caller's.
+        // Keep a sink attached; the failure is already reported through the
+        // rejected connect() promise.
+        this.socket.onerror = () => {};
+      }
+      this.socket.close();
+    } catch {
+      // Best-effort cleanup; a half-open socket may throw on close.
+    }
+    this.socket = undefined;
   }
 
   /** Awaits the session-termination message, bounded by `timeoutMs`. */

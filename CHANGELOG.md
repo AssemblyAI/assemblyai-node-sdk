@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.41.4]
+
+- Fix `RealtimeTranscriber.connect()` promise hanging indefinitely when a socket error or unexpected close occurs before `SessionBegins`. The promise now rejects, and the socket reference is discarded so that connections can be safely retried.
+
 ## [4.41.3]
 
 - Export the helper types (`LiteralUnion`) from the package root, so a downstream TypeScript package can export a value typed by `Transcript.language_code`, `TranscriptParams.language_code` or `SyncSpeechModel` without its declaration emit failing with TS2742 (the internal path `assemblyai/dist/types/helpers` is not in the `exports` map). No runtime change
