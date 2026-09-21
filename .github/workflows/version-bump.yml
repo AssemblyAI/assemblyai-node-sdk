@@ -1,0 +1,59 @@
+name: Version Bump Check
+
+# Every PR into main must increase the "version" in package.json and add a
+# matching `## [x.y.z]` entry to CHANGELOG.md, because publishing to npm is
+# release-driven and a release is cut from main after merge.
+# Add the `skip-version-bump` label to a PR that intentionally ships no
+# release (CI-only, docs-only, etc.) to bypass this check.
+on:
+  pull_request:
+    branches: ["main"]
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+concurrency:
+  group: concurrency-group::${{ github.workflow }}::pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  version-bump:
+    name: Version incremented
+    if: ${{ !contains(github.event.pull_request.labels.*.name, 'skip-version-bump') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history so the base branch's package.json is available locally.
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Compare version against base branch
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          BASE_VERSION=$(git show "${BASE_SHA}:package.json" | node -p 'JSON.parse(require("fs").readFileSync(0, "utf8")).version')
+          HEAD_VERSION=$(node -p 'require("./package.json").version')
+          echo "base: ${BASE_VERSION}  ->  head: ${HEAD_VERSION}"
+
+          for v in "${BASE_VERSION}" "${HEAD_VERSION}"; do
+            if ! npx -y semver@7.6.3 "${v}" > /dev/null 2>&1; then
+              echo "::error file=package.json::Could not parse version '${v}' as semver"
+              exit 1
+            fi
+          done
+
+          # `semver -r` prints only the versions that satisfy the range (-p so a prerelease head also counts); empty output means head <= base.
+          if [ -z "$(npx -y semver@7.6.3 -p -r ">${BASE_VERSION}" "${HEAD_VERSION}")" ]; then
+            echo "::error file=package.json::\"version\" must be incremented in every PR (base is ${BASE_VERSION}, PR has ${HEAD_VERSION}). Bump it, or add the 'skip-version-bump' label if this PR intentionally ships no release."
+            exit 1
+          fi
+          echo "Version bump OK"
+
+          if ! grep -qE "^## \[${HEAD_VERSION//./\\.}\]" CHANGELOG.md; then
+            echo "::error file=CHANGELOG.md::CHANGELOG.md has no \"## [${HEAD_VERSION}]\" entry. Add one describing this release at the top of the file."
+            exit 1
+          fi
+          echo "CHANGELOG entry OK"
