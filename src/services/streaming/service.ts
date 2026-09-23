@@ -406,6 +406,14 @@ export class StreamingTranscriber {
       searchParams.set("max_speakers", this.params.maxSpeakers.toString());
     }
 
+    if (this.params.speakerLabelsRevisionIntervalMs !== undefined) {
+      // Underscore-prefixed wire name = "not officially supported / unstable".
+      searchParams.set(
+        "_speaker_labels_revision_interval_ms",
+        this.params.speakerLabelsRevisionIntervalMs.toString(),
+      );
+    }
+
     if (this.params.voiceFocus) {
       searchParams.set("voice_focus", this.params.voiceFocus);
     }

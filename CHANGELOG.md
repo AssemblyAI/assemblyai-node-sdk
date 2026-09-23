@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.41.5]
+
+- Add `speakerLabelsRevisionIntervalMs` streaming param (sent as `_speaker_labels_revision_interval_ms`) — the cadence, in ms of audio time, at which the server emits mid-stream `speakerRevision` events when `speakerLabels` is enabled. Unset or `0` sends only the end-of-stream revision; values above the server default (300 000 ms) are clamped to it. Not officially supported yet; name and semantics may change
+
 ## [4.41.4]
 
 - Fix `RealtimeTranscriber.connect()` promise hanging indefinitely when a socket error or unexpected close occurs before `SessionBegins`. The promise now rejects, and the socket reference is discarded so that connections can be safely retried.

@@ -103,7 +103,10 @@ when `speakerLabels` is enabled). Sent once per offline-recluster resolve; each
 message batches every earlier Turn whose speaker label changed (unchanged turns
 are omitted). For each `revisions[i]`, match `turn_order` against the original
 Turn and replace its per-word `speaker` (and the turn-level `speaker_label`)
-with the revision's values — text and word timestamps are unchanged:
+with the revision's values — text and word timestamps are unchanged.
+By default only the end-of-stream revision is sent; set
+`speakerLabelsRevisionIntervalMs` (ms of audio time, e.g. `60_000`; sent as the
+not-yet-GA `_speaker_labels_revision_interval_ms`) to also get them mid-stream:
 
 ```typescript
 transcriber.on("speakerRevision", (event) => {

@@ -127,6 +127,44 @@ describe("streaming", () => {
     await connect(rt, server);
   });
 
+  it("should include _speaker_labels_revision_interval_ms in connection URL", async () => {
+    await cleanup();
+    WS.clean();
+
+    const wsUrl = `${websocketBaseUrl}?token=123&sample_rate=16000&speech_model=universal-streaming-english&speaker_labels=true&_speaker_labels_revision_interval_ms=60000`;
+    server = new WS(wsUrl);
+    rt = new StreamingTranscriber({
+      websocketBaseUrl,
+      token: "123",
+      sampleRate: 16_000,
+      speechModel: "universal-streaming-english",
+      speakerLabels: true,
+      speakerLabelsRevisionIntervalMs: 60_000,
+    });
+    onOpen = jest.fn();
+    rt.on("open", onOpen);
+    await connect(rt, server);
+  });
+
+  it("should send _speaker_labels_revision_interval_ms=0 when explicitly set to 0", async () => {
+    await cleanup();
+    WS.clean();
+
+    const wsUrl = `${websocketBaseUrl}?token=123&sample_rate=16000&speech_model=universal-streaming-english&speaker_labels=true&_speaker_labels_revision_interval_ms=0`;
+    server = new WS(wsUrl);
+    rt = new StreamingTranscriber({
+      websocketBaseUrl,
+      token: "123",
+      sampleRate: 16_000,
+      speechModel: "universal-streaming-english",
+      speakerLabels: true,
+      speakerLabelsRevisionIntervalMs: 0,
+    });
+    onOpen = jest.fn();
+    rt.on("open", onOpen);
+    await connect(rt, server);
+  });
+
   it("should normalize deprecated minEndOfTurnSilenceWhenConfident to min_turn_silence in connection URL", async () => {
     await cleanup();
     WS.clean();
