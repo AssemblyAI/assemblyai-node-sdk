@@ -147,6 +147,11 @@ export type StreamingTranscriberParams = {
    * server's default cadence (300 000 ms) are clamped to it. Accepts 0 to
    * 86 400 000 (24 h). Only used when `speakerLabels` is enabled.
    *
+   * The first mid-stream revision can only arrive after ~120 s of speech has
+   * been streamed (a server-side floor, not configurable), and a revision is
+   * sent only when some earlier turn's label actually changed — so expect
+   * "at most one per interval", not exactly one.
+   *
    * Not officially supported yet (sent as the underscore-prefixed
    * `_speaker_labels_revision_interval_ms`); name and semantics may change.
    */
