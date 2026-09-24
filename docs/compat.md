@@ -5,8 +5,8 @@ such as the browser, Deno, Bun, Cloudflare Workers, etc.
 
 ## Node.js compatibility
 
-The SDK supports Node.js 18, 20, and 21.
-If you do use an older version of Node.js like version 16, you'll need to polyfill `fetch`.
+The SDK supports Node.js 22 and later.
+If you're still on Node.js 18 or 20, use version 4 of the SDK.
 
 ## Browser compatibility
 

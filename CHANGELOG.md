@@ -1,5 +1,9 @@
 # Changelog
 
+## [5.0.0]
+
+- **Breaking**: Require Node.js 22 or later. `engines.node` is now `>=22` (was `>=18`), because Node.js 18 and 20 have reached end of life. There is no runtime change in this release, but installing it on Node.js 18 or 20 fails under package managers that enforce `engines` (Yarn 1, or npm and pnpm with `engine-strict`)
+
 ## [4.41.4]
 
 - Fix `RealtimeTranscriber.connect()` promise hanging indefinitely when a socket error or unexpected close occurs before `SessionBegins`. The promise now rejects, and the socket reference is discarded so that connections can be safely retried.

@@ -428,7 +428,7 @@ strings, when present).
 - **Never expose API keys client-side** — use temporary auth tokens for browser streaming
 - **Sync timeout is a total deadline** — `transcribe()`, `transcribeLive()` and `openLive()` all default to a 180 s deadline spanning the whole request (upload plus transcription), and the sync API still caps audio at 120 s
 - **Dictation timeout is a total 300 s deadline** — `client.dictation` spans the upload, the transcription and the LLM pass in one deadline; the service caps audio at 120 s and accepts WAV or raw 16-bit PCM only
-- **Node >= 18 required**
+- **Node >= 22 required**
 - **Only runtime dependency**: ws (WebSocket library)
 - **Multi-runtime support**: Works in Node.js, Deno, Bun, Cloudflare Workers, and browsers
 

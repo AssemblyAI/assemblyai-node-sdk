@@ -21,7 +21,7 @@ const encoder = new TextEncoder();
 /**
  * Generates a multipart boundary. Random alphanumerics behind a fixed prefix,
  * as `FormData` implementations do; `Math.random` rather than Web Crypto
- * because `globalThis.crypto` is flagged on Node 18, which is still supported.
+ * because `globalThis.crypto` was flagged on Node 18.
  * @returns The boundary token, without the leading dashes.
  */
 export function multipartBoundary(): string {
