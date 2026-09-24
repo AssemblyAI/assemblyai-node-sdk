@@ -58,7 +58,9 @@ describe("utils", () => {
     const userAgent = buildUserAgent({});
     expect(userAgent).toContain("AssemblyAI/1.0 (");
     expect(userAgent).toContain("sdk=JavaScript/__SDK_VERSION__");
-    expect(userAgent).toContain("runtime_env=Node/");
+    // Node 21+ sets `navigator.userAgent` to "Node.js/<major>", which prefixes
+    // the UA in place of a `runtime_env` entry.
+    expect(userAgent).toMatch(/^Node\.js\/\d+ /);
   });
 
   it("should build a user-agent with extras", () => {
@@ -67,7 +69,7 @@ describe("utils", () => {
     });
     expect(userAgent).toContain("AssemblyAI/1.0 (");
     expect(userAgent).toContain("sdk=JavaScript/__SDK_VERSION__");
-    expect(userAgent).toContain("runtime_env=Node/");
+    expect(userAgent).toMatch(/^Node\.js\/\d+ /);
     expect(userAgent).toContain("integration=Zapier/1.0.0");
   });
 
@@ -89,7 +91,7 @@ describe("utils", () => {
     });
     expect(userAgent).toContain("AssemblyAI/1.0 (");
     expect(userAgent).toContain("sdk=TS/1.0");
-    expect(userAgent).toContain("runtime_env=Node/");
+    expect(userAgent).toMatch(/^Node\.js\/\d+ /);
     expect(userAgent).not.toContain("os=");
   });
 

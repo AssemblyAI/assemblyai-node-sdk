@@ -9,10 +9,10 @@ jobs:
     name: Build and publish to npmjs.com
     runs-on: ubuntu-latest
     steps:
-      - name: Setup Node.js 20
+      - name: Setup Node.js 24
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
       - name: Checkout source code
         uses: actions/checkout@v4
       - name: Install pnpm
