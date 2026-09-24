@@ -407,9 +407,8 @@ export class StreamingTranscriber {
     }
 
     if (this.params.speakerLabelsRevisionIntervalMs !== undefined) {
-      // Underscore-prefixed wire name = "not officially supported / unstable".
       searchParams.set(
-        "_speaker_labels_revision_interval_ms",
+        "speaker_labels_revision_interval_ms",
         this.params.speakerLabelsRevisionIntervalMs.toString(),
       );
     }

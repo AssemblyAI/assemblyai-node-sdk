@@ -2,7 +2,7 @@
 
 ## [4.41.5]
 
-- Add `speakerLabelsRevisionIntervalMs` streaming param (sent as `_speaker_labels_revision_interval_ms`) — the cadence, in ms of audio time, at which the server emits mid-stream `speakerRevision` events when `speakerLabels` is enabled. Unset or `0` sends only the end-of-stream revision; values above the server default (300 000 ms) are clamped to it. The first mid-stream revision needs ~120 s of streamed speech, and one is sent only when some earlier turn's label changed. Not officially supported yet; name and semantics may change
+- Add `speakerLabelsRevisionIntervalMs` streaming param (sent as `speaker_labels_revision_interval_ms`) — the cadence, in ms of audio time, at which the server emits mid-stream `speakerRevision` events when `speakerLabels` is enabled. Unset or `0` sends only the end-of-stream revision; non-zero values are clamped server-side to 120 000–300 000 ms. The first mid-stream revision needs ~120 s of streamed speech, and one is sent only when some earlier turn's label changed
 
 ## [4.41.4]
 
