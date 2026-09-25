@@ -177,6 +177,14 @@ export type SyncTranscriptResponse = {
    */
   session_id: string;
   /**
+   * ISO 639-1 language code the model used for this transcript (e.g. `"en"`,
+   * `"es"`). Populated when the server detects or is told the language;
+   * `undefined` for responses from servers that predate the field. Useful
+   * when `language_codes` was not set and you need to know which language the
+   * model chose.
+   */
+  language_code?: string;
+  /**
    * The end-to-end server-side request time in milliseconds. `undefined`
    * when the server predates the field.
    */
