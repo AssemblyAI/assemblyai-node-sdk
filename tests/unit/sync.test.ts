@@ -171,6 +171,22 @@ describe("sync", () => {
     expect(result.request_time_ms).toBeUndefined();
   });
 
+  it("should parse a response with language_code", async () => {
+    const response = { ...okResponse, language_code: "es" };
+    fetchMock.doMockOnceIf(
+      requestMatches({ url: liveUrl, method: "POST" }),
+      JSON.stringify(response),
+    );
+    const result = await assembly.sync.transcribe(fakeWavBytes);
+    expect(result.language_code).toBe("es");
+  });
+
+  it("should parse a response without language_code", async () => {
+    mockOk();
+    const result = await assembly.sync.transcribe(fakeWavBytes);
+    expect(result.language_code).toBeUndefined();
+  });
+
   it("should stream a chunked multipart body with the config part first", async () => {
     mockOk();
     await assembly.sync.transcribe(fakeWavBytes);

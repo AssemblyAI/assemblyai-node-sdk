@@ -535,6 +535,22 @@ describe("dictation response", () => {
     expect(result.sync_time_ms).toBe(180.2);
   });
 
+  it("should parse auth_time_ms when present in the response", async () => {
+    mockOk({ ...okResponse, auth_time_ms: 24.6 });
+    const result = await assembly.dictation.transcribeLive(
+      chunks(bytes("RIFF")),
+    );
+    expect(result.auth_time_ms).toBe(24.6);
+  });
+
+  it("should leave auth_time_ms undefined when omitted by the server", async () => {
+    mockOk();
+    const result = await assembly.dictation.transcribeLive(
+      chunks(bytes("RIFF")),
+    );
+    expect(result.auth_time_ms).toBeUndefined();
+  });
+
   it("should prefer the LLM rewrite for final_text", async () => {
     mockOk({ ...okResponse, llm_response: "Take 2 tablets daily." });
     const result = await assembly.dictation.transcribeLive(

@@ -141,6 +141,11 @@ export type DictationResponse = {
    */
   sync_time_ms?: number;
   /**
+   * Authentication and key-validation time in milliseconds, as a portion of
+   * `request_time_ms`. `undefined` when the server predates the field.
+   */
+  auth_time_ms?: number;
+  /**
    * The text to show the user: `llm_response` when the LLM pass produced one,
    * `text` otherwise. Derived by the SDK from those two fields, so reading it
    * is safe whether or not an `llm_instruction` was sent.

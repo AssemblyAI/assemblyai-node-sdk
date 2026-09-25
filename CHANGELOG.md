@@ -1,5 +1,10 @@
 # Changelog
 
+## [4.41.6]
+
+- Expose `language_code` in `SyncTranscriptResponse` — surfaces the ISO 639-1 language code detected or used by the model for synchronous transcription requests (e.g. `"en"`, `"es"`; `undefined` for responses from older servers)
+- Expose `auth_time_ms` in `DictationResponse` — surfaces the authentication and token/API-key validation portion of `request_time_ms` for dictation requests (`undefined` when omitted by older servers)
+
 ## [4.41.5]
 
 - Add `speakerLabelsRevisionIntervalMs` streaming param (sent as `speaker_labels_revision_interval_ms`) — the cadence, in ms of audio time, at which the server emits mid-stream `speakerRevision` events when `speakerLabels` is enabled. Unset or `0` sends only the end-of-stream revision; non-zero values are clamped server-side to 120 000–300 000 ms. The first mid-stream revision needs ~120 s of streamed speech, and one is sent only when some earlier turn's label changed

@@ -371,7 +371,8 @@ afterwards. Over-cap prompts throw before the request is sent. There is no `mode
 timestamps), `confidence`, `llm_response` (`string | null`, the rewrite when the LLM pass ran),
 `llm_error` (`string | null`, why it failed when it did), `audio_duration_ms`, `session_id`
 (record it to correlate with support), and optional `request_time_ms` / `sync_time_ms`
-(transcription time excluding the LLM pass). **Show `final_text`** — derived by the SDK as
+(transcription time excluding the LLM pass) / `auth_time_ms` (auth portion of
+`request_time_ms`). **Show `final_text`** — derived by the SDK as
 `llm_response` when there is one, `text` otherwise, so it is safe to read either way.
 
 **Errors**: failures throw `DictationError` (a separate class from `SyncTranscriptError`) with
