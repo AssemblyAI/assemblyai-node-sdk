@@ -4,6 +4,7 @@
 export type ChatCompletionMessage = {
   role: "user" | "assistant" | "system";
   content?: string | { type: string; text: string }[];
+  thinking?: string | null;
   tool_calls?: unknown[];
   tool_call_id?: string;
   name?: string;
@@ -21,6 +22,8 @@ export type ChatCompletionRequest = {
   max_tokens?: number;
   top_p?: number;
   top_k?: number;
+  frequency_penalty?: number;
+  presence_penalty?: number;
   tools?: unknown[];
   tool_choice?: unknown;
   response_format?: unknown;
@@ -29,15 +32,38 @@ export type ChatCompletionRequest = {
   [key: string]: unknown;
 };
 
+export type ChatCompletionCacheCreation = {
+  ephemeral_5m_input_tokens?: number | null;
+  ephemeral_1h_input_tokens?: number | null;
+};
+
+export type ChatCompletionPromptTokensDetails = {
+  cached_tokens?: number | null;
+  audio_tokens?: number | null;
+  cache_creation?: ChatCompletionCacheCreation | null;
+  cache_write_tokens?: number | null;
+};
+
+export type ChatCompletionTokensDetails = {
+  reasoning_tokens?: number | null;
+  audio_tokens?: number | null;
+  accepted_prediction_tokens?: number | null;
+  rejected_prediction_tokens?: number | null;
+};
+
 export type ChatCompletionUsage = {
   prompt_tokens: number;
   completion_tokens: number;
   total_tokens: number;
+  input_tokens?: number | null;
+  output_tokens?: number | null;
+  prompt_tokens_details?: ChatCompletionPromptTokensDetails | null;
+  completion_tokens_details?: ChatCompletionTokensDetails | null;
 };
 
 export type ChatCompletionChoice = {
   index: number;
-  finish_reason?: string;
+  finish_reason?: string | null;
   message: ChatCompletionMessage;
 };
 
@@ -48,12 +74,17 @@ export type ChatCompletionResponse = {
   request_id: string;
   choices: ChatCompletionChoice[];
   usage: ChatCompletionUsage;
+  http_status_code?: number | null;
+  response_time?: number | null;
+  llm_status_code?: number | null;
+  request?: unknown;
 };
 
 export type ModelDefaultParameters = {
   temperature?: number | null;
   top_p?: number | null;
   frequency_penalty?: number | null;
+  presence_penalty?: number | null;
 };
 
 export type ModelTopProvider = {

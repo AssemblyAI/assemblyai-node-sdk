@@ -157,4 +157,114 @@ describe("llmGateway", () => {
       requestId: "req_000",
     });
   });
+
+  it("should parse detailed usage token breakdowns and thinking in chat completions", async () => {
+    const detailedResponse = {
+      request_id: "req_detailed_123",
+      http_status_code: 200,
+      response_time: 1542000000,
+      llm_status_code: 200,
+      choices: [
+        {
+          index: 0,
+          finish_reason: "stop",
+          message: {
+            role: "assistant",
+            content: "Here is the summary.",
+            thinking: "First analyze key points...",
+          },
+        },
+      ],
+      usage: {
+        input_tokens: 120,
+        output_tokens: 45,
+        prompt_tokens: 120,
+        completion_tokens: 45,
+        total_tokens: 165,
+        prompt_tokens_details: {
+          cached_tokens: 60,
+          audio_tokens: 0,
+          cache_creation: {
+            ephemeral_5m_input_tokens: 30,
+            ephemeral_1h_input_tokens: 0,
+          },
+          cache_write_tokens: 30,
+        },
+        completion_tokens_details: {
+          reasoning_tokens: 25,
+          audio_tokens: 0,
+          accepted_prediction_tokens: 0,
+          rejected_prediction_tokens: 0,
+        },
+      },
+    };
+    fetchMock.doMockOnceIf(
+      requestMatches({ url: "/v1/chat/completions", method: "POST" }),
+      JSON.stringify(detailedResponse),
+    );
+    const result = await assembly.llmGateway.chatCompletions({
+      model: "claude-haiku-4-5-20251001",
+      messages: [{ role: "user", content: "Summarize" }],
+      frequency_penalty: 0.5,
+      presence_penalty: 0.2,
+    });
+    expect(result.request_id).toBe("req_detailed_123");
+    expect(result.http_status_code).toBe(200);
+    expect(result.response_time).toBe(1542000000);
+    expect(result.choices[0].message.thinking).toBe(
+      "First analyze key points...",
+    );
+    expect(result.usage.prompt_tokens_details?.cached_tokens).toBe(60);
+    expect(
+      result.usage.prompt_tokens_details?.cache_creation
+        ?.ephemeral_5m_input_tokens,
+    ).toBe(30);
+    expect(result.usage.completion_tokens_details?.reasoning_tokens).toBe(25);
+    expect(requestBody()).toMatchObject({
+      frequency_penalty: 0.5,
+      presence_penalty: 0.2,
+    });
+  });
+
+  it("should parse presence_penalty in model default parameters", async () => {
+    const modelsWithPresencePenalty = {
+      data: [
+        {
+          id: "gpt-4o",
+          name: "GPT-4o",
+          description: "OpenAI GPT-4o",
+          default_parameters: {
+            temperature: 0.7,
+            top_p: 0.95,
+            frequency_penalty: 0.5,
+            presence_penalty: 0.2,
+          },
+          supported_parameters: [
+            "temperature",
+            "frequency_penalty",
+            "presence_penalty",
+          ],
+          top_provider: {
+            is_moderated: true,
+            context_length: 128000,
+            max_completion_tokens: 4096,
+          },
+          context_length: 128000,
+          pricing: { global: { completions: 10.0, prompt: 2.5 } },
+          creator: "openai",
+          retirement_date: 0,
+          available_regions: ["global"],
+          providers: ["openai"],
+          default_provider: "openai",
+        },
+      ],
+    };
+    fetchMock.doMockOnceIf(
+      requestMatches({ url: "/v1/models", method: "GET" }),
+      JSON.stringify(modelsWithPresencePenalty),
+    );
+    const result = await assembly.llmGateway.listModels();
+    expect(result.data[0].default_parameters.presence_penalty).toBe(0.2);
+    expect(result.data[0].default_parameters.frequency_penalty).toBe(0.5);
+  });
 });
