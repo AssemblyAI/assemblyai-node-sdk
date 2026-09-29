@@ -141,6 +141,10 @@ export class StreamingTranscriber {
   private socket?: PolyfillWebSocket;
   private listeners: StreamingListeners = {};
   private sessionTerminatedResolve?: () => void;
+  // Incremented by `close()` so a `connect()` that is still retrying can tell
+  // the transcriber was closed and stop instead of opening a new socket.
+  private connectEpoch = 0;
+  private cancelPendingConnect?: (error: Error) => void;
 
   // Dual-channel mode state (allocated only when params.channels is set).
   private isDualChannel = false;
@@ -558,8 +562,13 @@ export class StreamingTranscriber {
     const retryDelay =
       this.params.connectionRetryDelay ?? DEFAULT_CONNECTION_RETRY_DELAY_MS;
 
+    const epoch = this.connectEpoch;
+    const closedError = () =>
+      new StreamingError("Connection closed before the session started");
+
     let lastError: Error | undefined;
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      if (epoch !== this.connectEpoch) throw closedError();
       try {
         return await this.connectOnce();
       } catch (err) {
@@ -574,6 +583,7 @@ export class StreamingTranscriber {
         if (retryDelay > 0) {
           await new Promise((resolve) => setTimeout(resolve, retryDelay));
         }
+        if (epoch !== this.connectEpoch) throw closedError();
       }
     }
     // The loop above always returns or throws; this only satisfies the type
@@ -597,6 +607,7 @@ export class StreamingTranscriber {
       const failAttempt = (error: ConnectionAttemptError) => {
         if (settled) return;
         settled = true;
+        this.cancelPendingConnect = undefined;
         if (timer) clearTimeout(timer);
         this.discardPendingSocket();
         reject(error);
@@ -605,8 +616,14 @@ export class StreamingTranscriber {
       const succeed = (begin: BeginEvent) => {
         if (settled) return;
         settled = true;
+        this.cancelPendingConnect = undefined;
         if (timer) clearTimeout(timer);
         resolve(begin);
+      };
+
+      this.cancelPendingConnect = (error) => {
+        (error as ConnectionAttemptError).retryable = false;
+        failAttempt(error as ConnectionAttemptError);
       };
 
       if (timeoutMs > 0) {
@@ -1120,6 +1137,10 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
     waitForSessionTermination = true,
     terminationTimeout = DEFAULT_TERMINATION_TIMEOUT_MS,
   ) {
+    this.connectEpoch++;
+    this.cancelPendingConnect?.(
+      new StreamingError("Connection closed before the session started"),
+    );
     if (this.flushTimer) {
       clearInterval(this.flushTimer);
       this.flushTimer = undefined;

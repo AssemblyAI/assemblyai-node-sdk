@@ -1,5 +1,10 @@
 # Changelog
 
+## [4.41.6]
+
+- Fix `StreamingTranscriber.close()` while `connect()` is still pending. Previously the pending attempt was not cancelled, so its retry loop opened a new socket after `close()` returned, and the `connect()` promise could later resolve on a closed transcriber. `close()` now cancels the pending attempt, and `connect()` rejects with a "Connection closed before the session started" error. Calling `connect()` again after `close()` still works
+- Fix `RealtimeTranscriber.close()` while `connect()` is still pending. The `connect()` promise never settled because `close()` removed the socket listeners; it now rejects with the same error
+
 ## [4.41.5]
 
 - Add `speakerLabelsRevisionIntervalMs` streaming param (sent as `speaker_labels_revision_interval_ms`) — the cadence, in ms of audio time, at which the server emits mid-stream `speakerRevision` events when `speakerLabels` is enabled. Unset or `0` sends only the end-of-stream revision; non-zero values are clamped server-side to 120 000–300 000 ms. The first mid-stream revision needs ~120 s of streamed speech, and one is sent only when some earlier turn's label changed
