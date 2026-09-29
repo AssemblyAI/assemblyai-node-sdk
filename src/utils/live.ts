@@ -177,13 +177,22 @@ export async function* liveChunks(
 ): AsyncGenerator<Uint8Array> {
   if (isWebReadableStream(input)) {
     const reader = input.getReader();
+    let exhausted = false;
     try {
       for (;;) {
         const { done, value } = await reader.read();
-        if (done) return;
+        if (done) {
+          exhausted = true;
+          return;
+        }
         yield asBytes(value);
       }
     } finally {
+      // Stopping early (the upload was rejected, aborted or timed out, or a
+      // chunk was not bytes) must release the source, as `for await` does for
+      // Node streams and other async iterables. A cancel that fails because
+      // the stream already errored has nothing left to release.
+      if (!exhausted) reader.cancel().catch(() => undefined);
       reader.releaseLock();
     }
   } else {

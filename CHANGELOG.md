@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.41.8]
+
+- Fix `transcribeLive()` on the sync and dictation services leaving a web `ReadableStream` audio source open when the upload ends early (a rejected request, an abort, a timeout, or a chunk that is not bytes). The stream is now cancelled, matching how Node streams and other async iterables were already released
+
 ## [4.41.7]
 
 - Add `summarization` to the speech understanding feature requests and responses (`SummarizationRequest`, `SummarizationResponse`): `summary_type`, `headline_length`, `approximate_chapters` and `effort`. The feature was already accepted by the API but missing from the SDK types, so setting it failed to type check
