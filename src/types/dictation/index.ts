@@ -22,6 +22,13 @@ export type DictationAudioInput =
   | Iterable<Uint8Array>;
 
 /**
+ * The model tier that runs the transcript rewrite: `fast` (the server
+ * default) or `smart`, which follows detailed formatting instructions more
+ * reliably at higher latency.
+ */
+export type DictationRewriteMode = "fast" | "smart";
+
+/**
  * Options for a dictation request.
  *
  * `language_codes`, `stt_prompt` and `keyterms_prompt` shape the transcript;
@@ -75,6 +82,12 @@ export type DictationConfig = {
    * characters; longer instructions are rejected.
    */
   llm_instruction?: string;
+  /**
+   * The model tier that runs the rewrite: `"fast"` or `"smart"`. `"smart"`
+   * follows detailed formatting instructions more reliably at higher
+   * latency. Unset leaves the server default, `"fast"`.
+   */
+  rewrite_mode?: DictationRewriteMode;
 };
 
 /**

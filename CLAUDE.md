@@ -360,6 +360,7 @@ const result = await client.dictation.transcribeLive(mic, {
   stt_prompt: "A doctor dictating a patient visit note.", // max 6000 chars; describes the recording
   keyterms_prompt: ["AssemblyAI", "U3-Pro"], // whitespace stripped, empties dropped, max 100 terms, 8000 chars total
   llm_instruction: "Format this as a SOAP note.", // max 2048 chars; follow-up LLM pass over the transcript
+  rewrite_mode: "smart", // rewrite model tier: "fast" (server default) or "smart" (follows detailed instructions, slower)
 });
 ```
 
@@ -392,7 +393,7 @@ upload, the transcription and the LLM pass; the service caps audio at 120 s. `si
 
 **Exports** from the package root: `DictationTranscriber`, `DictationLiveSession`,
 `DictationError`, and the `DictationAudioInput`, `DictationConfig`, `DictationLiveOptions`,
-`DictationWord` and `DictationResponse` types.
+`DictationRewriteMode`, `DictationWord` and `DictationResponse` types.
 
 ## LLM Gateway
 
