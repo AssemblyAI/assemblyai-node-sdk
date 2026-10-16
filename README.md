@@ -674,6 +674,17 @@ console.log(result.final_text); // llm_response when there is one, text otherwis
 When the LLM pass fails, `llm_response` is `null` and `llm_error` says why — the
 transcript itself still comes back.
 
+`rewrite_mode` picks the model tier that runs the rewrite. `"fast"` is the
+default; `"smart"` follows detailed formatting instructions more reliably, at
+higher latency:
+
+```typescript
+const result = await client.dictation.transcribeLive(micStream, {
+  llm_instruction: "Lowercase unless a name, no final punctuation.",
+  rewrite_mode: "smart",
+});
+```
+
 </details>
 
 <details>
@@ -687,6 +698,7 @@ const result = await client.dictation.transcribeLive(micStream, {
   stt_prompt: "A doctor dictating a patient visit note.", // max 6000 chars
   keyterms_prompt: ["AssemblyAI", "Universal-3"], // max 100 terms, 8000 chars total
   llm_instruction: "Format this as a SOAP note.", // max 2048 chars
+  rewrite_mode: "smart", // rewrite model tier: "fast" (default) or "smart"
 });
 ```
 

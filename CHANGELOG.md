@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.41.6]
+
+- Add `rewrite_mode` to `DictationConfig` — the model tier that runs the dictation rewrite: `"fast"` (the server default) or `"smart"`, which follows detailed formatting instructions more reliably at higher latency. Unset, it is not sent. The `DictationRewriteMode` type is exported from the package root
+
 ## [4.41.5]
 
 - Add `speakerLabelsRevisionIntervalMs` streaming param (sent as `speaker_labels_revision_interval_ms`) — the cadence, in ms of audio time, at which the server emits mid-stream `speakerRevision` events when `speakerLabels` is enabled. Unset or `0` sends only the end-of-stream revision; non-zero values are clamped server-side to 120 000–300 000 ms. The first mid-stream revision needs ~120 s of streamed speech, and one is sent only when some earlier turn's label changed

@@ -403,6 +403,8 @@ function buildConfigJson(config: DictationConfig): Record<string, unknown> {
   if (keytermsPrompt) json["keyterms_prompt"] = keytermsPrompt;
   if (config.llm_instruction !== undefined)
     json["llm_instruction"] = config.llm_instruction;
+  if (config.rewrite_mode !== undefined)
+    json["rewrite_mode"] = config.rewrite_mode;
 
   return json;
 }
