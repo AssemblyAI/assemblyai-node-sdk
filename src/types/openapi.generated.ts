@@ -1140,7 +1140,7 @@ export type SummarizationRequest = {
    */
   headline_length?: number;
   /**
-   * Approximate number of chapters to split the transcript into
+   * Override: Approximate number of chapters to split the transcript into
    */
   approximate_chapters?: number;
   /**
