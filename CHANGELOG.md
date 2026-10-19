@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.41.7]
+
+- Add `summarization` to the speech understanding feature requests and responses (`SummarizationRequest`, `SummarizationResponse`): `summary_type`, `headline_length`, `approximate_chapters` and `effort`. The feature was already accepted by the API but missing from the SDK types, so setting it failed to type check
+
 ## [4.41.6]
 
 - Add `rewrite_mode` to `DictationConfig` — the model tier that runs the dictation rewrite: `"fast"` (the server default) or `"smart"`, which follows detailed formatting instructions more reliably at higher latency. Unset, it is not sent. The `DictationRewriteMode` type is exported from the package root
