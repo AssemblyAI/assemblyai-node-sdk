@@ -1,5 +1,11 @@
 # Changelog
 
+## [4.41.7]
+
+- Add `speakers` to `SpeakerIdentificationRequest` and export `SpeakerDescription` — enables passing rich speaker metadata (`name`, `role`, `description`) for speaker identification in Speech Understanding
+- Add `force_translation` to `TranslationRequest` — enables translating audio even when the detected source language equals a target language
+- Add `format_utterances` to `CustomFormattingRequest` — enables applying custom formatting at the utterance level
+
 ## [4.41.6]
 
 - Add `rewrite_mode` to `DictationConfig` — the model tier that runs the dictation rewrite: `"fast"` (the server default) or `"smart"`, which follows detailed formatting instructions more reliably at higher latency. Unset, it is not sent. The `DictationRewriteMode` type is exported from the package root

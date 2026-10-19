@@ -1,6 +1,7 @@
 import fetchMock from "jest-fetch-mock";
 import {
   CustomFormattingRequest,
+  SpeakerDescription,
   SpeakerIdentificationRequest,
   SpeechUnderstandingEffort,
   TranslationRequest,
@@ -123,6 +124,92 @@ describe("speech understanding effort", () => {
     expect(speakerIdentification.speaker_type).toBe("role");
     expect(speakerIdentification.known_values).toEqual(["Agent", "Customer"]);
     expect(speakerIdentification.effort).toBeUndefined();
+  });
+
+  it("should create transcript with speaker_identification speakers list", async () => {
+    const speakers: SpeakerDescription[] = [
+      { name: "Alice", description: "Host of the podcast" },
+      { name: "Bob", description: "Featured guest discussing AI", title: "Dr." },
+    ];
+    const speakerIdentification: SpeakerIdentificationRequest = {
+      speaker_type: "name",
+      speakers,
+      effort: "medium",
+    };
+    mockSubmit();
+
+    const transcript = await assembly.transcripts.submit({
+      audio_url: remoteAudioURL,
+      speaker_labels: true,
+      speech_understanding: {
+        request: { speaker_identification: speakerIdentification },
+      },
+    });
+
+    expect(transcript.id).toBe(transcriptId);
+    expect(submittedRequest().speaker_identification).toEqual(speakerIdentification);
+    expect(submittedRequest().speaker_identification.speakers).toEqual(speakers);
+  });
+
+  it("should create transcript with speaker_identification speakers by role", async () => {
+    const speakers: SpeakerDescription[] = [
+      { role: "Agent", description: "Customer support specialist" },
+      { role: "Customer", description: "Account owner inquiring about billing" },
+    ];
+    const speakerIdentification: SpeakerIdentificationRequest = {
+      speaker_type: "role",
+      speakers,
+    };
+    mockSubmit();
+
+    await assembly.transcripts.submit({
+      audio_url: remoteAudioURL,
+      speaker_labels: true,
+      speech_understanding: {
+        request: { speaker_identification: speakerIdentification },
+      },
+    });
+
+    expect(submittedRequest().speaker_identification.speaker_type).toBe("role");
+    expect(submittedRequest().speaker_identification.speakers).toEqual(speakers);
+    expect(submittedRequest().speaker_identification.known_values).toBeUndefined();
+  });
+
+  it("should create transcript with translation force_translation", async () => {
+    const translation: TranslationRequest = {
+      target_languages: ["es", "fr"],
+      force_translation: true,
+      effort: "medium",
+    };
+    mockSubmit();
+
+    await assembly.transcripts.submit({
+      audio_url: remoteAudioURL,
+      speech_understanding: { request: { translation } },
+    });
+
+    expect(submittedRequest().translation).toEqual(translation);
+    expect(submittedRequest().translation.force_translation).toBe(true);
+  });
+
+  it("should create transcript with custom_formatting format_utterances", async () => {
+    const customFormatting: CustomFormattingRequest = {
+      date: "mm/dd/yyyy",
+      phone_number: "(xxx)xxx-xxxx",
+      format_utterances: true,
+      effort: "medium",
+    };
+    mockSubmit();
+
+    await assembly.transcripts.submit({
+      audio_url: remoteAudioURL,
+      speech_understanding: {
+        request: { custom_formatting: customFormatting },
+      },
+    });
+
+    expect(submittedRequest().custom_formatting).toEqual(customFormatting);
+    expect(submittedRequest().custom_formatting.format_utterances).toBe(true);
   });
 
   it("should accept every documented effort value", () => {
