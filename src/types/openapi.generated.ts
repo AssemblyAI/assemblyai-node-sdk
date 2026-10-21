@@ -1053,6 +1053,25 @@ export type SpeakerType = "role" | "name";
 export type SpeechUnderstandingEffort = "low" | "medium";
 
 /**
+ * Speaker description for speaker identification with rich metadata
+ */
+export type SpeakerDescription = {
+  /**
+   * Speaker name (when speaker_type is 'name')
+   */
+  name?: string;
+  /**
+   * Speaker role (when speaker_type is 'role')
+   */
+  role?: string;
+  /**
+   * Description of the speaker's role or characteristics in the audio
+   */
+  description?: string;
+  [key: string]: unknown;
+};
+
+/**
  * Speaker identification configuration for speech understanding
  */
 export type SpeakerIdentificationRequest = {
@@ -1061,9 +1080,13 @@ export type SpeakerIdentificationRequest = {
    */
   speaker_type: SpeakerType;
   /**
-   * Known speaker values (required when speaker_type is 'role')
+   * Known speaker values (required when speaker_type is 'role' if speakers is not provided)
    */
   known_values?: string[];
+  /**
+   * Rich speaker metadata per speaker. Each entry should have name (when speaker_type is 'name') or role (when speaker_type is 'role').
+   */
+  speakers?: SpeakerDescription[];
   /**
    * How much effort to spend on this task
    *
@@ -1089,6 +1112,12 @@ export type TranslationRequest = {
    */
   match_original_utterance?: boolean;
   /**
+   * Whether to translate even when the detected source language equals a target language
+   *
+   * @defaultValue false
+   */
+  force_translation?: boolean;
+  /**
    * How much effort to spend on this task
    *
    * @defaultValue "low"
@@ -1112,6 +1141,12 @@ export type CustomFormattingRequest = {
    * Custom email format pattern (e.g., 'username\@domain.com')
    */
   email?: string;
+  /**
+   * Whether to also format utterance-level text
+   *
+   * @defaultValue false
+   */
+  format_utterances?: boolean;
   /**
    * How much effort to spend on this task
    *
