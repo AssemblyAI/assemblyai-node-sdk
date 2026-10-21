@@ -1156,6 +1156,37 @@ export type CustomFormattingRequest = {
 };
 
 /**
+ * Summarization type for speech understanding
+ */
+export type SummarizationType = "bullets" | "paragraph";
+
+/**
+ * Summarization configuration for speech understanding
+ */
+export type SummarizationRequest = {
+  /**
+   * The format of the summary
+   */
+  summary_type: SummarizationType;
+  /**
+   * Target word count for each chapter headline (5-15)
+   *
+   * @defaultValue 10
+   */
+  headline_length?: number;
+  /**
+   * Override: Approximate number of chapters to split the transcript into
+   */
+  approximate_chapters?: number;
+  /**
+   * How much effort to spend on this task
+   *
+   * @defaultValue "low"
+   */
+  effort?: SpeechUnderstandingEffort;
+};
+
+/**
  * Speech understanding feature requests grouped together
  */
 export type SpeechUnderstandingFeatureRequests = {
@@ -1171,6 +1202,10 @@ export type SpeechUnderstandingFeatureRequests = {
    * Custom formatting configuration
    */
   custom_formatting?: CustomFormattingRequest;
+  /**
+   * Summarization configuration
+   */
+  summarization?: SummarizationRequest;
 };
 
 /**
@@ -1230,6 +1265,58 @@ export type CustomFormattingResponse = {
 };
 
 /**
+ * A summarized section of the transcript
+ */
+export type SummarizationSection = {
+  /**
+   * Start of the section, in milliseconds
+   */
+  start: number;
+  /**
+   * End of the section, in milliseconds
+   */
+  end: number;
+  /**
+   * Section summary, when summary_type is 'paragraph'
+   */
+  text?: string;
+  /**
+   * Section summary, when summary_type is 'bullets'
+   */
+  bullets?: string[];
+  /**
+   * Short headline describing the section
+   */
+  headline?: string;
+};
+
+/**
+ * Summarization response containing the chapter summaries
+ */
+export type SummarizationResponse = {
+  /**
+   * Status of the summarization feature
+   */
+  status: string;
+  /**
+   * Per-section summaries
+   */
+  summary?: SummarizationSection[];
+  /**
+   * Single summary covering the whole transcript
+   */
+  block_summary?: string;
+  /**
+   * The summary type that was used
+   */
+  summary_type?: SummarizationType;
+  /**
+   * The effort level that was used
+   */
+  effort?: SpeechUnderstandingEffort;
+};
+
+/**
  * Speech understanding feature responses grouped together
  */
 export type SpeechUnderstandingFeatureResponses = {
@@ -1245,6 +1332,10 @@ export type SpeechUnderstandingFeatureResponses = {
    * Custom formatting results
    */
   custom_formatting?: CustomFormattingResponse;
+  /**
+   * Summarization results
+   */
+  summarization?: SummarizationResponse;
 };
 
 /**
