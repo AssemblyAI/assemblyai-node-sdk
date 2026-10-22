@@ -1,5 +1,10 @@
 # Changelog
 
+## [4.41.8]
+
+- Fix `StreamingTranscriber.close()` while `connect()` is still pending. Previously the pending attempt was not cancelled, so its retry loop opened a new socket after `close()` returned, and the `connect()` promise could later resolve on a closed transcriber. `close()` now cancels the pending attempt, and `connect()` rejects with a "Connection closed before the session started" error. Calling `connect()` again after `close()` still works
+- Fix `RealtimeTranscriber.close()` while `connect()` is still pending. The `connect()` promise never settled because `close()` removed the socket listeners; it now rejects with the same error
+
 ## [4.41.7]
 
 - Add `summarization` to the speech understanding feature requests and responses (`SummarizationRequest`, `SummarizationResponse`): `summary_type`, `headline_length`, `approximate_chapters` and `effort`. The feature was already accepted by the API but missing from the SDK types, so setting it failed to type check
