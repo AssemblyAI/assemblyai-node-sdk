@@ -20,5 +20,6 @@ export const createClient = () =>
     baseUrl: defaultBaseUrl,
     syncBaseUrl: defaultBaseUrl,
     llmGatewayBaseUrl: defaultBaseUrl,
+    ttsBaseUrl: defaultBaseUrl,
     apiKey: defaultApiKey,
   });

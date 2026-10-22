@@ -3,6 +3,12 @@ import { SyncTranscriber, SyncLiveSession } from "./sync";
 import { DictationTranscriber, DictationLiveSession } from "./dictation";
 import { LlmGatewayService } from "./llm-gateway";
 import {
+  TextToSpeechService,
+  TextToSpeechSession,
+  TextToSpeechStream,
+} from "./tts";
+import { TextToSpeechError } from "../utils/errors/tts";
+import {
   SyncTranscriptError,
   DictationError,
   LlmGatewayError,
@@ -33,6 +39,7 @@ const defaultStreamingUrl = "https://streaming.assemblyai.com";
 const defaultSyncUrl = "https://sync.assemblyai.com";
 const defaultDictationUrl = "https://dictation.assemblyai.com";
 const defaultLlmGatewayUrl = "https://llm-gateway.assemblyai.com";
+const defaultTtsUrl = "https://tts.us.assemblyai.com";
 
 class AssemblyAI {
   /**
@@ -69,6 +76,11 @@ class AssemblyAI {
    * The LLM Gateway service.
    */
   public llmGateway: LlmGatewayService;
+
+  /**
+   * The Text-to-Speech service: `synthesize()`, `stream()` and WebSocket `session()`.
+   */
+  public tts: TextToSpeechService;
 
   /**
    * Create a new AssemblyAI client.
@@ -115,6 +127,15 @@ class AssemblyAI {
       ...params,
       baseUrl: llmGatewayBaseUrl,
     });
+
+    let ttsBaseUrl = params.ttsBaseUrl || defaultTtsUrl;
+    if (ttsBaseUrl.endsWith("/")) {
+      ttsBaseUrl = ttsBaseUrl.slice(0, -1);
+    }
+    this.tts = new TextToSpeechService({
+      ...params,
+      baseUrl: ttsBaseUrl,
+    });
   }
 }
 
@@ -128,6 +149,10 @@ export {
   DictationError,
   LlmGatewayService,
   LlmGatewayError,
+  TextToSpeechService,
+  TextToSpeechSession,
+  TextToSpeechStream,
+  TextToSpeechError,
   RealtimeTranscriberFactory,
   RealtimeTranscriber,
   RealtimeServiceFactory,

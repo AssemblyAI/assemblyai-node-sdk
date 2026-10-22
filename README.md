@@ -824,6 +824,90 @@ Close the connection when you're finished.
 await transcriber.close();
 ```
 
+## Text-To-Speech
+
+`client.tts` speaks text with the Text-to-Speech API. `synthesize()` returns one text's complete audio, `stream()` returns it as the API generates it, and `session()` opens a WebSocket session that speaks text as it is written, for voice agents. Options take the API's own field names: the `voice_id` (a voice of the AssemblyAI voice library such as `aai-jane`, the default, or a voice cloned in your dashboard), the `model_id` (`assemblyai-tts-1`), the `language` (`english` by default, `spanish`, `german`, `french`, `italian`, `portuguese`), the `sample_rate` (24000 by default) and the `encoding` (`pcm_s16le` by default, `pcm_mulaw`/`pcm_alaw` for telephony, `mp3` over HTTP only). Requests go to `ttsBaseUrl`, `https://tts.us.assemblyai.com` by default; pass `https://tts.eu.assemblyai.com` to keep them in the EU data zone.
+
+### Synthesize a WAV file
+
+```typescript
+import { writeFileSync } from "fs";
+
+const response = await client.tts.synthesize({
+  text: "Hello from AssemblyAI.",
+  voice_id: "aai-jane",
+  container: "wav",
+});
+writeFileSync("hello.wav", response.audio);
+console.log(response.model, response.voiceId, response.audioDurationMs, "ms");
+```
+
+`synthesize()` waits for the whole audio, so an API refusal is always a `TextToSpeechError` and the WAV header carries real sizes. The response headers are on the result: `requestId`, `region`, `model`, `voiceId`, `language`, `encoding`, `sampleRate`, `container`, `bitRate`, `billedCharacters` and `audioDurationMs`.
+
+### Stream audio as it is generated
+
+```typescript
+const speech = await client.tts.stream({
+  text: "Streaming straight to the speakers.",
+  voice_id: "aai-alba",
+});
+console.log(
+  "speaking with",
+  speech.info.model,
+  "at",
+  speech.info.sampleRate,
+  "Hz",
+);
+for await (const chunk of speech) {
+  play(chunk); // raw 24 kHz 16-bit mono PCM, as a Uint8Array
+}
+```
+
+`stream()` resolves once the API has sent the first audio. Chunk sizes vary and are not aligned to samples or frames: for 16-bit PCM carry an odd trailing byte over to the next chunk, and re-frame for a fixed-size sink (20 ms of 8 kHz mu-law is 160 bytes). The API commits to `200` with the first audio, so a failure after that cuts the body: the loop then throws a `TextToSpeechError` with `retryable: true`, and the whole request should be retried. `speech.body` is the underlying web `ReadableStream`.
+
+### Speak text as it is written (voice agents)
+
+A `TextToSpeechSession` keeps one WebSocket open and speaks text as it is written, so an LLM's reply can be voiced sentence by sentence with no per-request handshake. `speak()` sends one text and returns its audio; `generate()` / `flush()` do the same in two steps, so tokens can be sent as they arrive; `cancel()` is the barge-in. `close()` ends the session and resolves with its summary.
+
+```typescript
+const session = client.tts.session({ voiceId: "aai-jane" });
+await session.connect();
+
+for (const sentence of llmReplySentences()) {
+  for await (const chunk of session.speak(sentence)) play(chunk);
+}
+
+const summary = await session.close();
+console.log(summary?.audio_duration_seconds, "s spoken");
+```
+
+Streaming the text in as it is generated, with a barge-in. Audio starts before `flush()` once whole sentences have arrived, so read `session.audio()` with no id while the tokens are still being sent:
+
+```typescript
+const session = client.tts.session({ voiceId: "aai-jane" });
+await session.connect();
+
+const player = (async () => {
+  for await (const chunk of session.audio()) {
+    if (userStartedTalking()) {
+      session.cancel(); // ends this iteration at once; the server drops the rest
+      break;
+    }
+    play(chunk);
+  }
+})();
+for await (const token of llmTokens()) session.generate(token); // joined as sent: include the spaces
+session.flush();
+await player;
+await session.close();
+```
+
+Requests can be pipelined: `flush()` again before reading the previous request's audio, then read each `audio(flushId)` in order; every `flush()` and `cancel()` takes the next id, so ids skip one after a cancel. A `Generate` frame takes at most 2,000 characters (`speak()` splits longer text; `generate()` throws); the API accepts text at about 100 characters per second after an initial 1,500 and holds at most 8,000 unspoken characters, so pace text to the audio. A session streams raw `pcm_s16le`, `pcm_mulaw` or `pcm_alaw` only, ends after an hour, and closes after `inactivityTimeout` seconds (5 to 120, default 120) without a frame; call `keepAlive()` between sparse requests.
+
+Register listeners with `session.on(event, listener)`: `begin`, `flushDone`, `wordBoundaries` (word timings per request, with `wordBoundaries: true`; `start`/`end` count from the start of the session's audio, so subtract the event's `audio_start_ms` for a time within the request), `cancelled`, `termination`, `error` and `close`. An `audio` listener receives the audio frames instead of the pull iterators, which then throw. A refusal rejects `connect()`; a failure mid-session rejects the `audio()` iteration or the next send, reaches the `error` listener, and, if nothing else observed it, rejects `close()`. On a session `TextToSpeechError.status` is undefined and `requestId` is the session id; `retryable: true` means a new session can succeed, and the same session object can `connect()` again.
+
+In a browser the API key must stay on your server: mint a temporary token there with `await client.tts.createTemporaryToken({ expires_in_seconds: 60 })` and open the session with `client.tts.session({ token })`.
+
 ## Contributing
 
 If you want to contribute to the JavaScript SDK, follow the guidelines in [CONTRIBUTING.md](./CONTRIBUTING.md).
