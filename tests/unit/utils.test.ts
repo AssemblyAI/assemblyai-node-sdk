@@ -1,7 +1,10 @@
 import fetchMock from "jest-fetch-mock";
 import { AssemblyAI } from "../../src";
 import { getPath } from "../../src/utils/path";
-import { buildUserAgent } from "../../src/utils/userAgent";
+import {
+  buildUserAgent,
+  detectDefaultUserAgent,
+} from "../../src/utils/userAgent";
 
 fetchMock.enableMocks();
 
@@ -119,5 +122,35 @@ describe("utils", () => {
       userAgent: false,
     });
     await service.files.upload(new Blob());
+  });
+
+  it("should detect Deno runtime environment", () => {
+    const { defaultUserAgent } = detectDefaultUserAgent({
+      deno: { version: { deno: "1.40.0" } },
+    });
+    expect(defaultUserAgent.runtime_env).toEqual({
+      name: "Deno",
+      version: "1.40.0",
+    });
+  });
+
+  it("should detect Bun runtime environment", () => {
+    const { defaultUserAgent } = detectDefaultUserAgent({
+      process: { versions: { bun: "1.1.0" } },
+    });
+    expect(defaultUserAgent.runtime_env).toEqual({
+      name: "Bun",
+      version: "1.1.0",
+    });
+  });
+
+  it("should detect Node runtime environment", () => {
+    const { defaultUserAgent } = detectDefaultUserAgent({
+      process: { versions: { node: "20.10.0" } },
+    });
+    expect(defaultUserAgent.runtime_env).toEqual({
+      name: "Node",
+      version: "20.10.0",
+    });
   });
 });
