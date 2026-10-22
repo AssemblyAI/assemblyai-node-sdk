@@ -1,0 +1,347 @@
+import {
+  BaseServiceParams,
+  SpeechRequest,
+  SpeechRequestOptions,
+  SpeechResponse,
+  SpeechResponseInfo,
+  TextToSpeechSessionParams,
+  TextToSpeechTokenParams,
+} from "../..";
+import { BaseService } from "../base";
+import { TextToSpeechError } from "../../utils/errors/tts";
+import { deadlineSignal } from "../../utils/live";
+
+/**
+ * A signal that aborts when the external one does, or after `timeoutMs`
+ * unless `settled()` runs first: the timeout covers the request up to the
+ * headers, not a body the caller then reads at playback pace.
+ */
+function headersDeadline(timeoutMs: number, external?: AbortSignal) {
+  const controller = new AbortController();
+  const timer = setTimeout(
+    () => controller.abort(new Error("timeout")),
+    timeoutMs,
+  );
+  const forward = () => controller.abort(external?.reason);
+  if (external?.aborted) forward();
+  external?.addEventListener("abort", forward, { once: true });
+  return {
+    signal: controller.signal,
+    settled: () => {
+      clearTimeout(timer);
+      external?.removeEventListener("abort", forward);
+    },
+  };
+}
+import { TextToSpeechSession } from "./session";
+
+const ENDPOINT_SPEECH = "/v1/speech";
+const DEFAULT_TOKEN_BASE_URL = "https://token.assemblyai.com";
+/** Each socket operation of a streamed request. */
+const DEFAULT_STREAM_TIMEOUT_MS = 30_000;
+/** A buffered request waits for the whole audio; the API caps a request at 600 s. */
+const DEFAULT_SYNTHESIZE_TIMEOUT_MS = 610_000;
+const RETRYABLE_STATUSES = new Set([408, 429, 500, 502, 503, 504]);
+
+/** Builds the `TextToSpeechError` for a non-200 response. */
+export async function speechErrorFromResponse(
+  response: Response,
+): Promise<TextToSpeechError> {
+  const status = response.status;
+  const requestId = response.headers.get("x-request-id") ?? undefined;
+  const retryAfterHeader = response.headers.get("retry-after");
+  let retryAfter = retryAfterHeader ? Number(retryAfterHeader) : undefined;
+  if (retryAfter !== undefined && !Number.isFinite(retryAfter))
+    retryAfter = undefined;
+
+  let body: Record<string, unknown> | undefined;
+  if (response.headers.get("content-type")?.startsWith("application/json")) {
+    try {
+      const parsed: unknown = await response.json();
+      if (parsed && typeof parsed === "object")
+        body = parsed as Record<string, unknown>;
+    } catch {
+      body = undefined;
+    }
+  }
+  if (body) {
+    const message =
+      (typeof body.message === "string" && body.message) ||
+      (typeof body.error === "string" && body.error) ||
+      `text-to-speech request failed with status ${status}`;
+    const hint = body.retry_after_seconds;
+    if (typeof hint === "number") retryAfter = Math.ceil(hint);
+    return new TextToSpeechError(message, {
+      status,
+      errorCode: typeof body.code === "string" ? body.code : undefined,
+      param: typeof body.param === "string" ? body.param : undefined,
+      requestId:
+        typeof body.request_id === "string" ? body.request_id : requestId,
+      retryable:
+        typeof body.retryable === "boolean"
+          ? body.retryable
+          : RETRYABLE_STATUSES.has(status),
+      retryAfter,
+      errors: Array.isArray(body.errors)
+        ? (body.errors as { message: string; param: string | null }[])
+        : undefined,
+      body,
+    });
+  }
+  const text = (await response.text().catch(() => "")).trim();
+  return new TextToSpeechError(
+    `text-to-speech request failed with status ${status}${text ? `: ${text.slice(0, 200)}` : ""}`,
+    {
+      status,
+      requestId,
+      retryable: RETRYABLE_STATUSES.has(status),
+      retryAfter,
+    },
+  );
+}
+
+function intHeader(headers: Headers, name: string): number | undefined {
+  const value = headers.get(name);
+  if (value === null || !/^\s*\d+\s*$/.test(value)) return undefined;
+  return Number(value);
+}
+
+/** Reads the `X-TTS-*` headers of a `200`. */
+export function speechResponseInfo(
+  headers: Headers,
+  requestedVoiceId?: string,
+): SpeechResponseInfo {
+  // `X-TTS-Voice-Id` is the voice; until the API sends it, derive it from
+  // `X-TTS-Voice` (`custom` is the request's own voice id, else a preset).
+  let voiceId = headers.get("x-tts-voice-id") ?? undefined;
+  if (voiceId === undefined) {
+    const voice = headers.get("x-tts-voice");
+    if (voice === "custom") voiceId = requestedVoiceId;
+    else if (voice) voiceId = `aai-${voice}`;
+  }
+  return {
+    requestId: headers.get("x-request-id") ?? undefined,
+    region: headers.get("x-tts-region") ?? undefined,
+    model: headers.get("x-tts-model") ?? undefined,
+    voiceId,
+    language: headers.get("x-tts-language") ?? undefined,
+    encoding: headers.get("x-tts-encoding") ?? undefined,
+    sampleRate: intHeader(headers, "x-tts-sample-rate"),
+    container: headers.get("x-tts-container") ?? undefined,
+    bitRate: intHeader(headers, "x-tts-bit-rate"),
+    contentType: headers.get("content-type") ?? undefined,
+    voiceExpiresAt: intHeader(headers, "x-tts-voice-expires-at"),
+    billedCharacters: intHeader(headers, "x-tts-billed-characters"),
+    audioDurationMs: intHeader(headers, "x-tts-audio-duration-ms"),
+  };
+}
+
+/**
+ * The audio of one streamed request, read as the API generates it.
+ *
+ * Iterate it (`for await (const chunk of speech)`) or read `body`, a web
+ * `ReadableStream`. Chunk sizes vary and are not aligned to samples. A
+ * failure after the first audio cuts the body: the iteration then throws a
+ * `TextToSpeechError` with `retryable: true`.
+ */
+export class TextToSpeechStream implements AsyncIterable<Uint8Array> {
+  constructor(
+    /** What the response headers say: model, voice, encoding, sample rate, request id. */
+    public readonly info: SpeechResponseInfo,
+    /** The audio bytes as they arrive. */
+    public readonly body: ReadableStream<Uint8Array>,
+  ) {}
+
+  async *[Symbol.asyncIterator](): AsyncIterator<Uint8Array> {
+    const reader = this.body.getReader();
+    let finished = false;
+    try {
+      for (;;) {
+        let result: ReadableStreamReadResult<Uint8Array>;
+        try {
+          result = await reader.read();
+        } catch {
+          finished = true;
+          throw new TextToSpeechError(
+            "The response was cut before the audio was complete. Retry the request.",
+            { status: 200, requestId: this.info.requestId, retryable: true },
+          );
+        }
+        if (result.done) {
+          finished = true;
+          return;
+        }
+        if (result.value.byteLength > 0) yield result.value;
+      }
+    } finally {
+      // A loop left early (a barge-in) must not keep downloading the rest.
+      if (!finished) await reader.cancel().catch(() => undefined);
+      reader.releaseLock();
+    }
+  }
+
+  /** Reads the rest of the audio and returns it. */
+  async bytes(): Promise<Uint8Array> {
+    const chunks: Uint8Array[] = [];
+    for await (const chunk of this) chunks.push(chunk);
+    let size = 0;
+    for (const chunk of chunks) size += chunk.byteLength;
+    const out = new Uint8Array(size);
+    let offset = 0;
+    for (const chunk of chunks) {
+      out.set(chunk, offset);
+      offset += chunk.byteLength;
+    }
+    return out;
+  }
+
+  /** Stops reading; the connection is released. */
+  async cancel(): Promise<void> {
+    await this.body.cancel().catch(() => undefined);
+  }
+}
+
+/**
+ * The Text-to-Speech API: text in, audio out.
+ *
+ * `synthesize()` returns one text's complete audio; `stream()` returns it as
+ * the API generates it; `session()` opens a WebSocket session that speaks
+ * text as it is written, for voice agents. Requests go to the client's
+ * `ttsBaseUrl` (`https://tts.us.assemblyai.com` by default;
+ * `https://tts.eu.assemblyai.com` keeps them in the EU).
+ *
+ * @example
+ * ```ts
+ * const client = new AssemblyAI({ apiKey: "..." });
+ * const { audio } = await client.tts.synthesize({ text: "Hello.", voice_id: "aai-jane", container: "wav" });
+ * writeFileSync("hello.wav", audio);
+ * ```
+ */
+export class TextToSpeechService extends BaseService {
+  private readonly serviceParams: BaseServiceParams;
+
+  constructor(params: BaseServiceParams) {
+    super(params);
+    this.serviceParams = params;
+  }
+
+  /**
+   * Speaks `request.text` and returns the complete audio.
+   *
+   * Nothing is sent back until the audio is complete, so a long text takes
+   * several seconds and an API failure is always a `TextToSpeechError`,
+   * never a cut response.
+   * @throws TextToSpeechError on any API refusal.
+   */
+  async synthesize(
+    request: SpeechRequest,
+    options: SpeechRequestOptions = {},
+  ): Promise<SpeechResponse> {
+    const response = await this.fetchResponse(ENDPOINT_SPEECH, {
+      method: "POST",
+      body: JSON.stringify({ ...request, stream: false }),
+      signal: deadlineSignal(
+        options.timeout ?? DEFAULT_SYNTHESIZE_TIMEOUT_MS,
+        options.signal,
+      ),
+    });
+    if (!response.ok) throw await speechErrorFromResponse(response);
+    const audio = new Uint8Array(await response.arrayBuffer());
+    return { ...speechResponseInfo(response.headers, request.voice_id), audio };
+  }
+
+  /**
+   * Speaks `request.text` and returns the audio as it is generated.
+   *
+   * Resolves once the API has sent the first audio. The API commits to `200`
+   * then, so a later failure cuts the body and the iteration throws.
+   * @throws TextToSpeechError if the API refuses the request before any audio.
+   */
+  async stream(
+    request: SpeechRequest,
+    options: SpeechRequestOptions = {},
+  ): Promise<TextToSpeechStream> {
+    const deadline = headersDeadline(
+      options.timeout ?? DEFAULT_STREAM_TIMEOUT_MS,
+      options.signal,
+    );
+    let response: Response;
+    try {
+      response = await this.fetchResponse(ENDPOINT_SPEECH, {
+        method: "POST",
+        body: JSON.stringify({ ...request, stream: true }),
+        signal: deadline.signal,
+      });
+    } finally {
+      deadline.settled();
+    }
+    if (!response.ok) throw await speechErrorFromResponse(response);
+    if (!response.body || typeof response.body.getReader !== "function") {
+      // A runtime without web streamed bodies: hand the whole audio over as one chunk.
+      const bytes = new Uint8Array(await response.arrayBuffer());
+      const body = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(bytes);
+          controller.close();
+        },
+      });
+      return new TextToSpeechStream(
+        speechResponseInfo(response.headers, request.voice_id),
+        body,
+      );
+    }
+    return new TextToSpeechStream(
+      speechResponseInfo(response.headers, request.voice_id),
+      response.body,
+    );
+  }
+
+  /**
+   * Creates a WebSocket session; nothing connects until `connect()`.
+   *
+   * The client's API key is used when `params` has neither `token` nor
+   * `apiKey`; the session host follows the client's `ttsBaseUrl` unless
+   * `websocketBaseUrl` is given.
+   */
+  session(params: TextToSpeechSessionParams = {}): TextToSpeechSession {
+    const sessionParams = { ...params };
+    if (!sessionParams.token && !sessionParams.apiKey) {
+      sessionParams.apiKey = this.serviceParams.apiKey;
+    }
+    if (!sessionParams.websocketBaseUrl && this.serviceParams.baseUrl) {
+      const base = new URL(this.serviceParams.baseUrl);
+      base.protocol = base.protocol === "http:" ? "ws:" : "wss:";
+      base.pathname = base.pathname.replace(/\/$/, "") + "/v1/ws";
+      sessionParams.websocketBaseUrl = base.toString();
+    }
+    return new TextToSpeechSession(sessionParams);
+  }
+
+  /**
+   * Mints a temporary token for a session opened on a user's device, where
+   * the API key must not go. Call this server-side.
+   */
+  async createTemporaryToken(
+    params: TextToSpeechTokenParams,
+    options: { tokenBaseUrl?: string } = {},
+  ): Promise<string> {
+    const search = new URLSearchParams({ product: "tts" });
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null)
+        search.append(key, String(value));
+    });
+    const base = (options.tokenBaseUrl ?? DEFAULT_TOKEN_BASE_URL).replace(
+      /\/$/,
+      "",
+    );
+    const response = await this.fetchResponse(
+      `${base}/v1/token?${search.toString()}`,
+      {
+        method: "GET",
+      },
+    );
+    if (!response.ok) throw await speechErrorFromResponse(response);
+    const data = (await response.json()) as { token: string };
+    return data.token;
+  }
+}

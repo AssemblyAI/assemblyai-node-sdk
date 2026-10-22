@@ -52,6 +52,7 @@ const client = new AssemblyAI({
 - `client.llmGateway.chatCompletions(request)` — OpenAI-compatible chat completions
 - `client.llmGateway.listModels()` — List models available on the LLM Gateway
 - `client.llmGateway.understanding(request)` / `client.llmGateway.validateUnderstanding(request)` — Run or validate a Speech Understanding request
+- `client.tts.synthesize({ text, voice_id? })` — one text's complete audio (`SpeechResponse.audio`, a Uint8Array, plus header fields); `client.tts.stream(request)` — async iterable of audio chunks as generated; `client.tts.session({ voiceId })` — WebSocket `TextToSpeechSession`: `connect()`, `speak(text)` (async iterable), `generate()`/`flush()`/`audio(flushId?)`, `cancel()`, `keepAlive()`, `close()`, `on("audio"|"flushDone"|"wordBoundaries"|"cancelled"|"termination"|"error"|"close", fn)`. Errors: `TextToSpeechError` (`errorCode`, `param`, `retryable`, `retryAfter`, `requestId`, `closeCode`, `body`)
 
 ## Common patterns
 
@@ -424,6 +425,33 @@ const result = await client.llmGateway.understanding({
 
 Failures throw `LlmGatewayError` with `.status`, `.requestId`, and `.errors` (validation detail
 strings, when present).
+
+## Text-to-Speech
+
+One text per HTTP request, or a WebSocket session for voice agents. Request fields use the API's names (`voice_id`, `sample_rate`, `encoding`, `container`); session parameters are camelCase (`voiceId`, `sampleRate`, `wordBoundaries`, `inactivityTimeout`, `token`). Host: `ttsBaseUrl` (`https://tts.us.assemblyai.com`; EU: `https://tts.eu.assemblyai.com`).
+
+```typescript
+const { audio } = await client.tts.synthesize({
+  text: "Hello.",
+  voice_id: "aai-jane",
+  container: "wav",
+});
+
+const speech = await client.tts.stream({
+  text: "Hello.",
+  encoding: "pcm_mulaw",
+  sample_rate: 8000,
+});
+for await (const chunk of speech) send(chunk); // chunk sizes vary; re-frame to 160 B for 20 ms
+
+const session = client.tts.session({ voiceId: "aai-jane" });
+await session.connect();
+for await (const chunk of session.speak("Hello.")) play(chunk);
+session.cancel(); // barge-in: ends the current audio() iteration at once
+await session.close(); // Terminate -> Termination summary; rejects with an unobserved session error
+```
+
+Gotchas: a session streams raw PCM/G.711 only (no `mp3`, `container` or `bit_rate`); `generate()` takes at most 2,000 characters per frame (`speak()` splits); the API paces text at ~100 chars/s; an `audio` listener switches audio from pull to push; a session the API ended (idle after 120 s) can `connect()` again on the same object.
 
 ## Important gotchas
 

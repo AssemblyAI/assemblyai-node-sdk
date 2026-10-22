@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.42.0]
+
+- Add Text-to-Speech: `client.tts.synthesize(request)` returns one text's complete audio (`SpeechResponse`: `audio` plus the response headers as `requestId`, `region`, `model`, `voiceId`, `encoding`, `sampleRate`, `billedCharacters`, `audioDurationMs`, ...), `client.tts.stream(request)` returns it as the API generates it (`TextToSpeechStream`, an async iterable over a web `ReadableStream`), and `client.tts.session(params)` opens a WebSocket `TextToSpeechSession` for voice agents: `connect()`, `generate()` / `flush()` / `audio()`, `speak()`, `cancel()`, `keepAlive()`, `close()`, with `on("audio" | "flushDone" | "wordBoundaries" | "cancelled" | "termination" | "error" | "close", ...)`. Requests take the API's fields (`text`, `voice_id`, `model_id`, `language`, `sample_rate`, `encoding`, `container`, `bit_rate`); failures throw `TextToSpeechError` (`status`, `errorCode`, `param`, `requestId`, `retryable`, `retryAfter`, `errors`, `closeCode`, `body`). New client option `ttsBaseUrl` (default `https://tts.us.assemblyai.com`); `client.tts.createTemporaryToken()` mints a token for browser sessions
+
 ## [4.41.7]
 
 - Add `summarization` to the speech understanding feature requests and responses (`SummarizationRequest`, `SummarizationResponse`): `summary_type`, `headline_length`, `approximate_chapters` and `effort`. The feature was already accepted by the API but missing from the SDK types, so setting it failed to type check
