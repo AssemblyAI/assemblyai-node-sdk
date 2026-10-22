@@ -41,25 +41,20 @@ export const detectDefaultUserAgent = (
     sdk: { name: "JavaScript", version: "__SDK_VERSION__" },
   };
 
-  if (env.process?.versions) {
-    if (env.process.versions.node && userAgentString.indexOf("Node") === -1) {
-      defaultAgent.runtime_env = {
-        name: "Node",
-        version: env.process.versions.node,
-      };
-    }
-    if (env.process.versions.bun && userAgentString.indexOf("Bun") === -1) {
-      defaultAgent.runtime_env = {
-        name: "Bun",
-        version: env.process.versions.bun,
-      };
-    }
-  }
-
-  if (env.deno?.version?.deno && userAgentString.indexOf("Deno") === -1) {
+  if (env.deno?.version?.deno) {
     defaultAgent.runtime_env = {
       name: "Deno",
       version: env.deno.version.deno,
+    };
+  } else if (env.process?.versions?.bun) {
+    defaultAgent.runtime_env = {
+      name: "Bun",
+      version: env.process.versions.bun,
+    };
+  } else if (env.process?.versions?.node) {
+    defaultAgent.runtime_env = {
+      name: "Node",
+      version: env.process.versions.node,
     };
   }
 
