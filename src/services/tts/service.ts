@@ -200,23 +200,17 @@ function intHeader(headers: Headers, name: string): number | undefined {
 }
 
 /** Reads the `X-TTS-*` headers of a `200`. */
-export function speechResponseInfo(
-  headers: Headers,
-  requestedVoiceId?: string,
-): SpeechResponseInfo {
-  // `X-TTS-Voice-Id` is the voice; until the API sends it, derive it from
-  // `X-TTS-Voice` (`custom` is the request's own voice id, else a preset).
-  let voiceId = headers.get("x-tts-voice-id") ?? undefined;
-  if (voiceId === undefined) {
-    const voice = headers.get("x-tts-voice");
-    if (voice === "custom") voiceId = requestedVoiceId;
-    else if (voice) voiceId = `aai-${voice}`;
-  }
+export function speechResponseInfo(headers: Headers): SpeechResponseInfo {
+  const unknownParams = headers
+    .get("x-tts-unknown-params")
+    ?.split(",")
+    .map((name) => name.trim())
+    .filter(Boolean);
   return {
     requestId: headers.get("x-request-id") ?? undefined,
     region: headers.get("x-tts-region") ?? undefined,
     model: headers.get("x-tts-model") ?? undefined,
-    voiceId,
+    voiceId: headers.get("x-tts-voice-id") ?? undefined,
     language: headers.get("x-tts-language") ?? undefined,
     encoding: headers.get("x-tts-encoding") ?? undefined,
     sampleRate: intHeader(headers, "x-tts-sample-rate"),
@@ -226,7 +220,24 @@ export function speechResponseInfo(
     voiceExpiresAt: intHeader(headers, "x-tts-voice-expires-at"),
     billedCharacters: intHeader(headers, "x-tts-billed-characters"),
     audioDurationMs: intHeader(headers, "x-tts-audio-duration-ms"),
+    unknownParams: unknownParams?.length ? unknownParams : undefined,
   };
+}
+
+let warnedUnknownParams = false;
+
+/**
+ * Warns once per process that the API ignored body fields it does not know,
+ * which is how a camelCase `sampleRate` in a request held in a variable (or
+ * sent from plain JavaScript) shows up. The names stay on `unknownParams`.
+ */
+function warnUnknownParams(info: SpeechResponseInfo) {
+  if (warnedUnknownParams || !info.unknownParams) return;
+  warnedUnknownParams = true;
+  console.warn(
+    `TextToSpeechService: the API ignored unknown request fields: ${info.unknownParams.join(", ")}. ` +
+      "Request fields are snake_case, such as sample_rate; see unknownParams on the response.",
+  );
 }
 
 /**
@@ -376,10 +387,9 @@ export class TextToSpeechService extends BaseService {
       });
       if (!response.ok) throw await speechErrorFromResponse(response);
       const audio = new Uint8Array(await response.arrayBuffer());
-      return {
-        ...speechResponseInfo(response.headers, request.voice_id),
-        audio,
-      };
+      const info = speechResponseInfo(response.headers);
+      warnUnknownParams(info);
+      return { ...info, audio };
     } finally {
       deadline.release();
     }
@@ -426,7 +436,8 @@ export class TextToSpeechService extends BaseService {
         deadline.release();
       }
     }
-    const info = speechResponseInfo(response.headers, request.voice_id);
+    const info = speechResponseInfo(response.headers);
+    warnUnknownParams(info);
     if (!response.body || typeof response.body.getReader !== "function") {
       // A runtime without web streamed bodies: hand the whole audio over as one chunk.
       let bytes: Uint8Array;

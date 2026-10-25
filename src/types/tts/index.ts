@@ -28,6 +28,12 @@ export type TextToSpeechSampleRate =
   | 48000;
 
 /**
+ * MP3 bit rates the API accepts, in bits per second. At most 64000 at a
+ * `sample_rate` of 8000.
+ */
+export type TextToSpeechMp3BitRate = 32000 | 48000 | 64000 | 96000 | 128000;
+
+/**
  * The language, by its English name: `english` (the default), `spanish`,
  * `german`, `french`, `italian` or `portuguese`. Case-insensitive.
  */
@@ -76,8 +82,12 @@ export type SpeechRequest = TextToSpeechVoiceOptions & {
   text: string;
   /** `raw` (the default) or `wav`, with a PCM or G.711 encoding only. */
   container?: TextToSpeechContainer;
-  /** MP3 bit rate in bits per second (32000 to 128000, default 64000), with `encoding: "mp3"` only. */
-  bit_rate?: number;
+  /**
+   * MP3 bit rate in bits per second: 32000, 48000, 64000 (the default),
+   * 96000 or 128000; at most 64000 at a `sample_rate` of 8000. With
+   * `encoding: "mp3"` only.
+   */
+  bit_rate?: TextToSpeechMp3BitRate;
 };
 
 /** Per-request options of the HTTP client. */
@@ -135,12 +145,28 @@ export type SpeechResponseInfo = {
   bitRate?: number;
   /** The response's `Content-Type`, such as `audio/pcm;rate=24000;channels=1`. */
   contentType?: string;
-  /** For a cloned voice of the account: its expiry as a Unix time in seconds. */
+  /**
+   * For a cloned voice of the account: its expiry as a Unix time in seconds,
+   * after the request's consent renewal on `synthesize()`. On a stream, the
+   * value as the stream started: the headers leave with the first audio,
+   * before any renewal.
+   */
   voiceExpiresAt?: number;
-  /** The characters the request bills. */
+  /**
+   * The characters the request bills. On a stream, the value as the stream
+   * started: the headers leave with the first audio, before the outcome is
+   * known, so a body cut by a server failure bills 0 instead.
+   */
   billedCharacters?: number;
   /** The audio's duration in milliseconds, on a complete response. */
   audioDurationMs?: number;
+  /**
+   * Body fields the API did not recognize and ignored
+   * (`X-TTS-Unknown-Params`), such as a camelCase `sampleRate` for
+   * `sample_rate`. The API lists at most 16, sorted, and shows a name it
+   * cannot echo as `<invalid>`. Absent when every field was known.
+   */
+  unknownParams?: string[];
 };
 
 /** The result of `synthesize()`: the whole audio, with its headers. */

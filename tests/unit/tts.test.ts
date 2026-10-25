@@ -89,18 +89,51 @@ describe("tts", () => {
     });
   });
 
-  it("derives the voice id from X-TTS-Voice until the API sends X-TTS-Voice-Id", async () => {
-    const legacy = { ...okHeaders };
-    delete (legacy as Record<string, string>)["x-tts-voice-id"];
-    mockAudio({ ...legacy, "x-tts-voice": "jane" });
-    mockAudio({ ...legacy, "x-tts-voice": "custom" });
-    expect((await client.tts.synthesize({ text: "Hi." })).voiceId).toBe(
-      "aai-jane",
-    );
+  it("takes the voice id from X-TTS-Voice-Id only", async () => {
+    const withoutVoiceId: Record<string, string> = { ...okHeaders };
+    delete withoutVoiceId["x-tts-voice-id"];
+    mockAudio({ ...withoutVoiceId, "x-tts-voice": "jane" });
+    mockAudio({ ...okHeaders, "x-tts-voice-id": "aai-isaiah-2" });
     expect(
-      (await client.tts.synthesize({ text: "Hi.", voice_id: "aai-isaiah-2" }))
+      (await client.tts.synthesize({ text: "Hi.", voice_id: "aai-jane" }))
         .voiceId,
-    ).toBe("aai-isaiah-2");
+    ).toBeUndefined();
+    const speech = await client.tts.stream({ text: "Hi." });
+    expect(speech.info.voiceId).toBe("aai-isaiah-2");
+    await speech.cancel();
+  });
+
+  it("reads X-TTS-Unknown-Params and warns once per process", async () => {
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      await jest.isolateModulesAsync(async () => {
+        // A fresh module, so the once-per-process warning has not fired yet.
+        const { AssemblyAI: FreshAssemblyAI } = await import("../../src");
+        const fresh = new FreshAssemblyAI({
+          ttsBaseUrl: "http://localhost:1234",
+          apiKey: defaultApiKey,
+        });
+        mockAudio({ ...okHeaders, "x-tts-unknown-params": "sampleRate" });
+        mockAudio({ ...okHeaders, "x-tts-unknown-params": "foo,,sampleRate" });
+        mockAudio(okHeaders);
+        // A request held in a variable gets no excess-property check.
+        const request = { text: "Hi.", sampleRate: 8000 };
+        const first = await fresh.tts.synthesize(request);
+        expect(first.unknownParams).toEqual(["sampleRate"]);
+        expect(warn).toHaveBeenCalledTimes(1);
+        expect(warn.mock.calls[0][0]).toContain(
+          "ignored unknown request fields: sampleRate",
+        );
+        const speech = await fresh.tts.stream(request);
+        expect(speech.info.unknownParams).toEqual(["foo", "sampleRate"]);
+        await speech.cancel();
+        const clean = await fresh.tts.synthesize({ text: "Hi." });
+        expect(clean.unknownParams).toBeUndefined();
+        expect(warn).toHaveBeenCalledTimes(1);
+      });
+    } finally {
+      warn.mockRestore();
+    }
   });
 
   it("stream asks for a streamed response and yields the body", async () => {
