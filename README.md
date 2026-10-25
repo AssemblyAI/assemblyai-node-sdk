@@ -842,7 +842,7 @@ writeFileSync("hello.wav", response.audio);
 console.log(response.model, response.voiceId, response.audioDurationMs, "ms");
 ```
 
-`synthesize()` waits for the whole audio, so an API refusal is always a `TextToSpeechError` and the WAV header carries real sizes. The response headers are on the result: `requestId`, `region`, `model`, `voiceId`, `language`, `encoding`, `sampleRate`, `container`, `bitRate`, `billedCharacters` and `audioDurationMs`.
+`synthesize()` waits for the whole audio, so an API refusal is always a `TextToSpeechError` and the WAV header carries real sizes. The response headers are on the result: `requestId`, `region`, `model`, `voiceId`, `language`, `encoding`, `sampleRate`, `container`, `bitRate`, `billedCharacters` and `audioDurationMs`. A network failure or a timeout rejects with the runtime's own error instead (a `TypeError`, or a `DOMException` named `TimeoutError` or `AbortError`). On Node, the built-in `fetch` gives up after 300 seconds without response headers, whatever `timeout` says; for longer requests use `stream()`, or raise the limit with `setGlobalDispatcher(new Agent({ headersTimeout: 610_000 }))` from the `undici` package.
 
 ### Stream audio as it is generated
 
@@ -864,6 +864,8 @@ for await (const chunk of speech) {
 ```
 
 `stream()` resolves once the API has sent the first audio. Chunk sizes vary and are not aligned to samples or frames: for 16-bit PCM carry an odd trailing byte over to the next chunk, and re-frame for a fixed-size sink (20 ms of 8 kHz mu-law is 160 bytes). The API commits to `200` with the first audio, so a failure after that cuts the body: the loop then throws a `TextToSpeechError` with `retryable: true`, and the whole request should be retried. `speech.body` is the underlying web `ReadableStream`.
+
+For a barge-in, pass `{ signal }` as the second argument and abort it: the download stops and the loop throws the signal's reason (an `AbortError`), not a `TextToSpeechError`. `speech.cancel()` stops it too, and the loop just ends. One signal can serve every request of a call.
 
 ### Speak text as it is written (voice agents)
 

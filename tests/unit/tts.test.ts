@@ -1,3 +1,4 @@
+import { getEventListeners } from "events";
 import fetchMock from "jest-fetch-mock";
 import { AssemblyAI, TextToSpeechError } from "../../src";
 import { createClient, defaultApiKey, requestMatches } from "./utils";
@@ -268,6 +269,16 @@ describe("tts", () => {
         }) as unknown as Response,
     );
 
+  /** The test audio as a web stream of two chunks. */
+  const audioSource = () =>
+    new ReadableStream<Uint8Array>({
+      start(c) {
+        c.enqueue(audio.slice(0, 480));
+        c.enqueue(audio.slice(480));
+        c.close();
+      },
+    });
+
   it("stream turns a body cut after the first audio into a retryable TextToSpeechError", async () => {
     const body = new ReadableStream<Uint8Array>({
       start(c) {
@@ -369,23 +380,222 @@ describe("tts", () => {
     expect(chunks).toHaveLength(0);
   });
 
-  it("a stream timeout covers the headers, not the body", async () => {
-    jest.useFakeTimers();
-    try {
-      fetchMock.doMockOnceIf(
-        requestMatches({ url: "/v1/speech", method: "POST" }),
-        () =>
-          Promise.resolve({
-            status: 200,
-            headers: okHeaders,
-            body: Buffer.from(audio) as unknown as string,
-          }),
+  it.each([
+    ["a streamed body", () => mockStreamedBody(audioSource())],
+    ["a whole body", () => mockAudio()],
+  ])(
+    "a stream timeout covers the headers, not %s",
+    async (_name, mockResponse) => {
+      jest.useFakeTimers();
+      try {
+        mockResponse();
+        const speech = await client.tts.stream(
+          { text: "Hi." },
+          { timeout: 10 },
+        );
+        jest.advanceTimersByTime(50); // well past the timeout, after the headers arrived
+        expect(
+          (fetchMock.mock.calls[0][1]!.signal as AbortSignal).aborted,
+        ).toBe(false);
+        expect(Buffer.from(await speech.bytes())).toEqual(Buffer.from(audio));
+      } finally {
+        jest.useRealTimers();
+      }
+    },
+  );
+
+  /**
+   * Answers the next fetch the way fetch does: once the request's signal
+   * aborts, the body errors with the signal's reason. The body sends `total`
+   * one-byte chunks, then ends, or with `hang` waits forever for more.
+   */
+  const mockAbortableBody = (total: number, { hang = false } = {}) => {
+    const source = { sent: 0, signal: undefined as AbortSignal | undefined };
+    fetchMock.mockImplementationOnce(async (_input, init) => {
+      const signal = init!.signal!;
+      source.signal = signal;
+      const body = new ReadableStream<Uint8Array>(
+        {
+          start(c) {
+            signal.addEventListener("abort", () => c.error(signal.reason), {
+              once: true,
+            });
+          },
+          pull(c) {
+            if (source.sent === total) {
+              if (hang) return new Promise<void>(() => undefined);
+              return c.close();
+            }
+            source.sent++;
+            c.enqueue(new Uint8Array([source.sent]));
+          },
+        },
+        { highWaterMark: 0 },
       );
-      const speech = await client.tts.stream({ text: "Hi." }, { timeout: 10 });
-      jest.advanceTimersByTime(50); // well past the timeout, after the headers arrived
-      expect(Buffer.from(await speech.bytes())).toEqual(Buffer.from(audio));
-    } finally {
-      jest.useRealTimers();
+      return {
+        ok: true,
+        status: 200,
+        headers: new Headers(okHeaders),
+        body,
+      } as unknown as Response;
+    });
+    return source;
+  };
+
+  /** Runs `loop` and returns what it threw, if anything. */
+  const thrownBy = async (loop: () => Promise<void>) => {
+    try {
+      await loop();
+    } catch (e) {
+      return e;
     }
+  };
+
+  it("stream stops at the caller's abort after the first chunk, as an AbortError and not a cut", async () => {
+    const source = mockAbortableBody(50);
+    const controller = new AbortController();
+    const speech = await client.tts.stream(
+      { text: "Hi." },
+      { signal: controller.signal },
+    );
+    const chunks: Uint8Array[] = [];
+    const error = await thrownBy(async () => {
+      for await (const chunk of speech) {
+        chunks.push(chunk);
+        controller.abort(); // a barge-in
+      }
+    });
+    expect(chunks).toHaveLength(1);
+    expect(error).not.toBeInstanceOf(TextToSpeechError);
+    expect((error as Error).name).toBe("AbortError");
+    expect(source.signal!.aborted).toBe(true); // the download itself stopped
+    expect(source.sent).toBe(1);
+  });
+
+  it("stream ends a read that waits for audio at the caller's abort", async () => {
+    mockAbortableBody(1, { hang: true });
+    const controller = new AbortController();
+    const speech = await client.tts.stream(
+      { text: "Hi." },
+      { signal: controller.signal },
+    );
+    const chunks: Uint8Array[] = [];
+    const error = await thrownBy(async () => {
+      for await (const chunk of speech) {
+        chunks.push(chunk);
+        setTimeout(() => controller.abort(new Error("barge-in")), 5);
+      }
+    });
+    expect(chunks).toHaveLength(1);
+    expect(error).toEqual(new Error("barge-in"));
+  });
+
+  it("stream ends at an abort before the first read even when the audio is already here", async () => {
+    mockAudio(); // a body read whole, as on runtimes without streamed bodies
+    const controller = new AbortController();
+    const speech = await client.tts.stream(
+      { text: "Hi." },
+      { signal: controller.signal },
+    );
+    controller.abort();
+    const chunks: Uint8Array[] = [];
+    const error = await thrownBy(async () => {
+      for await (const chunk of speech) chunks.push(chunk);
+    });
+    expect(chunks).toHaveLength(0);
+    expect((error as Error).name).toBe("AbortError");
+  });
+
+  /** A fetch that never answers and rejects with its signal's reason, as fetch does. */
+  const mockNoAnswer = () =>
+    fetchMock.mockImplementationOnce(
+      (_input, init) =>
+        new Promise((_resolve, reject) => {
+          const signal = init!.signal!;
+          signal.addEventListener("abort", () => reject(signal.reason), {
+            once: true,
+          });
+        }),
+    );
+
+  it("stream and synthesize time out with the same TimeoutError", async () => {
+    mockNoAnswer();
+    mockNoAnswer();
+    const errors = await Promise.all([
+      client.tts.stream({ text: "Hi." }, { timeout: 20 }).catch((e) => e),
+      client.tts.synthesize({ text: "Hi." }, { timeout: 20 }).catch((e) => e),
+    ]);
+    for (const error of errors) {
+      expect(error).toBeInstanceOf(DOMException);
+      expect(error.name).toBe("TimeoutError");
+      expect(error.message).toBe("no audio within 20 ms");
+    }
+  });
+
+  it("synthesize calls sharing one signal leave no listener on it", async () => {
+    const controller = new AbortController();
+    for (let i = 0; i < 13; i++) {
+      mockAudio();
+      await client.tts.synthesize(
+        { text: "Hi." },
+        { signal: controller.signal },
+      );
+    }
+    fetchMock.mockResponseOnce("busy", { status: 503 });
+    await client.tts
+      .synthesize({ text: "Hi." }, { signal: controller.signal })
+      .catch(() => undefined);
+    fetchMock.mockRejectOnce(new TypeError("fetch failed"));
+    await client.tts
+      .synthesize({ text: "Hi." }, { signal: controller.signal })
+      .catch(() => undefined);
+    expect(fetchMock).toHaveBeenCalledTimes(15);
+    expect(getEventListeners(controller.signal, "abort")).toHaveLength(0);
+  });
+
+  it("stream calls sharing one signal leave no listener on it, however they end", async () => {
+    const controller = new AbortController();
+    const signal = controller.signal;
+    const listeners = () => getEventListeners(signal, "abort").length;
+
+    mockStreamedBody(audioSource()); // read to the end
+    await (await client.tts.stream({ text: "Hi." }, { signal })).bytes();
+    mockStreamedBody(audioSource()); // read to the end with the caller's own reader
+    const own = (await client.tts.stream({ text: "Hi." }, { signal })).body;
+    const reader = own.getReader();
+    while (!(await reader.read()).done);
+    mockStreamedBody(audioSource()); // left early
+    for await (const chunk of await client.tts.stream(
+      { text: "Hi." },
+      { signal },
+    )) {
+      if (chunk) break;
+    }
+    mockStreamedBody(audioSource()); // cancelled before any read
+    const cancelled = await client.tts.stream({ text: "Hi." }, { signal });
+    expect(listeners()).toBe(1); // a body nobody has read yet still listens
+    await cancelled.cancel();
+    mockStreamedBody(
+      new ReadableStream<Uint8Array>({
+        start(c) {
+          c.enqueue(new Uint8Array([1, 2]));
+        },
+        pull(c) {
+          c.error(new TypeError("terminated"));
+        },
+      }),
+    ); // cut
+    await (await client.tts.stream({ text: "Hi." }, { signal }))
+      .bytes()
+      .catch(() => undefined);
+    mockAudio(); // a body read whole
+    await (await client.tts.stream({ text: "Hi." }, { signal })).bytes();
+    fetchMock.mockResponseOnce("busy", { status: 503 }); // refused
+    await client.tts.stream({ text: "Hi." }, { signal }).catch(() => undefined);
+    fetchMock.mockRejectOnce(new TypeError("fetch failed")); // no answer
+    await client.tts.stream({ text: "Hi." }, { signal }).catch(() => undefined);
+
+    expect(fetchMock).toHaveBeenCalledTimes(8);
+    expect(listeners()).toBe(0);
   });
 });

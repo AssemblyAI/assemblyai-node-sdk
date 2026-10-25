@@ -77,14 +77,27 @@ export type SpeechRequest = TextToSpeechVoiceOptions & {
 /** Per-request options of the HTTP client. */
 export type SpeechRequestOptions = {
   /**
-   * Milliseconds until the request is aborted. For `synthesize()` the whole
-   * request, 610 000 by default (the response waits for the complete audio;
-   * the API caps a request at 600 seconds). For `stream()` the wait for the
-   * headers and first audio, 30 000 by default; reading the body is not
-   * timed, so playback at its own pace never trips it.
+   * Milliseconds until the request is aborted with a `DOMException` named
+   * `TimeoutError`. For `synthesize()` the whole request, 610 000 by default
+   * (the response waits for the complete audio; the API caps a request at
+   * 600 seconds). For `stream()` the wait for the headers and first audio,
+   * 30 000 by default; reading the body is not timed, so playback at its own
+   * pace never trips it.
+   *
+   * On Node, the built-in `fetch` also gives up after 300 seconds without
+   * response headers (undici's `headersTimeout`), so a `synthesize()` longer
+   * than that fails with a `TypeError` first. For longer requests use
+   * `stream()`, or raise that limit with
+   * `setGlobalDispatcher(new Agent({ headersTimeout: 610_000 }))` from the
+   * `undici` package.
    */
   timeout?: number;
-  /** An external abort signal, combined with the timeout. */
+  /**
+   * An external abort signal, combined with the timeout. Aborting it rejects
+   * the request with the signal's reason; for `stream()` it also stops the
+   * download of the body, and the iteration throws that reason. One signal
+   * can serve many requests: each detaches from it when it ends.
+   */
   signal?: AbortSignal;
 };
 

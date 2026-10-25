@@ -9,31 +9,36 @@ import {
 } from "../..";
 import { BaseService } from "../base";
 import { TextToSpeechError } from "../../utils/errors/tts";
-import { deadlineSignal } from "../../utils/live";
+import { TextToSpeechSession } from "./session";
 
 /**
- * A signal that aborts when the external one does, or after `timeoutMs`
- * unless `settled()` runs first: the timeout covers the request up to the
- * headers, not a body the caller then reads at playback pace.
+ * The abort signal of one request. It aborts when `external` does, or after
+ * `timeoutMs` with a `TimeoutError` unless `headersArrived()` runs first, so
+ * a streamed body read at playback pace is not timed. `release()` stops the
+ * timer and detaches from `external`; call it once the request is over, so
+ * a signal shared by many requests does not collect listeners.
  */
-function headersDeadline(timeoutMs: number, external?: AbortSignal) {
+function requestDeadline(timeoutMs: number, external?: AbortSignal) {
   const controller = new AbortController();
   const timer = setTimeout(
-    () => controller.abort(new Error("timeout")),
+    () =>
+      controller.abort(
+        new DOMException(`no audio within ${timeoutMs} ms`, "TimeoutError"),
+      ),
     timeoutMs,
   );
   const forward = () => controller.abort(external?.reason);
   if (external?.aborted) forward();
-  external?.addEventListener("abort", forward, { once: true });
+  else external?.addEventListener("abort", forward, { once: true });
   return {
     signal: controller.signal,
-    settled: () => {
+    headersArrived: () => clearTimeout(timer),
+    release: () => {
       clearTimeout(timer);
       external?.removeEventListener("abort", forward);
     },
   };
 }
-import { TextToSpeechSession } from "./session";
 
 const ENDPOINT_SPEECH = "/v1/speech";
 const DEFAULT_TOKEN_BASE_URL = "https://token.assemblyai.com";
@@ -142,28 +147,39 @@ export function speechResponseInfo(
  * Iterate it (`for await (const chunk of speech)`) or read `body`, a web
  * `ReadableStream`. Chunk sizes vary and are not aligned to samples. A
  * failure after the first audio cuts the body: the iteration then throws a
- * `TextToSpeechError` with `retryable: true`.
+ * `TextToSpeechError` with `retryable: true`. Aborting the request's
+ * `signal` stops the download, and the iteration throws the signal's reason
+ * (an `AbortError` unless you gave another) instead.
  */
 export class TextToSpeechStream implements AsyncIterable<Uint8Array> {
   /** The reader of the running iteration, which `cancel()` goes through. */
   private reader?: ReadableStreamDefaultReader<Uint8Array>;
+  private readonly signal?: AbortSignal;
 
   constructor(
     /** What the response headers say: model, voice, encoding, sample rate, request id. */
     public readonly info: SpeechResponseInfo,
     /** The audio bytes as they arrive. */
     public readonly body: ReadableStream<Uint8Array>,
-  ) {}
+    /** `signal`: the request's abort signal, whose abort ends the iteration with its reason. */
+    options: { signal?: AbortSignal } = {},
+  ) {
+    this.signal = options.signal;
+  }
 
   async *[Symbol.asyncIterator](): AsyncIterator<Uint8Array> {
     const reader = (this.reader = this.body.getReader());
+    const signal = this.signal;
     let finished = false;
     try {
       for (;;) {
+        // An abort is the caller's own stop, not a cut to retry.
+        if (signal?.aborted) throw signal.reason;
         let result: ReadableStreamReadResult<Uint8Array>;
         try {
           result = await reader.read();
         } catch {
+          if (signal?.aborted) throw signal.reason;
           finished = true;
           throw new TextToSpeechError(
             "The response was cut before the audio was complete. Retry the request.",
@@ -240,23 +256,40 @@ export class TextToSpeechService extends BaseService {
    * Nothing is sent back until the audio is complete, so a long text takes
    * several seconds and an API failure is always a `TextToSpeechError`,
    * never a cut response.
-   * @throws TextToSpeechError on any API refusal.
+   *
+   * On Node, the built-in `fetch` waits at most 300 seconds for the response
+   * headers (undici's `headersTimeout`), whatever `options.timeout` says. For
+   * longer requests use `stream()`, or raise that limit with
+   * `setGlobalDispatcher(new Agent({ headersTimeout: 610_000 }))` from the
+   * `undici` package.
+   * @throws TextToSpeechError on any API refusal. A network failure or a
+   * timeout rejects with the runtime's own error instead: a `TypeError`, a
+   * `DOMException` named `TimeoutError` once `options.timeout` passes, or the
+   * reason of `options.signal` (an `AbortError` unless you gave another).
    */
   async synthesize(
     request: SpeechRequest,
     options: SpeechRequestOptions = {},
   ): Promise<SpeechResponse> {
-    const response = await this.fetchResponse(ENDPOINT_SPEECH, {
-      method: "POST",
-      body: JSON.stringify({ ...request, stream: false }),
-      signal: deadlineSignal(
-        options.timeout ?? DEFAULT_SYNTHESIZE_TIMEOUT_MS,
-        options.signal,
-      ),
-    });
-    if (!response.ok) throw await speechErrorFromResponse(response);
-    const audio = new Uint8Array(await response.arrayBuffer());
-    return { ...speechResponseInfo(response.headers, request.voice_id), audio };
+    const deadline = requestDeadline(
+      options.timeout ?? DEFAULT_SYNTHESIZE_TIMEOUT_MS,
+      options.signal,
+    );
+    try {
+      const response = await this.fetchResponse(ENDPOINT_SPEECH, {
+        method: "POST",
+        body: JSON.stringify({ ...request, stream: false }),
+        signal: deadline.signal,
+      });
+      if (!response.ok) throw await speechErrorFromResponse(response);
+      const audio = new Uint8Array(await response.arrayBuffer());
+      return {
+        ...speechResponseInfo(response.headers, request.voice_id),
+        audio,
+      };
+    } finally {
+      deadline.release();
+    }
   }
 
   /**
@@ -264,13 +297,17 @@ export class TextToSpeechService extends BaseService {
    *
    * Resolves once the API has sent the first audio. The API commits to `200`
    * then, so a later failure cuts the body and the iteration throws.
+   * `options.signal` keeps covering the body: aborting it stops the download.
    * @throws TextToSpeechError if the API refuses the request before any audio.
+   * A network failure or a timeout rejects with the runtime's own error
+   * instead: a `TypeError`, a `DOMException` named `TimeoutError` once
+   * `options.timeout` passes, or the reason of `options.signal`.
    */
   async stream(
     request: SpeechRequest,
     options: SpeechRequestOptions = {},
   ): Promise<TextToSpeechStream> {
-    const deadline = headersDeadline(
+    const deadline = requestDeadline(
       options.timeout ?? DEFAULT_STREAM_TIMEOUT_MS,
       options.signal,
     );
@@ -281,43 +318,64 @@ export class TextToSpeechService extends BaseService {
         body: JSON.stringify({ ...request, stream: true }),
         signal: deadline.signal,
       });
-    } finally {
-      deadline.settled();
+    } catch (error) {
+      deadline.release();
+      throw error;
     }
-    if (!response.ok) throw await speechErrorFromResponse(response);
+    deadline.headersArrived();
+    if (!response.ok) {
+      try {
+        throw await speechErrorFromResponse(response);
+      } finally {
+        deadline.release();
+      }
+    }
+    const info = speechResponseInfo(response.headers, request.voice_id);
     if (!response.body || typeof response.body.getReader !== "function") {
       // A runtime without web streamed bodies: hand the whole audio over as one chunk.
-      const bytes = new Uint8Array(await response.arrayBuffer());
+      let bytes: Uint8Array;
+      try {
+        bytes = new Uint8Array(await response.arrayBuffer());
+      } finally {
+        deadline.release();
+      }
       const body = new ReadableStream<Uint8Array>({
         start(controller) {
           controller.enqueue(bytes);
           controller.close();
         },
       });
-      return new TextToSpeechStream(
-        speechResponseInfo(response.headers, request.voice_id),
-        body,
-      );
+      return new TextToSpeechStream(info, body, { signal: options.signal });
     }
     // Lock the body now and read it through this reader. Node 20+ fetch
     // cancels the unlocked body of a garbage-collected `Response`, which
     // would end an iteration that starts after an `await` with no audio.
+    // The request stays tied to `options.signal` until the body ends, however
+    // it ends, also when the caller reads `body` with a reader of its own.
     const reader = response.body.getReader();
     const body = new ReadableStream<Uint8Array>(
       {
         async pull(controller) {
-          const { done, value } = await reader.read();
-          if (done) controller.close();
-          else controller.enqueue(value);
+          let result: ReadableStreamReadResult<Uint8Array>;
+          try {
+            result = await reader.read();
+          } catch (error) {
+            deadline.release();
+            throw error;
+          }
+          if (result.done) {
+            deadline.release();
+            controller.close();
+          } else controller.enqueue(result.value);
         },
-        cancel: (reason) => reader.cancel(reason),
+        cancel: (reason) => {
+          deadline.release();
+          return reader.cancel(reason);
+        },
       },
       { highWaterMark: 0 },
     );
-    return new TextToSpeechStream(
-      speechResponseInfo(response.headers, request.voice_id),
-      body,
-    );
+    return new TextToSpeechStream(info, body, { signal: options.signal });
   }
 
   /**
