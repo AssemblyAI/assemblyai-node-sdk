@@ -869,7 +869,7 @@ For a barge-in, pass `{ signal }` as the second argument and abort it: the downl
 
 ### Speak text as it is written (voice agents)
 
-A `TextToSpeechSession` keeps one WebSocket open and speaks text as it is written, so an LLM's reply can be voiced sentence by sentence with no per-request handshake. `speak()` sends one text and returns its audio; `generate()` / `flush()` do the same in two steps, so tokens can be sent as they arrive; `cancel()` is the barge-in. `close()` ends the session and resolves with its summary.
+A `TextToSpeechSession` keeps one WebSocket open and speaks text as it is written, so an LLM's reply can be voiced sentence by sentence with no per-request handshake. `speak()` sends one text and returns its audio; `generate()` / `flush()` do the same in two steps, so tokens can be sent as they arrive; `cancel()` is the barge-in. `close()` ends the session and resolves with its summary once the API has spoken the text still pending. It stops waiting after `terminateTimeout` milliseconds (default 35,000) without a message from the API; an `audio()` iteration still running then rejects with a retryable `TextToSpeechError`, and `close()` resolves `undefined`. Calling `close()` again, or from two places at once, waits for the same end.
 
 ```typescript
 const session = client.tts.session({ voiceId: "aai-jane" });

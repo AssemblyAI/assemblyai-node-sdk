@@ -20,7 +20,12 @@ import { RETRYABLE_STATUSES, TextToSpeechError } from "../../utils/errors/tts";
 
 const DEFAULT_WEBSOCKET_BASE_URL = "wss://tts.us.assemblyai.com/v1/ws";
 const DEFAULT_CONNECT_TIMEOUT_MS = 10_000;
-const DEFAULT_TERMINATE_TIMEOUT_MS = 10_000;
+/**
+ * Milliseconds without a message from the API after which `close()` stops
+ * waiting: a little over the API's own 30 s drain limit, so the API's 3005
+ * Error for a stalled drain normally arrives first.
+ */
+const DEFAULT_TERMINATE_TIMEOUT_MS = 35_000;
 /** Characters one `Generate` frame may carry, unless `Begin` says otherwise. */
 const MAX_GENERATE_CHARS = 2000;
 /** Audio frames queued for pulling before the oldest is dropped (~160 s). */
@@ -52,8 +57,12 @@ class PullQueue {
   ended = false;
   /** The error the connection ended with, if any. */
   error?: TextToSpeechError;
-  /** The connection ended with the API's `Termination`. */
-  terminated = false;
+  /** The API's `Termination` summary, when the connection ended with it. */
+  termination?: TtsTerminationEvent;
+  /** When the API last sent a message; `close()` starts it at `Terminate`. */
+  heardAt = 0;
+  /** The connection's one `close()`, which every call shares. */
+  closing?: Promise<TtsTerminationEvent | undefined>;
   /** The socket's own close event, when it arrived. */
   closedWith?: [code: number, reason: string];
   closeEmitted = false;
@@ -74,7 +83,7 @@ class PullQueue {
     if (this.closedWith) return this.closedWith;
     const code = this.error?.closeCode ?? 1000;
     if (code !== 1000) return [code, "See Error message for details"];
-    return [code, this.terminated ? "Session ended" : "Closed by the client"];
+    return [code, this.termination ? "Session ended" : "Closed by the client"];
   }
 
   push(item: PullItem) {
@@ -492,6 +501,7 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
       socket.onopen = () => {};
 
       socket.onmessage = ({ data }: MessageEvent) => {
+        connection.heardAt = Date.now();
         const frame = parseFrame(data);
         if (!frame) return;
         if (frame.type === "Begin") {
@@ -626,14 +636,17 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
     this.emit("close", code, reason);
   }
 
-  /** Marks the connection over with the session's error: readers drain, sends refuse. */
-  private end() {
+  /**
+   * Marks the connection over: readers drain, sends refuse. It ends with the
+   * session's error, else with `cut`, the audio a `close()` stopped waiting for.
+   */
+  private end(cut?: TextToSpeechError) {
     const connection = this.queue;
     if (connection.ended) return;
     connection.ended = true;
-    connection.error = this.error;
-    connection.terminated = this.termination !== undefined;
-    this.enqueue({ kind: "closed", error: this.error });
+    connection.error = this.error ?? cut;
+    connection.termination = this.termination;
+    this.enqueue({ kind: "closed", error: connection.error });
     this.terminationResolve?.();
     this.terminationResolve = undefined;
   }
@@ -853,43 +866,76 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
   /**
    * Ends the session: `Terminate`, then the `Termination` summary.
    *
-   * Text sent and not flushed is spoken first. Resolves with the summary,
-   * or `undefined` if the session had already ended or the wait timed out.
-   * A `connect()` still pending is rejected.
+   * Text sent and not flushed is spoken first, and the wait lasts as long as
+   * the API keeps sending: it stops after `terminateTimeout` milliseconds
+   * without a message from the API. Then the socket is closed, the API drops
+   * the audio still to come, and an `audio()` iteration still running
+   * rejects with a retryable `TextToSpeechError`. Resolves with the summary,
+   * or `undefined` if the session had already ended or the wait stopped. A
+   * `connect()` still pending is rejected. All calls on one connection share
+   * one close: one `Terminate` is sent, and every call resolves when the
+   * connection ends; the arguments of the first call apply.
    * @param waitForTermination - Wait for the summary before closing the socket.
-   * @param terminateTimeout - Milliseconds to wait for it; `0` waits indefinitely.
-   * @throws TextToSpeechError the session's error, when nothing else surfaced it.
+   * @param terminateTimeout - Milliseconds without a message from the API
+   * after which the wait stops; `0` waits indefinitely. Defaults to the
+   * session's `terminateTimeout`, else 35 000.
+   * @throws TextToSpeechError the session's error, when nothing else surfaced
+   * it; only the first call throws it.
    */
-  async close(
+  close(
     waitForTermination = true,
     terminateTimeout = this.params.terminateTimeout ??
       DEFAULT_TERMINATE_TIMEOUT_MS,
+  ): Promise<TtsTerminationEvent | undefined> {
+    const connection = this.queue;
+    if (connection.closing) {
+      // The first call is the one that throws the session's error.
+      return connection.closing.catch(() => connection.termination);
+    }
+    connection.closing = this.closeConnection(
+      connection,
+      waitForTermination,
+      terminateTimeout,
+    );
+    return connection.closing;
+  }
+
+  private async closeConnection(
+    connection: PullQueue,
+    waitForTermination: boolean,
+    terminateTimeout: number,
   ): Promise<TtsTerminationEvent | undefined> {
     const socket = this.socket;
     this.abortConnect?.(
       new TextToSpeechError("The session was closed before it began"),
     );
     if (socket && !this.stopped && socket.readyState === socket.OPEN) {
-      const terminated = new Promise<void>((resolve) => {
+      const ended = new Promise<void>((resolve) => {
         this.terminationResolve = resolve;
       });
+      connection.heardAt = Date.now();
       try {
         socket.send(JSON.stringify({ type: "Terminate" }));
       } catch {
         // the socket closed under us; the close handler ends the session
       }
-      if (waitForTermination) {
-        if (terminateTimeout > 0) {
-          let timer: ReturnType<typeof setTimeout> | undefined;
-          const expired = new Promise<void>((resolve) => {
-            timer = setTimeout(resolve, terminateTimeout);
-          });
-          await Promise.race([terminated, expired]);
-          if (timer) clearTimeout(timer);
-        } else {
-          await terminated;
-        }
+      if (
+        waitForTermination &&
+        !(await this.drained(connection, ended, terminateTimeout)) &&
+        this.queue === connection
+      ) {
+        this.end(
+          new TextToSpeechError(
+            "No Termination within the terminate timeout; the remaining audio was dropped",
+            { retryable: true, requestId: this.begin?.id },
+          ),
+        );
       }
+    }
+    if (this.queue !== connection) {
+      // A listener connected again while this close waited; the new
+      // connection is not this close's to end.
+      return connection.termination;
     }
     this.end();
     this.releaseSocket();
@@ -897,8 +943,31 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
     const unobserved =
       this.error && !this.errorRaised ? this.surfaced() : undefined;
     // Reported last: the close listener may connect again.
-    this.emitClose(this.queue);
+    this.emitClose(connection);
     if (unobserved) throw unobserved;
     return termination;
+  }
+
+  /**
+   * Resolves `true` when `ended` does, or `false` once the API has sent
+   * nothing for `idleMs` milliseconds; `0` waits indefinitely.
+   */
+  private drained(
+    connection: PullQueue,
+    ended: Promise<void>,
+    idleMs: number,
+  ): Promise<boolean> {
+    const done = ended.then(() => true);
+    if (!(idleMs > 0)) return done;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const idle = new Promise<boolean>((resolve) => {
+      const check = () => {
+        const quiet = Date.now() - connection.heardAt;
+        if (quiet >= idleMs) resolve(false);
+        else timer = setTimeout(check, idleMs - quiet);
+      };
+      timer = setTimeout(check, idleMs);
+    });
+    return Promise.race([done, idle]).finally(() => clearTimeout(timer));
   }
 }

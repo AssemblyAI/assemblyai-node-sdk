@@ -177,7 +177,12 @@ export type TextToSpeechSessionParams = {
   websocketBaseUrl?: string;
   /** Milliseconds to wait for the handshake and `Begin`. Defaults to 10 000. */
   connectTimeout?: number;
-  /** Milliseconds to wait for `Termination` on `close()`. Defaults to 10 000. */
+  /**
+   * Milliseconds without a message from the API after which `close()` stops
+   * waiting for `Termination` and drops the audio still to come; `0` waits
+   * indefinitely. Defaults to 35 000, a little over the API's own 30 s limit
+   * for a stalled drain.
+   */
   terminateTimeout?: number;
 };
 
