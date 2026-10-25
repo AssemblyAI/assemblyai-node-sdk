@@ -7,6 +7,7 @@ import {
   TextToSpeechError,
   TextToSpeechSession,
   TtsBeginEvent,
+  TtsWordBoundariesEvent,
 } from "../../src";
 import * as websocketPolyfill from "../../src/polyfills/websocket/default";
 import { conditions } from "#conditions";
@@ -48,13 +49,16 @@ type ServerSocket = {
 
 /**
  * Plays the API: Generate/Flush answer with the text's bytes as one Audio
- * frame and a FlushDone, Cancel with Cancelled, Terminate with Termination
+ * frame and a FlushDone, Cancel with Cancelled, and Terminate speaks the text
+ * not flushed yet the same way, under the next flush id, before Termination
  * and a clean close.
  */
 class FakeApi {
   text = "";
   flushId = 0;
   answerFlush = true;
+  /** On, each spoken request's FlushDone is followed by its WordBoundaries. */
+  wordBoundaries = false;
   /** Off, Cancel gets no Cancelled: the test plays the audio still in transit. */
   answerCancel = true;
   /** Off, Terminate gets no answer: the test plays the drain. */
@@ -110,22 +114,7 @@ class FakeApi {
         this.text += frame.text as string;
         return;
       case "Flush":
-        if (this.answerFlush) {
-          socket.send(
-            JSON.stringify({
-              type: "Audio",
-              audio: Buffer.from(this.text).toString("base64"),
-              flush_id: this.flushId,
-            }),
-          );
-          socket.send(
-            JSON.stringify({
-              type: "FlushDone",
-              flush_id: this.flushId,
-              audio_duration_ms: 80,
-            }),
-          );
-        }
+        if (this.answerFlush) this.speak(socket);
         this.flushId += 1;
         this.text = "";
         return;
@@ -140,6 +129,12 @@ class FakeApi {
         return;
       case "Terminate":
         if (!this.answerTerminate) return;
+        // Text sent and not flushed is flushed: its own FlushDone, next id.
+        if (this.text) {
+          this.speak(socket);
+          this.flushId += 1;
+          this.text = "";
+        }
         socket.send(JSON.stringify(terminationMessage));
         if (this.closeOnTerminate) {
           socket.close({ code: 1000, reason: "Session ended", wasClean: true });
@@ -148,9 +143,48 @@ class FakeApi {
     }
   }
 
+  /** Sends the pending text as the current request's Audio and FlushDone. */
+  private speak(socket: ServerSocket) {
+    socket.send(
+      JSON.stringify({
+        type: "Audio",
+        audio: Buffer.from(this.text).toString("base64"),
+        flush_id: this.flushId,
+      }),
+    );
+    socket.send(
+      JSON.stringify({
+        type: "FlushDone",
+        flush_id: this.flushId,
+        audio_duration_ms: 80,
+      }),
+    );
+    if (this.wordBoundaries) {
+      socket.send(JSON.stringify(wordBoundariesFrame(this.flushId, this.text)));
+    }
+  }
+
   frames(type: string) {
     return this.sent.filter((f) => f.type === type);
   }
+}
+
+/** The WordBoundaries frame FakeApi sends for request `flushId` of `text`. */
+function wordBoundariesFrame(flushId: number, text: string) {
+  return {
+    type: "WordBoundaries",
+    flush_id: flushId,
+    audio_start_ms: flushId * 1000,
+    words: text
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((word, i) => ({
+        word,
+        start: flushId * 1000 + i * 100,
+        end: flushId * 1000 + i * 100 + 80,
+        confidence: 0.9,
+      })),
+  };
 }
 
 let server: WS;
@@ -206,6 +240,14 @@ let consoleError: jest.SpyInstance | undefined;
 function spyConsoleError(): jest.SpyInstance {
   consoleError = jest.spyOn(console, "error").mockImplementation(() => {});
   return consoleError;
+}
+
+function audioFrame(text: string, flushId: number) {
+  return JSON.stringify({
+    type: "Audio",
+    audio: Buffer.from(text).toString("base64"),
+    flush_id: flushId,
+  });
 }
 
 function errorFrame(code: number, errorType: string, retryable: boolean) {
@@ -264,6 +306,30 @@ describe("tts session", () => {
     expect(api.frames("Terminate")).toHaveLength(1);
     await server.closed;
   });
+
+  it.each([
+    ["http://localhost:1234/prefix", "ws://localhost:1234/prefix/v1/ws"],
+    ["https://localhost:1234/prefix/", "wss://localhost:1234/prefix/v1/ws"],
+  ])(
+    "a client with ttsBaseUrl %p opens its sessions at %p",
+    async (ttsBaseUrl, sessionUrl) => {
+      // Given a client whose TTS host is under a path prefix, as behind a proxy
+      const prefixed = new WS(sessionUrl);
+      const proxied = new AssemblyAI({ apiKey: defaultApiKey, ttsBaseUrl });
+
+      // When it opens a session without a websocketBaseUrl
+      const session = proxied.tts.session();
+      const connecting = outcome(session.connect());
+      const socket = await outcome(prefixed.connected);
+      prefixed.send(JSON.stringify(beginMessage));
+
+      // Then the session opens at the prefixed URL
+      expect(await connecting).toMatchObject({ id: "sess-1" });
+      const url = new URL((socket as { url: string }).url);
+      expect(`${url.protocol}//${url.host}${url.pathname}`).toBe(sessionUrl);
+      await session.close(false);
+    },
+  );
 
   it("pipelines requests and reads them in flush id order", async () => {
     const session = client.tts.session({ websocketBaseUrl });
@@ -333,6 +399,45 @@ describe("tts session", () => {
       api.frames("Generate").map((f) => (f.text as string).length),
     ).toEqual([2000, 500]);
     expect(() => session.generate("x".repeat(2001))).toThrow(RangeError);
+    await session.close();
+  });
+
+  it("Begin's max_generate_text_length limits generate() and the frames of speak()", async () => {
+    // Given a session whose Begin allows 10 characters per Generate frame
+    const session = client.tts.session({ websocketBaseUrl });
+    await connect(session, {
+      ...beginMessage,
+      configuration: {
+        ...beginMessage.configuration,
+        limits: { max_generate_text_length: 10 },
+      },
+    });
+
+    // When the app speaks 25 characters
+    const text = "a".repeat(10) + "b".repeat(10) + "c".repeat(5);
+
+    // Then speak() sends them in frames of at most 10, and they are spoken
+    expect((await collect(session.speak(text))).toString()).toBe(text);
+    expect(api.frames("Generate").map((frame) => frame.text)).toEqual([
+      "a".repeat(10),
+      "b".repeat(10),
+      "c".repeat(5),
+    ]);
+
+    // And generate() refuses 11 characters before sending them, and sends 10
+    expect(() => session.generate("x".repeat(11))).toThrow(
+      new RangeError(
+        "text is 11 characters, over the 10-character limit of one Generate frame; split it across several generate() calls",
+      ),
+    );
+    session.generate("y".repeat(10));
+    await tick();
+    expect(api.frames("Generate").map((frame) => frame.text)).toEqual([
+      "a".repeat(10),
+      "b".repeat(10),
+      "c".repeat(5),
+      "y".repeat(10),
+    ]);
     await session.close();
   });
 
@@ -453,6 +558,48 @@ describe("tts session", () => {
     expect(error.closeCode).toBe(1006);
   });
 
+  it.each([
+    [1011, true],
+    [1012, true],
+    [3005, true],
+    [3008, true],
+    [3009, true],
+    [1008, false],
+    [3010, false],
+  ])(
+    "a close %i without an Error frame has retryable %s, before Begin and after it",
+    async (code, retryable) => {
+      // Given a session whose first connection the API closes before Begin
+      const session = client.tts.session({ websocketBaseUrl });
+      const errors: TextToSpeechError[] = [];
+      session.on("error", (error) => errors.push(error));
+      const connecting = session.connect();
+      (await connection(1)).close({ code, reason: "", wasClean: true });
+
+      // Then connect() rejects with the close code and whether to retry
+      const refused = await connecting.catch((error: unknown) => error);
+      expect(refused).toBeInstanceOf(TextToSpeechError);
+      expect(refused).toMatchObject({ closeCode: code, retryable });
+
+      // And when the API closes a second connection the same way after Begin
+      const reconnecting = session.connect();
+      const second = await connection(2);
+      second.send(JSON.stringify(beginMessage));
+      await reconnecting;
+      second.close({ code, reason: "", wasClean: true });
+      await tick();
+
+      // Then the error listener gets the same verdict, with the session id
+      expect(errors).toHaveLength(2);
+      expect(errors[0]).toBe(refused);
+      expect(errors[1]).toMatchObject({
+        closeCode: code,
+        retryable,
+        requestId: "sess-1",
+      });
+    },
+  );
+
   it("a token session reconnects with a new token, sent in the query alone", async () => {
     api.singleUseTokens = true;
     const session = client.tts.session({
@@ -537,6 +684,28 @@ describe("tts session", () => {
     });
     second.send(JSON.stringify(beginMessage));
     await reconnect;
+    await session.close();
+  });
+
+  it("extendBiometricConsent is sent in the session URL", async () => {
+    const session = client.tts.session({
+      websocketBaseUrl,
+      voiceId: "my-cloned-voice",
+      extendBiometricConsent: true,
+    });
+    await connect(session);
+    const url = new URL((await connection(1)).url);
+    expect(url.searchParams.get("voice_id")).toBe("my-cloned-voice");
+    expect(url.searchParams.get("extend_biometric_consent")).toBe("true");
+    await session.close();
+  });
+
+  it("keepAlive() sends a KeepAlive frame", async () => {
+    const session = client.tts.session({ websocketBaseUrl });
+    await connect(session);
+    session.keepAlive();
+    await tick();
+    expect(api.sent).toEqual([{ type: "KeepAlive" }]);
     await session.close();
   });
 
@@ -790,6 +959,79 @@ describe("tts session", () => {
     await connect(session);
     await session.close();
     expect(closes).toEqual([[1000, "Session ended"]]);
+  });
+
+  it("close() speaks text not flushed yet and resolves after its FlushDone", async () => {
+    // Given a session with one request read and text sent after it, not flushed
+    const session = client.tts.session({ websocketBaseUrl });
+    const events: string[] = [];
+    session.on("flushDone", (event) =>
+      events.push(`flushDone ${event.flush_id}`),
+    );
+    session.on("termination", () => events.push("termination"));
+    session.on("close", (code) => events.push(`close ${code}`));
+    await connect(session);
+    expect((await collect(session.speak("One."))).toString()).toBe("One.");
+    session.generate("Trailing ");
+    session.generate("text.");
+    const reading = outcome(collect(session.audio())); // the request being written
+
+    // When the app closes the session
+    const termination = await session.close();
+
+    // Then the API spoke the text as the next request before Termination,
+    // and close() resolved once the session ended
+    expect(termination).toEqual(terminationMessage);
+    expect(events).toEqual([
+      "flushDone 0",
+      "flushDone 1",
+      "termination",
+      "close 1000",
+    ]);
+    expect(await reading).toEqual(Buffer.from("Trailing text."));
+    expect(api.sent.map((frame) => frame.type)).toEqual([
+      "Generate",
+      "Flush",
+      "Generate",
+      "Generate",
+      "Terminate",
+    ]);
+  });
+
+  it("the wordBoundaries listener receives each request's frame, the one close() flushes included", async () => {
+    // Given a session that asked for word boundaries
+    api.wordBoundaries = true;
+    const session = client.tts.session({
+      websocketBaseUrl,
+      wordBoundaries: true,
+    });
+    const received: TtsWordBoundariesEvent[] = [];
+    const events: string[] = [];
+    session.on("wordBoundaries", (event) => {
+      received.push(event);
+      events.push(`wordBoundaries ${event.flush_id}`);
+    });
+    session.on("termination", () => events.push("termination"));
+    await connect(session);
+    const url = new URL((await connection(1)).url);
+    expect(url.searchParams.get("word_boundaries")).toBe("true");
+
+    // When it speaks one text, then closes with another not flushed
+    await collect(session.speak("Hello there."));
+    session.generate("Goodbye now.");
+    await session.close();
+
+    // Then the listener receives both frames as the API sent them, before
+    // Termination
+    expect(received).toEqual([
+      wordBoundariesFrame(0, "Hello there."),
+      wordBoundariesFrame(1, "Goodbye now."),
+    ]);
+    expect(events).toEqual([
+      "wordBoundaries 0",
+      "wordBoundaries 1",
+      "termination",
+    ]);
   });
 
   it.each([
@@ -1498,13 +1740,95 @@ describe("tts session", () => {
     expect(queue.size).toBe(0);
   });
 
+  describe("audio nobody reads", () => {
+    const warning =
+      "TextToSpeechSession: dropping audio nobody reads; iterate audio() or add an audio listener";
+    let warn: jest.SpyInstance;
+
+    beforeEach(() => {
+      api.answerFlush = false; // the test sends each request's frames
+      warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+    });
+    afterEach(() => warn.mockRestore());
+
+    /** Each chunk of the iteration as text, or "pending" if it does not end. */
+    function chunks(iterable: AsyncIterable<Uint8Array>) {
+      return outcome(
+        (async () => {
+          const texts: string[] = [];
+          for await (const chunk of iterable) {
+            texts.push(Buffer.from(chunk).toString());
+          }
+          return texts;
+        })(),
+      );
+    }
+
+    /** Requests 0 and 1, flushed and not read yet. */
+    async function twoRequests() {
+      const session = client.tts.session({ websocketBaseUrl });
+      await connect(session);
+      session.generate("A long answer. ");
+      expect(session.flush()).toBe(0);
+      session.generate("A short one.");
+      expect(session.flush()).toBe(1);
+      return session;
+    }
+
+    function sendRequest(flushId: number, frames: number) {
+      for (let i = 0; i < frames; i++) {
+        server.send(audioFrame(`${flushId}:${i}`, flushId));
+      }
+      server.send(JSON.stringify({ type: "FlushDone", flush_id: flushId }));
+    }
+
+    it("keeps the newest 2,000 frames, warns once, and each iteration ends at its FlushDone", async () => {
+      // Given 2,500 frames of request 0 and 5 of request 1, each with its
+      // FlushDone, arriving before anything reads them
+      const session = await twoRequests();
+      sendRequest(0, 2500);
+      sendRequest(1, 5);
+
+      // When the app reads both requests afterwards
+      const first = await chunks(session.audio(0));
+      const second = await chunks(session.audio(1));
+
+      // Then the oldest audio was dropped to hold 2,000 frames: request 0
+      // keeps its newest 1,995 and request 1 all 5, and both iterations end
+      expect(first).toEqual(
+        Array.from({ length: 1995 }, (_, i) => `0:${i + 505}`),
+      );
+      expect(second).toEqual(["1:0", "1:1", "1:2", "1:3", "1:4"]);
+
+      // And one warning says why
+      expect(warn.mock.calls).toEqual([[warning]]);
+      await session.close();
+    });
+
+    it("keeps a FlushDone at the front of a full queue, so its request's iteration still ends", async () => {
+      // Given request 0's 3 frames and FlushDone, then 2,001 frames of
+      // request 1: the FlushDone is the oldest item once request 0's audio
+      // was dropped
+      const session = await twoRequests();
+      sendRequest(0, 3);
+      sendRequest(1, 2001);
+
+      // When the app reads both requests afterwards
+      const first = await chunks(session.audio(0));
+      const second = await chunks(session.audio(1));
+
+      // Then request 0 lost its audio and still ends, and request 1 keeps
+      // its newest 2,000 frames
+      expect(first).toEqual([]);
+      expect(second).toEqual(
+        Array.from({ length: 2000 }, (_, i) => `1:${i + 1}`),
+      );
+      expect(warn.mock.calls).toEqual([[warning]]);
+      await session.close();
+    });
+  });
+
   describe("cancel() and audio still in transit", () => {
-    const audioFrame = (text: string, flushId: number) =>
-      JSON.stringify({
-        type: "Audio",
-        audio: Buffer.from(text).toString("base64"),
-        flush_id: flushId,
-      });
     const cancelledFrame = JSON.stringify({
       type: "Cancelled",
       audio_duration_seconds: 0.4,
