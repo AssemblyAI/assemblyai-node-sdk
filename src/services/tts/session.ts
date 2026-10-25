@@ -39,7 +39,9 @@ type PullItem =
   | { kind: "audio"; flushId: number; bytes: Uint8Array }
   | { kind: "done"; flushId: number }
   | { kind: "cancelled"; cancelId: number }
-  | { kind: "closed"; error?: TextToSpeechError };
+  | { kind: "closed"; error?: TextToSpeechError }
+  /** Handed only to a waiting reader, never queued: check the state again. */
+  | { kind: "wake" };
 
 /**
  * One connection: a FIFO that hands items to one waiting reader, and how the
@@ -111,6 +113,14 @@ class PullQueue {
       this.audioItems++;
     }
     this.items.push(item);
+  }
+
+  /** Hands the waiting reader, if any, a `wake` item. */
+  wake() {
+    const resolve = this.waiter;
+    if (!resolve) return;
+    this.waiter = undefined;
+    resolve({ kind: "wake" });
   }
 
   next(): Promise<PullItem> {
@@ -556,6 +566,9 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
   private dispatch(event: SessionFrame) {
     switch (event.type) {
       case "Audio":
+        // Audio of a request a Cancel retired, which the API sent before it
+        // read the Cancel.
+        if (event.flush_id <= this.queue.cancelledBefore) return;
         if (this.listeners.audio) this.emit("audio", event);
         else {
           this.enqueue({
@@ -777,19 +790,27 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
   }
 
   /**
-   * Barge-in: stops the request in flight and drops queued requests.
+   * Barge-in: stops the request in flight, drops queued requests and the
+   * text being written, and returns the `flush_id` the cancel takes.
    *
-   * An `audio()` iteration of a cancelled request, or of the text being
-   * written, ends at once; audio of it still in transit is discarded. Like
-   * `flush()`, a cancel takes a `flush_id`, so the next request's id skips one.
-   * A cancel the session refuses (after `close()`, or once the connection
-   * is lost) changes nothing: the iterations go on to their own end.
+   * Like `flush()`, a cancel takes the id of the text being written, so the
+   * cancelled requests are those with an id up to the one returned, and the
+   * next request's id is one more. An `audio()` iteration of a cancelled
+   * request ends at once, even one waiting for its next chunk. Audio of a
+   * cancelled request that the API sent before it read the `Cancel` can
+   * still arrive; neither an `audio()` iteration nor the `audio` listener
+   * receives it. A cancel the session refuses (after `close()`, or once the
+   * connection is lost) changes nothing: the iterations go on to their own end.
    */
-  cancel() {
+  cancel(): number {
     this.send({ type: "Cancel" });
     const cancelId = this.nextFlushId++;
     this.cancelIds.push(cancelId);
     this.queue.cancelledBefore = Math.max(this.queue.cancelledBefore, cancelId);
+    // A reader waiting for a frame reads a request this cancel retired (no
+    // reader's id is past the cancel's), so it ends now.
+    this.queue.wake();
+    return cancelId;
   }
 
   /**
@@ -896,7 +917,10 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
         const item = await connection.next();
         switch (item.kind) {
           case "audio":
-            if (item.flushId === flushId) yield item.bytes;
+            if (item.flushId !== flushId) break;
+            // cancel() may have run since the frame was handed over.
+            if (flushId <= connection.cancelledBefore) return;
+            yield item.bytes;
             break;
           case "done":
             // Counted when read, so a FlushDone still queued for a pipelined
@@ -913,6 +937,8 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
           case "closed":
             if (item.error) throw this.surface(item.error);
             return;
+          case "wake":
+            break;
         }
       }
     } finally {

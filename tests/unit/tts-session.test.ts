@@ -54,6 +54,8 @@ class FakeApi {
   text = "";
   flushId = 0;
   answerFlush = true;
+  /** Off, Cancel gets no Cancelled: the test plays the audio still in transit. */
+  answerCancel = true;
   /** Off, Terminate gets no answer: the test plays the drain. */
   answerTerminate = true;
   closeOnTerminate = true;
@@ -129,9 +131,11 @@ class FakeApi {
       case "Cancel":
         this.flushId += 1;
         this.text = "";
-        socket.send(
-          JSON.stringify({ type: "Cancelled", audio_duration_seconds: 0.1 }),
-        );
+        if (this.answerCancel) {
+          socket.send(
+            JSON.stringify({ type: "Cancelled", audio_duration_seconds: 0.1 }),
+          );
+        }
         return;
       case "Terminate":
         if (!this.answerTerminate) return;
@@ -1408,6 +1412,126 @@ describe("tts session", () => {
     expect(queue.size).toBe(0);
     await session.close();
     expect(queue.size).toBe(0);
+  });
+
+  describe("cancel() and audio still in transit", () => {
+    const audioFrame = (text: string, flushId: number) =>
+      JSON.stringify({
+        type: "Audio",
+        audio: Buffer.from(text).toString("base64"),
+        flush_id: flushId,
+      });
+    const cancelledFrame = JSON.stringify({
+      type: "Cancelled",
+      audio_duration_seconds: 0.4,
+    });
+    const textOf = (chunk: IteratorResult<Uint8Array, void>) =>
+      Buffer.from(chunk.value as Uint8Array).toString();
+
+    beforeEach(() => {
+      // The test sends the Cancelled, after the audio the API had already sent.
+      api.answerCancel = false;
+    });
+
+    it("cancel() returns the id it takes, and the next flush() the one after", async () => {
+      const session = client.tts.session({ websocketBaseUrl });
+      await connect(session);
+      expect(session.cancel()).toBe(0);
+      expect(session.flush()).toBe(1);
+      expect(session.cancel()).toBe(2);
+      await session.close();
+    });
+
+    it("an audio listener gets no audio of a cancelled request still in transit", async () => {
+      // Given an audio listener playing the request being written
+      const session = client.tts.session({ websocketBaseUrl });
+      const heard: string[] = [];
+      session.on("audio", (event) =>
+        heard.push(`${event.flush_id}:${Buffer.from(event.audio).toString()}`),
+      );
+      const cancelled = jest.fn();
+      session.on("cancelled", cancelled);
+      await connect(session);
+      session.generate("A reply the user talks over. ");
+      server.send(audioFrame("first", 0));
+      expect(heard).toEqual(["0:first"]);
+
+      // When the user barges in, and audio the API sent before it read the
+      // Cancel arrives ahead of Cancelled
+      expect(session.cancel()).toBe(0);
+      for (let i = 0; i < 5; i++) server.send(audioFrame("stale", 0));
+      server.send(cancelledFrame);
+      await tick();
+
+      // Then none of it reaches the listener
+      expect(cancelled).toHaveBeenCalledTimes(1);
+      expect(heard).toEqual(["0:first"]);
+
+      // And the next request, which takes the id after the cancel, does
+      session.generate("Sure, go ahead.");
+      expect(session.flush()).toBe(1);
+      await tick();
+      expect(heard).toEqual(["0:first", "1:Sure, go ahead."]);
+      await session.close();
+    });
+
+    it("a reader waiting when cancel() is called ends at once and yields nothing in transit", async () => {
+      // Given a reader of request 0 waiting for its next frame
+      api.answerFlush = false;
+      const session = client.tts.session({ websocketBaseUrl });
+      await connect(session);
+      session.generate("A reply the user talks over. ");
+      const reader = session.audio(session.flush());
+      server.send(audioFrame("first", 0));
+      expect(textOf(await reader.next())).toBe("first");
+      const waiting = reader.next();
+      await tick();
+
+      // When the user barges in
+      expect(session.cancel()).toBe(1);
+
+      // Then the reader ends without waiting for Cancelled
+      expect(await outcome(waiting, 100)).toEqual({
+        value: undefined,
+        done: true,
+      });
+
+      // And the audio still in transit is dropped, not queued: only the
+      // Cancelled marker is
+      for (let i = 0; i < 5; i++) server.send(audioFrame("stale", 0));
+      server.send(cancelledFrame);
+      await tick();
+      const queue = (session as unknown as { queue: { size: number } }).queue;
+      expect(queue.size).toBe(1);
+
+      // And the next request reads only its own audio
+      api.answerFlush = true;
+      expect((await collect(session.speak("Next."))).toString()).toBe("Next.");
+      await session.close();
+    });
+
+    it("a reader yields no frame that reached it just before cancel()", async () => {
+      // Given a reader of the text being written, waiting for its first frame
+      const session = client.tts.session({ websocketBaseUrl });
+      await connect(session);
+      const reader = session.audio();
+      session.generate("A reply the user talks over. ");
+      const waiting = reader.next();
+      await tick();
+
+      // When a frame is handed to it and the app cancels before the reader
+      // runs again
+      server.send(audioFrame("stale", 0));
+      expect(session.cancel()).toBe(0);
+
+      // Then the reader ends instead of yielding the frame
+      expect(await outcome(waiting, 100)).toEqual({
+        value: undefined,
+        done: true,
+      });
+      server.send(cancelledFrame);
+      await session.close();
+    });
   });
 
   describe("connect() failures before the socket opens", () => {
