@@ -32,18 +32,45 @@ type PullItem =
   | { kind: "audio"; flushId: number; bytes: Uint8Array }
   | { kind: "done"; flushId: number }
   | { kind: "cancelled"; cancelId: number }
-  | { kind: "error"; error: TextToSpeechError }
-  | { kind: "closed" };
+  | { kind: "closed"; error?: TextToSpeechError };
 
-/** A FIFO that hands items to one waiting reader; one per connection. */
+/**
+ * One connection: a FIFO that hands items to one waiting reader, and how the
+ * connection ended. A reader keeps the connection it started on, so a
+ * reconnect cannot change what it sees.
+ */
 class PullQueue {
   private items: PullItem[] = [];
   private audioItems = 0;
   private waiter?: (item: PullItem) => void;
   dropped = false;
+  /** A socket was opened for this connection. */
+  hadSocket = false;
+  /** The connection is over and its `closed` item is queued. */
+  ended = false;
+  /** The error the connection ended with, if any. */
+  error?: TextToSpeechError;
+  /** The connection ended with the API's `Termination`. */
+  terminated = false;
+  /** The socket's own close event, when it arrived. */
+  closedWith?: [code: number, reason: string];
+  closeEmitted = false;
+  /** Requests up to this flush id were cancelled. */
+  cancelledBefore = -1;
 
   get size() {
     return this.items.length;
+  }
+
+  /**
+   * The socket's close code and reason; when the socket was released before
+   * its close event, the close the API sends after this ending.
+   */
+  close(): [code: number, reason: string] {
+    if (this.closedWith) return this.closedWith;
+    const code = this.error?.closeCode ?? 1000;
+    if (code !== 1000) return [code, "See Error message for details"];
+    return [code, this.terminated ? "Session ended" : "Closed by the client"];
   }
 
   push(item: PullItem) {
@@ -145,7 +172,8 @@ function errorFromClose(code: number, reason: string): TextToSpeechError {
  * `wordBoundaries`, `cancelled`, `termination`, `error`, `close`) are
  * optional. A refusal rejects `connect()`; a failure mid-session rejects the
  * `audio()` iteration or the next send, and a failure nothing observed
- * rejects `close()`.
+ * rejects `close()`. The `error` and `close` listeners run once the
+ * connection has ended, so either can `connect()` again.
  *
  * @example
  * ```ts
@@ -161,11 +189,8 @@ export class TextToSpeechSession {
   private queue = new PullQueue();
   private nextFlushId = 0;
   private cancelIds: number[] = [];
-  private cancelledBefore = -1;
-  private stopped = false;
   private errorRaised = false;
   private reading = false;
-  private closeEmitted = false;
   private terminationResolve?: () => void;
   private abortConnect?: (error: TextToSpeechError) => void;
 
@@ -177,6 +202,11 @@ export class TextToSpeechSession {
   error?: TextToSpeechError;
 
   constructor(private readonly params: TextToSpeechSessionParams) {}
+
+  /** The current connection is over: sends refuse and readers drain. */
+  private get stopped(): boolean {
+    return this.queue.ended;
+  }
 
   on(event: "begin", listener: (event: TtsBeginEvent) => void): void;
   on(event: "audio", listener: (event: TtsAudioEvent) => void): void;
@@ -228,11 +258,8 @@ export class TextToSpeechSession {
     this.queue = new PullQueue();
     this.nextFlushId = 0;
     this.cancelIds = [];
-    this.cancelledBefore = -1;
-    this.stopped = false;
     this.errorRaised = false;
     this.reading = false;
-    this.closeEmitted = false;
     this.begin = undefined;
     this.termination = undefined;
     this.error = undefined;
@@ -246,11 +273,18 @@ export class TextToSpeechSession {
    * fails, or `Begin` does not arrive in time.
    */
   connect(): Promise<TtsBeginEvent> {
+    if (this.stopped) {
+      // The previous connection's close, when its socket was released before
+      // the close event arrived. The close listener may connect again.
+      this.releaseSocket();
+      this.emitClose(this.queue);
+    }
     if (this.socket && !this.stopped) {
       return Promise.reject(new Error("The session is already connected"));
     }
     this.releaseSocket();
     this.reset();
+    const connection = this.queue;
     const url = this.connectionUrl();
     const timeoutMs = this.params.connectTimeout ?? DEFAULT_CONNECT_TIMEOUT_MS;
 
@@ -258,15 +292,15 @@ export class TextToSpeechSession {
       let settled = false;
       const timer = setTimeout(() => {
         settle(() => {
-          this.releaseSocket();
-          this.stopped = true;
-          reject(
-            new TextToSpeechError(
-              `The session did not begin within ${timeoutMs}ms`,
-              { retryable: true },
-            ),
+          this.error = new TextToSpeechError(
+            `The session did not begin within ${timeoutMs}ms`,
+            { retryable: true },
           );
+          this.end();
+          this.releaseSocket();
+          reject(this.surfaced());
         });
+        this.emitClose(connection);
       }, timeoutMs);
       const settle = (fn: () => void) => {
         if (settled) return;
@@ -276,6 +310,13 @@ export class TextToSpeechSession {
         fn();
       };
       this.abortConnect = (error) => settle(() => reject(error));
+      // Ends the connection and settles connect() before the error listener
+      // runs, so the listener sees an ended session it can connect again.
+      const fail = (error: TextToSpeechError) => {
+        const raised = this.fail(error);
+        settle(() => reject(this.surfaced()));
+        if (raised) this.listeners.error?.(raised);
+      };
 
       if (this.params.token) {
         this.socket = polyfillWebSocketFactory(url.toString());
@@ -291,6 +332,7 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
         });
       }
       const socket = this.socket;
+      connection.hadSocket = true;
       socket.binaryType = "arraybuffer";
       socket.onopen = () => {};
 
@@ -311,32 +353,37 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
           return;
         }
         if (frame.type === "Error") {
-          const error = errorFromFrame(frame as unknown as TtsErrorMessage);
-          this.fail(error);
-          settle(() => reject(error));
+          fail(errorFromFrame(frame as unknown as TtsErrorMessage));
           return;
         }
         try {
           this.dispatch(frame);
         } catch (cause) {
-          const error = new TextToSpeechError(
-            `Unreadable frame from the API: ${String(cause)}`,
+          fail(
+            new TextToSpeechError(
+              `Unreadable frame from the API: ${String(cause)}`,
+            ),
           );
-          this.fail(error);
-          settle(() => reject(error));
         }
       };
 
       socket.onclose = ({ code, reason }: CloseEvent) => {
         const text = typeof reason === "string" ? reason : "";
+        connection.closedWith = [code, text];
+        let raised: TextToSpeechError | undefined;
         if (!this.stopped && code !== 1000 && !this.error) {
-          this.error = errorFromClose(code, text);
-          if (this.begin) this.error.requestId = this.begin.id;
-          this.listeners.error?.(this.error);
+          raised = this.error = errorFromClose(code, text);
+          if (this.begin) raised.requestId = this.begin.id;
         }
         this.end();
-        this.emitClose(code, text);
-        settle(() => reject(this.error ?? errorFromClose(code, text)));
+        settle(() =>
+          reject(this.error ? this.surfaced() : errorFromClose(code, text)),
+        );
+        try {
+          if (raised) this.listeners.error?.(raised);
+        } finally {
+          this.emitClose(connection);
+        }
       };
 
       socket.onerror = (event: ErrorEvent) => {
@@ -349,7 +396,7 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
         );
         this.error = error;
         this.end();
-        settle(() => reject(error));
+        settle(() => reject(this.surfaced()));
       };
     });
   }
@@ -391,22 +438,24 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
       }
       case "Termination":
         this.termination = frame as unknown as TtsTerminationEvent;
-        this.listeners.termination?.(this.termination);
         this.end();
+        this.listeners.termination?.(this.termination);
         return;
       default:
         return; // a frame type this SDK does not know
     }
   }
 
-  private fail(error: TextToSpeechError) {
-    if (!this.error) {
-      if (!error.requestId && this.begin) error.requestId = this.begin.id;
-      this.error = error;
-      this.listeners.error?.(error);
-    }
-    this.enqueue({ kind: "error", error: this.error });
+  /**
+   * Ends the connection with `error`; returns it when it is the session's
+   * first error, for the caller to pass to the error listener.
+   */
+  private fail(error: TextToSpeechError): TextToSpeechError | undefined {
+    if (this.error) return undefined; // the connection already ended with it
+    if (!error.requestId && this.begin) error.requestId = this.begin.id;
+    this.error = error;
     this.end();
+    return error;
   }
 
   /** Queues an item for `audio()`; nothing is queued while an `audio` listener receives the frames. */
@@ -415,17 +464,22 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
     this.queue.push(item);
   }
 
-  private emitClose(code: number, reason: string) {
-    if (this.closeEmitted) return;
-    this.closeEmitted = true;
+  /** Reports a connection's close to the close listener, once. */
+  private emitClose(connection: PullQueue) {
+    if (!connection.hadSocket || connection.closeEmitted) return;
+    connection.closeEmitted = true;
+    const [code, reason] = connection.close();
     this.listeners.close?.(code, reason);
   }
 
-  /** Marks the connection over: waiters wake up, sends refuse. */
+  /** Marks the connection over with the session's error: readers drain, sends refuse. */
   private end() {
-    if (this.stopped) return;
-    this.stopped = true;
-    this.enqueue({ kind: "closed" });
+    const connection = this.queue;
+    if (connection.ended) return;
+    connection.ended = true;
+    connection.error = this.error;
+    connection.terminated = this.termination !== undefined;
+    this.enqueue({ kind: "closed", error: this.error });
     this.terminationResolve?.();
     this.terminationResolve = undefined;
   }
@@ -445,9 +499,14 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
     }
   }
 
+  /** Marks `error` observed when it is the session's own error, and returns it. */
+  private surface(error: TextToSpeechError): TextToSpeechError {
+    if (error === this.error) this.errorRaised = true;
+    return error;
+  }
+
   private surfaced(): TextToSpeechError {
-    this.errorRaised = true;
-    return this.error as TextToSpeechError;
+    return this.surface(this.error as TextToSpeechError);
   }
 
   private send(frame: Record<string, unknown>) {
@@ -525,7 +584,7 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
   cancel() {
     const cancelId = this.nextFlushId++;
     this.cancelIds.push(cancelId);
-    this.cancelledBefore = Math.max(this.cancelledBefore, cancelId);
+    this.queue.cancelledBefore = Math.max(this.queue.cancelledBefore, cancelId);
     this.send({ type: "Cancel" });
   }
 
@@ -559,21 +618,25 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
    * @throws TextToSpeechError if the session fails before the request completes.
    */
   async *audio(flushId?: number): AsyncGenerator<Uint8Array, void, undefined> {
+    if (!this.queue.hadSocket) {
+      throw new Error("The session is not open: call connect() first");
+    }
     this.checkPullable();
     if (flushId === undefined) flushId = this.nextFlushId;
     else if (flushId > this.nextFlushId) {
       throw new RangeError(`flush_id ${flushId} has not been flushed yet`);
     }
+    // The connection this request was sent on; a reconnect leaves it to
+    // drain to its own `closed` item.
     const connection = this.queue;
     this.reading = true;
     try {
       for (;;) {
-        if (this.queue !== connection) return; // the session reconnected
         // A Cancel drops every request before it and the text being written,
         // whose id it takes.
-        if (flushId <= this.cancelledBefore) return;
-        if (this.stopped && connection.size === 0) {
-          if (this.error) throw this.surfaced();
+        if (flushId <= connection.cancelledBefore) return;
+        if (connection.ended && connection.size === 0) {
+          if (connection.error) throw this.surface(connection.error);
           return;
         }
         const item = await connection.next();
@@ -587,10 +650,8 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
           case "cancelled":
             if (item.cancelId >= flushId) return;
             break;
-          case "error":
-            throw this.surfaced();
           case "closed":
-            if (this.error) throw this.surfaced();
+            if (item.error) throw this.surface(item.error);
             return;
         }
       }
@@ -642,8 +703,12 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
     }
     this.end();
     this.releaseSocket();
-    if (socket) this.emitClose(1000, "Closed by the client");
-    if (this.error && !this.errorRaised) throw this.surfaced();
-    return this.termination;
+    const termination = this.termination;
+    const unobserved =
+      this.error && !this.errorRaised ? this.surfaced() : undefined;
+    // Reported last: the close listener may connect again.
+    this.emitClose(this.queue);
+    if (unobserved) throw unobserved;
+    return termination;
   }
 }

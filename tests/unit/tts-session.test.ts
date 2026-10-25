@@ -2,7 +2,12 @@ jest.mock("ws", () => require("./mocks/ws"));
 
 import WS from "jest-websocket-mock";
 import fetchMock from "jest-fetch-mock";
-import { AssemblyAI, TextToSpeechError, TextToSpeechSession } from "../../src";
+import {
+  AssemblyAI,
+  TextToSpeechError,
+  TextToSpeechSession,
+  TtsBeginEvent,
+} from "../../src";
 import { createClient } from "./utils";
 
 fetchMock.enableMocks();
@@ -26,6 +31,15 @@ const terminationMessage = {
   audio_duration_seconds: 1.5,
 };
 
+type ServerSocket = {
+  send: (data: string) => void;
+  close: (options?: {
+    code: number;
+    reason: string;
+    wasClean: boolean;
+  }) => void;
+};
+
 /**
  * Plays the API: Generate/Flush answer with the text's bytes as one Audio
  * frame and a FlushDone, Cancel with Cancelled, Terminate with Termination
@@ -35,10 +49,14 @@ class FakeApi {
   text = "";
   flushId = 0;
   answerFlush = true;
+  closeOnTerminate = true;
   sent: Record<string, unknown>[] = [];
+  /** The server side of each connection, in order. */
+  sockets: ServerSocket[] = [];
 
   constructor(public server: WS) {
     server.on("connection", (socket) => {
+      this.sockets.push(socket);
       this.text = ""; // a new connection is a new session: ids start at 0
       this.flushId = 0;
       socket.on("message", (raw) => {
@@ -49,17 +67,7 @@ class FakeApi {
     });
   }
 
-  private handle(
-    frame: Record<string, unknown>,
-    socket: {
-      send: (data: string) => void;
-      close: (options?: {
-        code: number;
-        reason: string;
-        wasClean: boolean;
-      }) => void;
-    },
-  ) {
+  private handle(frame: Record<string, unknown>, socket: ServerSocket) {
     switch (frame.type) {
       case "Generate":
         this.text += frame.text as string;
@@ -93,7 +101,9 @@ class FakeApi {
         return;
       case "Terminate":
         socket.send(JSON.stringify(terminationMessage));
-        socket.close({ code: 1000, reason: "Session ended", wasClean: true });
+        if (this.closeOnTerminate) {
+          socket.close({ code: 1000, reason: "Session ended", wasClean: true });
+        }
         return;
     }
   }
@@ -124,6 +134,37 @@ async function collect(iterable: AsyncIterable<Uint8Array>): Promise<Buffer> {
 }
 
 const tick = () => new Promise((resolve) => setTimeout(resolve, 20));
+
+/** The server side of connection `n` (1-based), once the client opened it. */
+async function connection(n: number): Promise<ServerSocket> {
+  for (let waited = 0; api.sockets.length < n; waited += 5) {
+    if (waited > 500) throw new Error(`connection ${n} was never opened`);
+    await new Promise((resolve) => setTimeout(resolve, 5));
+  }
+  return api.sockets[n - 1];
+}
+
+/** What the promise settled with, or "pending" if it did not settle in time. */
+function outcome<T>(promise: Promise<T>, ms = 300) {
+  return Promise.race([
+    promise.catch((error: unknown) => error),
+    new Promise<"pending">((resolve) =>
+      setTimeout(() => resolve("pending"), ms),
+    ),
+  ]);
+}
+
+function errorFrame(code: number, errorType: string, retryable: boolean) {
+  return JSON.stringify({
+    type: "Error",
+    error_code: code,
+    error: `Failed: ${errorType}`,
+    error_type: errorType,
+    retryable,
+    param: null,
+    retry_after_seconds: null,
+  });
+}
 
 describe("tts session", () => {
   beforeEach(() => {
@@ -461,7 +502,238 @@ describe("tts session", () => {
     session.on("close", (code, reason) => closes.push([code, reason]));
     await connect(session);
     await session.close();
+    expect(closes).toEqual([[1000, "Session ended"]]);
+  });
+
+  it.each([
+    { name: "waits for audio", chunkFirst: false },
+    { name: "is between chunks", chunkFirst: true },
+  ])(
+    "a close listener that connects again does not hide the cut from a reader that $name",
+    async ({ chunkFirst }) => {
+      api.answerFlush = false;
+      const session = client.tts.session({ websocketBaseUrl });
+      const closes: number[] = [];
+      let reconnecting: Promise<TtsBeginEvent> | undefined;
+      session.on("close", (code) => {
+        closes.push(code);
+        if (session.error?.retryable) reconnecting = session.connect();
+      });
+      await connect(session);
+      const flushId = session.flush();
+      const stream = session.audio(flushId);
+      let reading: Promise<unknown> | undefined;
+      if (chunkFirst) {
+        // The reader stays suspended at this chunk through the cut, the
+        // reconnect and a barge-in on the new connection.
+        api.sockets[0].send(
+          JSON.stringify({ type: "Audio", audio: "QQ==", flush_id: flushId }),
+        );
+        expect((await stream.next()).done).toBe(false);
+      } else {
+        reading = outcome(stream.next());
+        await tick();
+      }
+      api.sockets[0].close({ code: 3005, reason: "", wasClean: true });
+      (await connection(2)).send(JSON.stringify(beginMessage));
+      await expect(reconnecting).resolves.toMatchObject({ id: "sess-1" });
+      session.cancel();
+
+      const error = await (reading ?? outcome(stream.next()));
+      expect(error).toBeInstanceOf(TextToSpeechError);
+      expect(error).toMatchObject({ closeCode: 3005, retryable: true });
+      expect(closes).toEqual([3005]);
+
+      api.answerFlush = true;
+      expect((await collect(session.speak("Again."))).toString()).toBe(
+        "Again.",
+      );
+      // Reading the old connection's error does not count as observing a
+      // failure of the new one.
+      api.sockets[1].send(errorFrame(3010, "input_rate_exceeded", false));
+      await expect(session.close()).rejects.toMatchObject({
+        errorCode: "input_rate_exceeded",
+      });
+      expect(closes).toEqual([3005, 3010]);
+    },
+  );
+
+  it("close() rejects with an unobserved error although the close listener connects again", async () => {
+    const session = client.tts.session({ websocketBaseUrl });
+    let reconnecting: Promise<TtsBeginEvent> | undefined;
+    session.on("audio", () => undefined); // push mode: nothing reads the error
+    session.on("close", () => {
+      reconnecting ??= session.connect();
+    });
+    await connect(session);
+    api.sockets[0].send(errorFrame(3005, "at_capacity", true));
+    await expect(session.close()).rejects.toMatchObject({
+      errorCode: "at_capacity",
+    });
+
+    (await connection(2)).send(JSON.stringify(beginMessage));
+    await expect(reconnecting).resolves.toMatchObject({ id: "sess-1" });
+    await expect(session.close()).resolves.toEqual(terminationMessage);
+  });
+
+  it.each([
+    {
+      name: "an Error frame and its close",
+      end: (socket: ServerSocket) => {
+        socket.send(errorFrame(1012, "service_restart", true));
+        socket.close({ code: 1012, reason: "", wasClean: true });
+      },
+    },
+    {
+      name: "a dropped connection",
+      end: (socket: ServerSocket) =>
+        socket.close({ code: 1006, reason: "", wasClean: false }),
+    },
+  ])("the error listener can connect again after $name", async ({ end }) => {
+    const session = client.tts.session({ websocketBaseUrl });
+    const errors: TextToSpeechError[] = [];
+    let reconnecting: Promise<TtsBeginEvent> | undefined;
+    session.on("error", (error) => {
+      errors.push(error);
+      reconnecting = session.connect();
+    });
+    await connect(session);
+    end(api.sockets[0]);
+    await tick();
+    expect(errors).toHaveLength(1);
+    expect(errors[0].retryable).toBe(true);
+
+    (await connection(2)).send(JSON.stringify(beginMessage));
+    await expect(reconnecting).resolves.toMatchObject({ id: "sess-1" });
+    expect((await collect(session.speak("Back."))).toString()).toBe("Back.");
+    await session.close();
+  });
+
+  it("a throwing error listener does not leave a reader waiting", async () => {
+    api.answerFlush = false;
+    const session = client.tts.session({ websocketBaseUrl });
+    session.on("error", () => {
+      throw new Error("listener failed");
+    });
+    await connect(session);
+    const flushId = session.flush();
+    const reading = outcome(collect(session.audio(flushId)));
+    await tick();
+    expect(() =>
+      api.sockets[0].send(errorFrame(3005, "at_capacity", true)),
+    ).toThrow("listener failed");
+    expect(await reading).toMatchObject({ errorCode: "at_capacity" });
+    await session.close();
+  });
+
+  it.each([
+    {
+      name: "an Error frame",
+      refuse: (socket: ServerSocket) => {
+        socket.send(errorFrame(3012, "voice_not_found", false));
+        socket.close({ code: 3012, reason: "", wasClean: true });
+      },
+      closeCode: 3012,
+    },
+    {
+      name: "a close",
+      refuse: (socket: ServerSocket) =>
+        socket.close({ code: 1008, reason: "Unauthorized", wasClean: true }),
+      closeCode: 1008,
+    },
+  ])(
+    "close() after connect() rejected with $name does not throw it again",
+    async ({ refuse, closeCode }) => {
+      const session = client.tts.session({ websocketBaseUrl });
+      const connecting = session.connect();
+      refuse(await connection(1));
+      let caught: unknown;
+      let closing: Promise<unknown> | undefined;
+      try {
+        await connecting;
+      } catch (error) {
+        caught = error;
+      } finally {
+        closing = session.close();
+      }
+      expect(caught).toMatchObject({ closeCode });
+      await expect(closing).resolves.toBeUndefined();
+    },
+  );
+
+  it("close() reports the close of an Error frame whose close is still in flight", async () => {
+    api.answerFlush = false;
+    const session = client.tts.session({ websocketBaseUrl });
+    const closes: [number, string][] = [];
+    session.on("close", (code, reason) => closes.push([code, reason]));
+    await connect(session);
+    const flushId = session.flush();
+    api.sockets[0].send(errorFrame(3005, "at_capacity", true));
+    api.sockets[0].close({ code: 3005, reason: "", wasClean: true });
+    await expect(collect(session.audio(flushId))).rejects.toMatchObject({
+      closeCode: 3005,
+    });
+    await session.close();
+    expect(session.error?.closeCode).toBe(3005);
+    expect(closes).toEqual([[3005, "See Error message for details"]]);
+  });
+
+  it("close() after Termination reports the session's end", async () => {
+    api.closeOnTerminate = false; // the server's close is still in flight
+    const session = client.tts.session({ websocketBaseUrl });
+    const closes: [number, string][] = [];
+    session.on("close", (code, reason) => closes.push([code, reason]));
+    await connect(session);
+    await session.close();
+    expect(closes).toEqual([[1000, "Session ended"]]);
+  });
+
+  it("connect() reports the previous connection's close before opening a new one", async () => {
+    api.answerFlush = false;
+    const session = client.tts.session({ websocketBaseUrl });
+    const events: string[] = [];
+    session.on("close", (code) => events.push(`close ${code}`));
+    session.on("begin", () => events.push("begin"));
+    await connect(session);
+    const flushId = session.flush();
+    api.sockets[0].send(errorFrame(3005, "at_capacity", true)); // no close yet
+    await expect(collect(session.audio(flushId))).rejects.toMatchObject({
+      closeCode: 3005,
+    });
+    const reconnecting = session.connect();
+    (await connection(2)).send(JSON.stringify(beginMessage));
+    await reconnecting;
+    expect(events).toEqual(["begin", "close 3005", "begin"]);
+    await session.close();
+  });
+
+  it("a connect timeout ends a reader waiting for the session", async () => {
+    const session = client.tts.session({
+      websocketBaseUrl,
+      connectTimeout: 50,
+    });
+    const closes: [number, string][] = [];
+    session.on("close", (code, reason) => closes.push([code, reason]));
+    const connecting = outcome(session.connect());
+    await connection(1); // no Begin follows
+    const reading = outcome(collect(session.audio()));
+    const error = await reading;
+    expect(error).toBeInstanceOf(TextToSpeechError);
+    expect(error).toMatchObject({
+      retryable: true,
+      message: expect.stringMatching(/did not begin within 50ms/),
+    });
+    expect(await connecting).toBe(error);
+    expect(closes).toEqual([[1000, "Closed by the client"]]);
+    await expect(outcome(session.close())).resolves.toBeUndefined();
     expect(closes).toHaveLength(1);
-    expect(closes[0][0]).toBe(1000);
+  });
+
+  it("audio() before connect() says what to do", async () => {
+    const session = client.tts.session({ websocketBaseUrl });
+    const first = outcome((async () => session.audio().next())());
+    expect(await first).toMatchObject({
+      message: expect.stringMatching(/call connect\(\) first/),
+    });
   });
 });
