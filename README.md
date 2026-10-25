@@ -939,6 +939,16 @@ await session.connect();
 
 Mint a new token for every connection, reconnects included, and for every HTTP request (a token works as the `apiKey` of a client made for that request), and keep `expires_in_seconds` short. `createTemporaryToken()` mints on the token host of the client's zone: `https://token.eu.assemblyai.com` when `ttsBaseUrl` is `https://tts.eu.assemblyai.com`, `https://token.us.assemblyai.com` for `https://tts.us.assemblyai.com` (the default), and `https://token.assemblyai.com` for any other host; pass `{ tokenBaseUrl }` as its second argument to choose the host. A token works in every zone. A refusal throws a `TextToSpeechError` whose message gives the token service's reason, such as `Invalid API key` or `expires_in_seconds: Input should be less than or equal to 600`.
 
+### Keep the time to first audio low
+
+The wait for first audio is mostly synthesis on our servers, plus whatever your client does before the text reaches them. These habits take the client's part away from the moment a user is waiting:
+
+- **Connect the session before the reply is ready**, when the call starts or the page loads, and keep it for the whole conversation instead of opening one per turn. A turn on an open session skips the TCP, TLS and WebSocket handshakes and the API's checks before `Begin`: in the API's region that saved about 25 ms per turn, and about 75 ms on the first turn with a voice the API had not used recently, because the API loads the voice when the session opens. Farther away, each new session also costs three network round trips. Between turns call `keepAlive()` at least once per `inactivityTimeout`, and before `session.begin.expires_at` (at most an hour after `Begin`) open the next session in a pause and move the following turns to it.
+- **In a browser, mint the next token before the page needs it**, for example when the pointer enters the text box after the idle session closed, so that opening the session does not wait for your server and the token service (about 32 ms per new session in our tests, before the round trip to your server). Mint it only when a session will have to be opened, use it for one connection, and drop it well before it expires.
+- **On Node, keep HTTP connections between replies** if your voice agent calls `stream()` or `synthesize()` more than 4 seconds apart. Node's built-in `fetch` closes an idle connection after about 4 seconds when the server sends no `Keep-Alive` hint, and the API sends none, so a later reply opens a new TCP and TLS connection. Keep connections for 2 minutes with `setGlobalDispatcher(new Agent({ keepAliveTimeout: 120_000 }))` from the `undici` package, which applies to every `fetch` of the process. In the API's region the difference is too small to measure; farther away each new connection costs two network round trips.
+
+Node needs no shared TLS context for sessions: after its first TLS connection it keeps the parsed root certificates, so later connections set up their TLS context in about a tenth of a millisecond.
+
 ## Contributing
 
 If you want to contribute to the JavaScript SDK, follow the guidelines in [CONTRIBUTING.md](./CONTRIBUTING.md).

@@ -1296,6 +1296,15 @@ describe("tts session", () => {
       frame: { type: "Audio", audio: "not base64!", flush_id: 0 },
     },
     {
+      // Node's Buffer decodes both without an error.
+      name: "audio in the URL-safe alphabet",
+      frame: { type: "Audio", audio: "QUJ-QUJD", flush_id: 0 },
+    },
+    {
+      name: "audio with a character past U+00FF",
+      frame: { type: "Audio", audio: "QUJ\u0144", flush_id: 0 },
+    },
+    {
       name: "an Audio frame without audio",
       frame: { type: "Audio", flush_id: 0 },
     },
@@ -1347,6 +1356,41 @@ describe("tts session", () => {
     (await connection(2)).send(JSON.stringify(beginMessage));
     await expect(reconnecting).resolves.toMatchObject({ id: "sess-1" });
     expect((await collect(session.speak("Back."))).toString()).toBe("Back.");
+    await session.close();
+  });
+
+  it("reads frames sent as binary messages, UTF-8 JSON", async () => {
+    api.answerFlush = false;
+    const session = client.tts.session({ websocketBaseUrl });
+    await connect(session);
+    const flushId = session.flush();
+    const reading = collect(session.audio(flushId));
+    await tick();
+    const binary = (frame: string) => {
+      const bytes = new TextEncoder().encode(frame);
+      return bytes.buffer.slice(
+        bytes.byteOffset,
+        bytes.byteOffset + bytes.byteLength,
+      );
+    };
+    for (const text of ["Grüße, ", "señor."]) {
+      api.sockets[0].send(binary(audioFrame(text, flushId)) as never);
+    }
+    api.sockets[0].send(
+      binary(JSON.stringify({ type: "FlushDone", flush_id: flushId })) as never,
+    );
+    expect((await reading).toString()).toBe("Grüße, señor.");
+    await session.close();
+  });
+
+  it("audio chunks own their memory", async () => {
+    const session = client.tts.session({ websocketBaseUrl });
+    await connect(session);
+    for await (const chunk of session.speak("Hello there.")) {
+      expect(chunk.constructor).toBe(Uint8Array);
+      expect(chunk.byteOffset).toBe(0);
+      expect(chunk.buffer.byteLength).toBe(chunk.byteLength);
+    }
     await session.close();
   });
 

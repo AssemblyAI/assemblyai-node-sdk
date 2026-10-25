@@ -17,6 +17,7 @@ import {
   TtsWordBoundariesEvent,
 } from "../..";
 import { RETRYABLE_STATUSES, TextToSpeechError } from "../../utils/errors/tts";
+import { base64ToBytes } from "../../utils/base64";
 
 const DEFAULT_WEBSOCKET_BASE_URL = "wss://tts.us.assemblyai.com/v1/ws";
 const DEFAULT_CONNECT_TIMEOUT_MS = 10_000;
@@ -149,14 +150,6 @@ function codePointLength(text: string): number {
   return Array.from(text).length;
 }
 
-/** @throws DOMException for text that is not base64, which makes its frame unreadable. */
-function base64ToBytes(data: string): Uint8Array {
-  const binary = atob(data);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  return bytes;
-}
-
 /** A server frame after `Begin`, read into the event its listener receives. */
 type SessionFrame =
   | TtsAudioEvent
@@ -165,13 +158,17 @@ type SessionFrame =
   | TtsCancelledEvent
   | TtsTerminationEvent;
 
+/** Decodes the binary messages; made at the first one. */
+let utf8: TextDecoder | undefined;
+
 /**
  * The message, text or UTF-8 bytes, as a JSON object; `undefined` for
  * anything else, which carries nothing this SDK reads.
  */
 function parseFrame(data: unknown): Record<string, unknown> | undefined {
   if (typeof data !== "string" && !(data instanceof ArrayBuffer)) return;
-  const text = typeof data === "string" ? data : new TextDecoder().decode(data);
+  const text =
+    typeof data === "string" ? data : (utf8 ??= new TextDecoder()).decode(data);
   let frame: unknown;
   try {
     frame = JSON.parse(text);
