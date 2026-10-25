@@ -169,3 +169,5 @@ export {
   rollUpTurnChannel,
   float32ToPcm16,
 };
+
+export type { TextToSpeechErrorFields } from "../utils/errors/tts";

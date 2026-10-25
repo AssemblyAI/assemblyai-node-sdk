@@ -1,8 +1,10 @@
 import type {
   LiteralUnion,
+  TextToSpeechErrorFields,
   Transcript,
   TranscriptParams,
 } from "../../src/exports";
+import { TextToSpeechError } from "../../src/exports";
 
 // #105: every type a public field is declared with must be reachable from the
 // package root. `LiteralUnion` sits behind `language_code` and
@@ -19,5 +21,25 @@ describe("package root exports", () => {
     expect(code).toBe("en_us");
     expect(typeof languageOf).toBe("function");
     expect(typeof requested).toBe("function");
+  });
+
+  it("exposes the fields type of the TextToSpeechError constructor", () => {
+    // `TextToSpeechErrorFields` is the constructor's second argument and the
+    // class implements it, so a downstream declaration that names the
+    // constructor's parameters needs it from the root.
+    const fields: TextToSpeechErrorFields = {
+      status: 429,
+      errorCode: "rate_limited",
+      retryable: true,
+      retryAfter: 2,
+    };
+    const args: ConstructorParameters<typeof TextToSpeechError> = [
+      "Too many requests",
+      fields,
+    ];
+    const error = new TextToSpeechError(...args);
+    const carried: TextToSpeechErrorFields = error;
+    expect(carried.errorCode).toBe("rate_limited");
+    expect(carried.retryAfter).toBe(2);
   });
 });
