@@ -8,6 +8,7 @@ import {
   TextToSpeechSession,
   TtsBeginEvent,
 } from "../../src";
+import * as websocketPolyfill from "../../src/polyfills/websocket/default";
 import { createClient, defaultApiKey } from "./utils";
 
 fetchMock.enableMocks();
@@ -1109,5 +1110,189 @@ describe("tts session", () => {
     expect(queue.size).toBe(0);
     await session.close();
     expect(queue.size).toBe(0);
+  });
+
+  describe("connect() failures before the socket opens", () => {
+    type FakeSocket = {
+      OPEN: number;
+      readyState: number;
+      binaryType: string;
+      onopen: (() => void) | null;
+      onerror: ((event: unknown) => void) | null;
+      onclose: ((event: unknown) => void) | null;
+      onmessage: ((event: unknown) => void) | null;
+      send: jest.Mock;
+      close: jest.Mock;
+    };
+
+    /** Hands the session a socket the test drives, as the runtime would. */
+    function fakeSocket(): FakeSocket {
+      const socket: FakeSocket = {
+        OPEN: 1,
+        readyState: 0,
+        binaryType: "blob",
+        onopen: null,
+        onerror: null,
+        onclose: null,
+        onmessage: null,
+        send: jest.fn(),
+        close: jest.fn(),
+      };
+      jest
+        .spyOn(websocketPolyfill, "factory")
+        .mockReturnValueOnce(
+          socket as unknown as ReturnType<typeof websocketPolyfill.factory>,
+        );
+      return socket;
+    }
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+      jest.useRealTimers();
+    });
+
+    it.each([
+      [404, false],
+      [400, false],
+      [401, false],
+      [403, false],
+      [408, true],
+      [429, true],
+      [502, true],
+      [503, true],
+    ])(
+      "an upgrade answered %i carries the status and retryable %s",
+      async (status, retryable) => {
+        // Given a session whose upgrade the server answers with an HTTP status
+        const socket = fakeSocket();
+        const session = client.tts.session({ websocketBaseUrl });
+        const connecting = session.connect();
+
+        // When ws reports the refused upgrade
+        const message = `Unexpected server response: ${status}`;
+        socket.onerror?.({ error: new Error(message), message });
+
+        // Then connect() rejects with the status, retryable only when transient
+        const error = await connecting.catch((e: unknown) => e);
+        expect(error).toBeInstanceOf(TextToSpeechError);
+        expect(error).toMatchObject({
+          message: `WebSocket handshake failed: ${message}`,
+          status,
+          retryable,
+        });
+        expect(session.error).toBe(error);
+      },
+    );
+
+    it("a handshake error event without a message says what may have happened", async () => {
+      // Given a browser, whose error event has neither error nor message
+      const socket = fakeSocket();
+      const session = client.tts.session({ websocketBaseUrl });
+      const connecting = session.connect();
+
+      // When the socket fails before it opens
+      socket.onerror?.({ type: "error" });
+
+      // Then the error explains it and stays retryable, with no status
+      const error = await connecting.catch((e: unknown) => e);
+      expect(error).toMatchObject({
+        message:
+          "WebSocket handshake failed: network error or the server refused the upgrade",
+        status: undefined,
+        retryable: true,
+      });
+    });
+
+    it("a session needs an API key or a temporary token", () => {
+      expect(() => new TextToSpeechSession({ websocketBaseUrl })).toThrow(
+        "API key or temporary token is required.",
+      );
+      expect(
+        () =>
+          new TextToSpeechSession({ websocketBaseUrl, apiKey: "", token: "" }),
+      ).toThrow("API key or temporary token is required.");
+      expect(
+        () => new TextToSpeechSession({ websocketBaseUrl, token: "tmp-1" }),
+      ).not.toThrow();
+      // The client fills in its own key.
+      expect(() => client.tts.session({ websocketBaseUrl })).not.toThrow();
+    });
+
+    it("a socket the runtime refuses to create rejects connect() and leaves no timer", async () => {
+      // Given a runtime whose WebSocket constructor throws, as a browser's
+      // does for options it cannot take
+      jest.useFakeTimers({ doNotFake: ["nextTick", "queueMicrotask"] });
+      jest.spyOn(websocketPolyfill, "factory").mockImplementationOnce(() => {
+        throw new SyntaxError("An invalid or illegal string was specified");
+      });
+      const session = client.tts.session({
+        websocketBaseUrl,
+        connectTimeout: 3000,
+      });
+
+      // When the session connects
+      const error = await session.connect().catch((e: unknown) => e);
+
+      // Then connect() rejects with a TextToSpeechError and no timer is left
+      expect(error).toBeInstanceOf(TextToSpeechError);
+      expect(error).toMatchObject({
+        message:
+          "Could not open the WebSocket: An invalid or illegal string was specified",
+        retryable: false,
+      });
+      expect(jest.getTimerCount()).toBe(0);
+      jest.useRealTimers();
+
+      // And the session sends nothing, closes quietly and can connect again
+      expect(() => session.keepAlive()).toThrow(error as TextToSpeechError);
+      await expect(session.close()).resolves.toBeUndefined();
+      await connect(session);
+      expect((await collect(session.speak("Again."))).toString()).toBe(
+        "Again.",
+      );
+      await session.close();
+    });
+
+    it.each(["https://localhost:1234/v1/ws", "not a url"])(
+      "connect() with base URL %p rejects and leaves the previous connection as it was",
+      async (badUrl) => {
+        // Given a session whose last connection failed and whose close is
+        // still to be reported
+        api.answerFlush = false;
+        const params = { websocketBaseUrl, apiKey: defaultApiKey };
+        const session = new TextToSpeechSession(params);
+        const events: string[] = [];
+        session.on("close", (code) => events.push(`close ${code}`));
+        await connect(session);
+        const flushId = session.flush();
+        api.sockets[0].send(errorFrame(3005, "at_capacity", true)); // no close yet
+        await expect(collect(session.audio(flushId))).rejects.toMatchObject({
+          closeCode: 3005,
+        });
+        const failed = session.error;
+
+        // When it connects to a base URL that is not ws:// or wss://
+        params.websocketBaseUrl = badUrl;
+        let connecting: Promise<TtsBeginEvent> | undefined;
+        expect(() => {
+          connecting = session.connect();
+        }).not.toThrow();
+
+        // Then connect() rejects and nothing about the last connection changed
+        await expect(connecting).rejects.toThrow();
+        expect(session.error).toBe(failed);
+        expect(session.begin?.id).toBe("sess-1");
+        expect(events).toEqual([]);
+        expect(api.sockets).toHaveLength(1);
+
+        // And a valid URL connects again, reporting the last close first
+        params.websocketBaseUrl = websocketBaseUrl;
+        const reconnecting = session.connect();
+        (await connection(2)).send(JSON.stringify(beginMessage));
+        await reconnecting;
+        expect(events).toEqual(["close 3005"]);
+        await session.close();
+      },
+    );
   });
 });

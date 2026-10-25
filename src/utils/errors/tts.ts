@@ -1,6 +1,9 @@
 /** The fields a Text-to-Speech failure carries besides its message. */
 export type TextToSpeechErrorFields = {
-  /** The HTTP status; absent for a session failure, which has no HTTP status. */
+  /**
+   * The HTTP status. On a session, only a refused WebSocket upgrade has one,
+   * and only where the runtime reports it (Node does, a browser does not).
+   */
   status?: number;
   /** The API's stable code: `invalid_parameter`, `voice_not_found`, `rate_limited`, ... */
   errorCode?: string;
@@ -19,6 +22,11 @@ export type TextToSpeechErrorFields = {
   /** The whole error envelope or frame the API sent. */
   body?: Record<string, unknown>;
 };
+
+/** HTTP statuses at which the same request, or a new session, can succeed later. */
+export const RETRYABLE_STATUSES: ReadonlySet<number> = new Set([
+  408, 429, 500, 502, 503, 504,
+]);
 
 /**
  * Error thrown when a Text-to-Speech request or session fails.

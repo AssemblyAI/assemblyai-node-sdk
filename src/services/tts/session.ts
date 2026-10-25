@@ -16,7 +16,7 @@ import {
   TtsTerminationEvent,
   TtsWordBoundariesEvent,
 } from "../..";
-import { TextToSpeechError } from "../../utils/errors/tts";
+import { RETRYABLE_STATUSES, TextToSpeechError } from "../../utils/errors/tts";
 
 const DEFAULT_WEBSOCKET_BASE_URL = "wss://tts.us.assemblyai.com/v1/ws";
 const DEFAULT_CONNECT_TIMEOUT_MS = 10_000;
@@ -27,6 +27,8 @@ const MAX_GENERATE_CHARS = 2000;
 const PULL_QUEUE_FRAMES = 2000;
 /** Closes after which a new session can succeed. */
 const RETRYABLE_CLOSE_CODES = new Set([1006, 1011, 1012, 3005, 3008, 3009]);
+/** How the `ws` package reports an upgrade answered with an HTTP status. */
+const UPGRADE_STATUS = /Unexpected server response: (\d{3})/;
 
 type PullItem =
   | { kind: "audio"; flushId: number; bytes: Uint8Array }
@@ -213,6 +215,24 @@ function errorFromFrame(frame: TtsErrorMessage): TextToSpeechError {
   });
 }
 
+/**
+ * The error of a WebSocket that failed before it opened. Node's `ws` names
+ * the HTTP status of a refused upgrade in its message; a browser's error
+ * event carries no message and no status.
+ */
+function errorFromHandshake(event: ErrorEvent): TextToSpeechError {
+  const message =
+    (event.error as Error | undefined)?.message ||
+    event.message ||
+    "network error or the server refused the upgrade";
+  const match = UPGRADE_STATUS.exec(message);
+  const status = match ? Number(match[1]) : undefined;
+  return new TextToSpeechError(`WebSocket handshake failed: ${message}`, {
+    status,
+    retryable: status === undefined || RETRYABLE_STATUSES.has(status),
+  });
+}
+
 function errorFromClose(code: number, reason: string): TextToSpeechError {
   return new TextToSpeechError(
     `Connection closed (code=${code})${reason ? `: ${reason}` : ""}`,
@@ -278,7 +298,11 @@ export class TextToSpeechSession {
   /** The temporary token of the next connection; `connect({ token })` replaces it. */
   private token?: string;
 
+  /** @throws Error if neither `apiKey` nor `token` is given. */
   constructor(private readonly params: TextToSpeechSessionParams) {
+    if (!params.token && !params.apiKey) {
+      throw new Error("API key or temporary token is required.");
+    }
     this.token = params.token;
   }
 
@@ -306,7 +330,8 @@ export class TextToSpeechSession {
     (this.listeners as Record<string, unknown>)[event] = listener;
   }
 
-  private connectionUrl(): URL {
+  /** @throws Error if `websocketBaseUrl` is not a ws:// or wss:// URL. */
+  private baseUrl(): URL {
     const url = new URL(
       this.params.websocketBaseUrl ?? DEFAULT_WEBSOCKET_BASE_URL,
     );
@@ -315,6 +340,11 @@ export class TextToSpeechSession {
         "The WebSocket base URL must use the wss:// or ws:// protocol",
       );
     }
+    return url;
+  }
+
+  /** `url` with the session's parameters and token in its query. */
+  private connectionUrl(url: URL): URL {
     const p = this.params;
     const set = (name: string, value: unknown) => {
       if (value !== undefined && value !== null) {
@@ -357,9 +387,19 @@ export class TextToSpeechSession {
    * token for this connection and the next ones, and is sent instead of the
    * API key.
    * @throws TextToSpeechError if the API refuses the session, the handshake
-   * fails, or `Begin` does not arrive in time.
+   * fails, the socket cannot be opened, or `Begin` does not arrive in time.
+   * `status` is set when the API or a proxy answered the upgrade with an
+   * HTTP status the runtime reports.
+   * @throws Error, before anything else changes, if `websocketBaseUrl` is
+   * not a ws:// or wss:// URL.
    */
   connect(options: { token?: string } = {}): Promise<TtsBeginEvent> {
+    let base: URL;
+    try {
+      base = this.baseUrl();
+    } catch (error) {
+      return Promise.reject(error);
+    }
     if (this.stopped) {
       // The previous connection's close, when its socket was released before
       // the close event arrived. The close listener may connect again.
@@ -370,10 +410,11 @@ export class TextToSpeechSession {
       return Promise.reject(new Error("The session is already connected"));
     }
     if (options.token) this.token = options.token;
+    const token = this.token;
     this.releaseSocket();
     this.reset();
     const connection = this.queue;
-    const url = this.connectionUrl();
+    const url = this.connectionUrl(base);
     const timeoutMs = this.params.connectTimeout ?? DEFAULT_CONNECT_TIMEOUT_MS;
 
     return new Promise<TtsBeginEvent>((resolve, reject) => {
@@ -420,21 +461,32 @@ export class TextToSpeechSession {
         this.emitClose(connection);
       };
 
-      if (this.token) {
-        // The token alone: an Authorization header would override it.
-        this.socket = polyfillWebSocketFactory(url.toString());
-      } else {
-        if (conditions.browser) {
-          console.warn(
-            `API key authentication is not supported for the TextToSpeechSession in browser environments. Use temporary token authentication instead.
+      if (!token && conditions.browser) {
+        console.warn(
+          `API key authentication is not supported for the TextToSpeechSession in browser environments. Use temporary token authentication instead.
 Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/compat.md#browser-compatibility.`,
-          );
-        }
-        this.socket = polyfillWebSocketFactory(url.toString(), {
-          headers: { Authorization: this.params.apiKey },
-        });
+        );
       }
-      const socket = this.socket;
+      let socket: PolyfillWebSocket;
+      try {
+        socket = token
+          ? // The token alone: an Authorization header would override it.
+            polyfillWebSocketFactory(url.toString())
+          : polyfillWebSocketFactory(url.toString(), {
+              headers: { Authorization: this.params.apiKey },
+            });
+      } catch (cause) {
+        // The runtime refused to create the socket (a browser's WebSocket
+        // takes no headers, for one), so there is no connection to close.
+        this.error = new TextToSpeechError(
+          `Could not open the WebSocket: ${cause instanceof Error ? cause.message : String(cause)}`,
+          { retryable: false },
+        );
+        this.end();
+        settle(() => reject(this.surfaced()));
+        return;
+      }
+      this.socket = socket;
       connection.hadSocket = true;
       socket.binaryType = "arraybuffer";
       socket.onopen = () => {};
@@ -481,13 +533,7 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
 
       socket.onerror = (event: ErrorEvent) => {
         if (settled) return; // after Begin, the close that follows reports it
-        const message =
-          (event.error as Error | undefined)?.message ?? event.message;
-        const error = new TextToSpeechError(
-          `WebSocket handshake failed: ${message}`,
-          { retryable: true },
-        );
-        this.error = error;
+        this.error = errorFromHandshake(event);
         this.end();
         settle(() => reject(this.surfaced()));
       };

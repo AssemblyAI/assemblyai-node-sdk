@@ -8,7 +8,7 @@ import {
   TextToSpeechTokenParams,
 } from "../..";
 import { BaseService } from "../base";
-import { TextToSpeechError } from "../../utils/errors/tts";
+import { RETRYABLE_STATUSES, TextToSpeechError } from "../../utils/errors/tts";
 import { TextToSpeechSession } from "./session";
 
 /**
@@ -67,7 +67,6 @@ function zoneTokenBaseUrl(ttsBaseUrl?: string): string {
 const DEFAULT_STREAM_TIMEOUT_MS = 30_000;
 /** A buffered request waits for the whole audio; the API caps a request at 600 s. */
 const DEFAULT_SYNTHESIZE_TIMEOUT_MS = 610_000;
-const RETRYABLE_STATUSES = new Set([408, 429, 500, 502, 503, 504]);
 
 /** Builds the `TextToSpeechError` for a non-200 response. */
 export async function speechErrorFromResponse(
