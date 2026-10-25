@@ -52,7 +52,7 @@ const client = new AssemblyAI({
 - `client.llmGateway.chatCompletions(request)` — OpenAI-compatible chat completions
 - `client.llmGateway.listModels()` — List models available on the LLM Gateway
 - `client.llmGateway.understanding(request)` / `client.llmGateway.validateUnderstanding(request)` — Run or validate a Speech Understanding request
-- `client.tts.synthesize({ text, voice_id? })` — Text-to-speech in one request: the complete audio (`SpeechResponse.audio`, a Uint8Array) plus the response header fields
+- `client.tts.synthesize({ text, voice_id? })` — Text-to-speech in one request: the complete audio (`TextToSpeechResponse.audio`, a Uint8Array) plus the response header fields
 - `client.tts.stream(request, { signal? })` — Text-to-speech audio as it is generated: a `TextToSpeechStream`, an async iterable of Uint8Array chunks with `info` (header fields), `body`, `bytes()` and `cancel()`
 - `client.tts.session({ voiceId })` — WebSocket `TextToSpeechSession` that speaks text as it is written (voice agents): `connect({ token? })`, `speak(text)` (async iterable), `generate()`/`flush()`/`audio(flushId?)`, `cancel()`, `keepAlive()`, `close()`, `on("begin"|"audio"|"flushDone"|"wordBoundaries"|"cancelled"|"termination"|"error"|"close", fn)`
 - `client.tts.createTemporaryToken({ expires_in_seconds })` — Mint a short-lived token, server-side, for a session opened in a browser with `new TextToSpeechSession({ token })`; one token per connection

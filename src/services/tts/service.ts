@@ -1,9 +1,9 @@
 import {
   BaseServiceParams,
-  SpeechRequest,
-  SpeechRequestOptions,
-  SpeechResponse,
-  SpeechResponseInfo,
+  TextToSpeechRequest,
+  TextToSpeechRequestOptions,
+  TextToSpeechResponse,
+  TextToSpeechResponseInfo,
   TextToSpeechSessionParams,
   TextToSpeechTokenParams,
 } from "../..";
@@ -200,7 +200,9 @@ function intHeader(headers: Headers, name: string): number | undefined {
 }
 
 /** Reads the `X-TTS-*` headers of a `200`. */
-export function speechResponseInfo(headers: Headers): SpeechResponseInfo {
+export function textToSpeechResponseInfo(
+  headers: Headers,
+): TextToSpeechResponseInfo {
   const unknownParams = headers
     .get("x-tts-unknown-params")
     ?.split(",")
@@ -231,7 +233,7 @@ let warnedUnknownParams = false;
  * which is how a camelCase `sampleRate` in a request held in a variable (or
  * sent from plain JavaScript) shows up. The names stay on `unknownParams`.
  */
-function warnUnknownParams(info: SpeechResponseInfo) {
+function warnUnknownParams(info: TextToSpeechResponseInfo) {
   if (warnedUnknownParams || !info.unknownParams) return;
   warnedUnknownParams = true;
   console.warn(
@@ -260,7 +262,7 @@ export class TextToSpeechStream implements AsyncIterable<Uint8Array> {
 
   constructor(
     /** What the response headers say: model, voice, encoding, sample rate, request id. */
-    public readonly info: SpeechResponseInfo,
+    public readonly info: TextToSpeechResponseInfo,
     /** The audio bytes as they arrive. */
     public readonly body: ReadableStream<Uint8Array>,
     /** `signal`: the request's abort signal, whose abort ends the iteration with its reason. */
@@ -372,9 +374,9 @@ export class TextToSpeechService extends BaseService {
    * reason of `options.signal` (an `AbortError` unless you gave another).
    */
   async synthesize(
-    request: SpeechRequest,
-    options: SpeechRequestOptions = {},
-  ): Promise<SpeechResponse> {
+    request: TextToSpeechRequest,
+    options: TextToSpeechRequestOptions = {},
+  ): Promise<TextToSpeechResponse> {
     const deadline = requestDeadline(
       options.timeout ?? DEFAULT_SYNTHESIZE_TIMEOUT_MS,
       options.signal,
@@ -387,7 +389,7 @@ export class TextToSpeechService extends BaseService {
       });
       if (!response.ok) throw await speechErrorFromResponse(response);
       const audio = new Uint8Array(await response.arrayBuffer());
-      const info = speechResponseInfo(response.headers);
+      const info = textToSpeechResponseInfo(response.headers);
       warnUnknownParams(info);
       return { ...info, audio };
     } finally {
@@ -418,8 +420,8 @@ export class TextToSpeechService extends BaseService {
    * `options.timeout` passes, or the reason of `options.signal`.
    */
   async stream(
-    request: SpeechRequest,
-    options: SpeechRequestOptions = {},
+    request: TextToSpeechRequest,
+    options: TextToSpeechRequestOptions = {},
   ): Promise<TextToSpeechStream> {
     // Checked before sending, so a runtime that could not hand the audio
     // over is not billed for it.
@@ -452,7 +454,7 @@ export class TextToSpeechService extends BaseService {
         deadline.release();
       }
     }
-    const info = speechResponseInfo(response.headers);
+    const info = textToSpeechResponseInfo(response.headers);
     warnUnknownParams(info);
     if (!response.body || typeof response.body.getReader !== "function") {
       // A runtime without web streamed bodies: hand the whole audio over as one chunk.

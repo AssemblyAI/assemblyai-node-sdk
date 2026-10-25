@@ -1,10 +1,15 @@
 import type {
   LiteralUnion,
   TextToSpeechErrorFields,
+  TextToSpeechRequest,
+  TextToSpeechRequestOptions,
+  TextToSpeechResponse,
+  TextToSpeechResponseInfo,
+  TextToSpeechStream,
   Transcript,
   TranscriptParams,
 } from "../../src/exports";
-import { TextToSpeechError } from "../../src/exports";
+import { AssemblyAI, TextToSpeechError } from "../../src/exports";
 
 // #105: every type a public field is declared with must be reachable from the
 // package root. `LiteralUnion` sits behind `language_code` and
@@ -41,5 +46,31 @@ describe("package root exports", () => {
     const carried: TextToSpeechErrorFields = error;
     expect(carried.errorCode).toBe("rate_limited");
     expect(carried.retryAfter).toBe(2);
+  });
+
+  it("exposes the HTTP text-to-speech types under the product's prefix", () => {
+    // The root also exports speech-to-text types such as `SpeechModel` and
+    // `SpeechUnderstandingRequest`, so the types `synthesize()` and
+    // `stream()` are declared with carry the `TextToSpeech` prefix.
+    const client = new AssemblyAI({ apiKey: "key" });
+    const synthesize: (
+      request: TextToSpeechRequest,
+      options?: TextToSpeechRequestOptions,
+    ) => Promise<TextToSpeechResponse> = client.tts.synthesize.bind(client.tts);
+    const stream: (
+      request: TextToSpeechRequest,
+      options?: TextToSpeechRequestOptions,
+    ) => Promise<TextToSpeechStream> = client.tts.stream.bind(client.tts);
+    const infoOf = (speech: TextToSpeechStream): TextToSpeechResponseInfo =>
+      speech.info;
+    const response: TextToSpeechResponse = {
+      audio: new Uint8Array(2),
+      requestId: "req-1",
+    };
+    const info: TextToSpeechResponseInfo = response;
+    expect(typeof synthesize).toBe("function");
+    expect(typeof stream).toBe("function");
+    expect(typeof infoOf).toBe("function");
+    expect(info.requestId).toBe("req-1");
   });
 });

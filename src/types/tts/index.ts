@@ -77,7 +77,7 @@ export type TextToSpeechVoiceOptions = {
 };
 
 /** The body of `POST /v1/speech`. */
-export type SpeechRequest = TextToSpeechVoiceOptions & {
+export type TextToSpeechRequest = TextToSpeechVoiceOptions & {
   /** 1 to 5,000 characters. */
   text: string;
   /** `raw` (the default) or `wav`, with a PCM or G.711 encoding only. */
@@ -91,7 +91,7 @@ export type SpeechRequest = TextToSpeechVoiceOptions & {
 };
 
 /** Per-request options of the HTTP client. */
-export type SpeechRequestOptions = {
+export type TextToSpeechRequestOptions = {
   /**
    * Milliseconds until the request is aborted with a `DOMException` named
    * `TimeoutError`. For `synthesize()` the whole request, 610 000 by default
@@ -127,7 +127,7 @@ export type SpeechRequestOptions = {
 };
 
 /** What the response headers of a `200` say about the audio. */
-export type SpeechResponseInfo = {
+export type TextToSpeechResponseInfo = {
   /** The request's id (`X-Request-Id`). Quote it in support requests. */
   requestId?: string;
   /** The region that served the request, such as `us-east-1`. */
@@ -170,7 +170,7 @@ export type SpeechResponseInfo = {
 };
 
 /** The result of `synthesize()`: the whole audio, with its headers. */
-export type SpeechResponse = SpeechResponseInfo & {
+export type TextToSpeechResponse = TextToSpeechResponseInfo & {
   /** The audio in the requested encoding and container, complete. */
   audio: Uint8Array;
 };
