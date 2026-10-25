@@ -102,7 +102,39 @@ const DEFAULT_READ_TIMEOUT_MS = 30_000;
 /** A buffered request waits for the whole audio; the API caps a request at 600 s. */
 const DEFAULT_SYNTHESIZE_TIMEOUT_MS = 610_000;
 
-/** Builds the `TextToSpeechError` for a non-200 response. */
+/**
+ * The reason in a FastAPI `detail`, which the token host answers refusals
+ * with: a string, or a list of `{ loc, msg }` for a bad query parameter. A
+ * list entry reads `<field>: <msg>`, its field being the last element of
+ * `loc` (`["query", "expires_in_seconds"]`), and the entries are joined with
+ * `"; "`. `param` is the first entry's field, when its `loc` names one after
+ * the location (`query`, `body`, ...).
+ */
+function fastApiDetail(detail: unknown): { text?: string; param?: string } {
+  if (typeof detail === "string") return { text: detail || undefined };
+  if (!Array.isArray(detail)) return {};
+  let param: string | undefined;
+  const parts = detail.flatMap((entry: unknown, index) => {
+    if (!entry || typeof entry !== "object") return [];
+    const { loc, msg } = entry as { loc?: unknown; msg?: unknown };
+    const field =
+      Array.isArray(loc) && loc.length > 0
+        ? String(loc[loc.length - 1])
+        : undefined;
+    if (index === 0 && Array.isArray(loc) && loc.length > 1) param = field;
+    const part = [field, typeof msg === "string" ? msg : undefined]
+      .filter(Boolean)
+      .join(": ");
+    return part ? [part] : [];
+  });
+  return { text: parts.join("; ") || undefined, param };
+}
+
+/**
+ * Builds the `TextToSpeechError` for a non-200 response. The message is the
+ * body's `message`, else its `error`, else the reason in a FastAPI `detail`
+ * (the token host's refusals), else a generic one with the status.
+ */
 export async function speechErrorFromResponse(
   response: Response,
 ): Promise<TextToSpeechError> {
@@ -124,16 +156,18 @@ export async function speechErrorFromResponse(
     }
   }
   if (body) {
+    const detail = fastApiDetail(body.detail);
     const message =
       (typeof body.message === "string" && body.message) ||
       (typeof body.error === "string" && body.error) ||
+      detail.text ||
       `text-to-speech request failed with status ${status}`;
     const hint = body.retry_after_seconds;
     if (typeof hint === "number") retryAfter = Math.ceil(hint);
     return new TextToSpeechError(message, {
       status,
       errorCode: typeof body.code === "string" ? body.code : undefined,
-      param: typeof body.param === "string" ? body.param : undefined,
+      param: typeof body.param === "string" ? body.param : detail.param,
       requestId:
         typeof body.request_id === "string" ? body.request_id : requestId,
       retryable:
@@ -485,7 +519,8 @@ export class TextToSpeechService extends BaseService {
    * `https://token.assemblyai.com` for any other host. A token works in
    * every zone.
    * @param options.tokenBaseUrl - The token host to use instead.
-   * @throws TextToSpeechError if the token service refuses the request.
+   * @throws TextToSpeechError if the token service refuses the request; its
+   * message is the service's reason, such as `Invalid API key`.
    */
   async createTemporaryToken(
     params: TextToSpeechTokenParams,

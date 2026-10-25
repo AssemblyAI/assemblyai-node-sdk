@@ -287,6 +287,117 @@ describe("tts", () => {
     );
   });
 
+  it("a token refusal with a FastAPI detail string carries the reason in its message", async () => {
+    fetchMock.mockResponseOnce(JSON.stringify({ detail: "Invalid API key" }), {
+      status: 404,
+      headers: { "content-type": "application/json" },
+    });
+    const error = (await client.tts
+      .createTemporaryToken({ expires_in_seconds: 60 })
+      .catch((e) => e)) as TextToSpeechError;
+    expect(error).toBeInstanceOf(TextToSpeechError);
+    expect(error.message).toBe("Invalid API key");
+    expect(error).toMatchObject({ status: 404, retryable: false });
+    expect(error.param).toBeUndefined();
+    expect(error.body).toEqual({ detail: "Invalid API key" });
+  });
+
+  it("a token refusal with a FastAPI 422 list names the field and the reason", async () => {
+    const body = {
+      detail: [
+        {
+          type: "less_than_equal",
+          loc: ["query", "expires_in_seconds"],
+          msg: "Input should be less than or equal to 600",
+          input: "601",
+          ctx: { le: 600 },
+        },
+        {
+          type: "greater_than_equal",
+          loc: ["query", "max_session_duration_seconds"],
+          msg: "Input should be greater than or equal to 60",
+          input: "30",
+          ctx: { ge: 60 },
+        },
+      ],
+    };
+    fetchMock.mockResponseOnce(JSON.stringify(body), {
+      status: 422,
+      headers: { "content-type": "application/json" },
+    });
+    const error = (await client.tts
+      .createTemporaryToken({
+        expires_in_seconds: 601,
+        max_session_duration_seconds: 30,
+      })
+      .catch((e) => e)) as TextToSpeechError;
+    expect(error).toBeInstanceOf(TextToSpeechError);
+    expect(error.message).toBe(
+      "expires_in_seconds: Input should be less than or equal to 600; " +
+        "max_session_duration_seconds: Input should be greater than or equal to 60",
+    );
+    expect(error).toMatchObject({
+      status: 422,
+      param: "expires_in_seconds",
+      retryable: false,
+    });
+    expect(error.body).toEqual(body);
+  });
+
+  it.each([
+    {
+      name: "message wins over error and detail",
+      body: { message: "from message", error: "from error", detail: "x" },
+      message: "from message",
+      param: undefined,
+    },
+    {
+      name: "error wins over detail",
+      body: {
+        error: "from error",
+        detail: [{ loc: ["query", "a"], msg: "m" }],
+      },
+      message: "from error",
+      param: "a",
+    },
+    {
+      name: "the envelope's param wins over the detail's",
+      body: { param: "voice_id", detail: [{ loc: ["query", "a"], msg: "m" }] },
+      message: "a: m",
+      param: "voice_id",
+    },
+    {
+      name: "a detail entry with only a location gives no param",
+      body: { detail: [{ loc: ["body"], msg: "Field required" }] },
+      message: "body: Field required",
+      param: undefined,
+    },
+    {
+      name: "an empty or unrecognized detail falls back to the status",
+      body: { detail: [{}, null, 3] },
+      message: "text-to-speech request failed with status 400",
+      param: undefined,
+    },
+    {
+      name: "an object detail falls back to the status",
+      body: { detail: { reason: "nope" } },
+      message: "text-to-speech request failed with status 400",
+      param: undefined,
+    },
+  ])("error message precedence: $name", async ({ body, message, param }) => {
+    const { speechErrorFromResponse } = await import(
+      "../../src/services/tts/service"
+    );
+    const error = await speechErrorFromResponse(
+      new Response(JSON.stringify(body), {
+        status: 400,
+        headers: { "content-type": "application/json" },
+      }),
+    );
+    expect(error.message).toBe(message);
+    expect(error.param).toBe(param);
+  });
+
   it("leaving a stream early cancels the body", async () => {
     const { TextToSpeechStream } = await import(
       "../../src/services/tts/service"

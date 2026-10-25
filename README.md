@@ -844,6 +844,8 @@ console.log(response.model, response.voiceId, response.audioDurationMs, "ms");
 
 `synthesize()` waits for the whole audio, so an API refusal is always a `TextToSpeechError` and the WAV header carries real sizes. The response headers are on the result: `requestId`, `region`, `model`, `voiceId`, `language`, `encoding`, `sampleRate`, `container`, `bitRate`, `billedCharacters` and `audioDurationMs`. A network failure or a timeout rejects with the runtime's own error instead (a `TypeError`, or a `DOMException` named `TimeoutError` or `AbortError`). On Node, the built-in `fetch` gives up after 300 seconds without response headers, whatever `timeout` says; for longer requests use `stream()`, or raise the limit with `setGlobalDispatcher(new Agent({ headersTimeout: 610_000 }))` from the `undici` package.
 
+Branch on a refusal's `errorCode`, not its message. Your account's own cloned voices, and `extend_biometric_consent: true` (which renews the consent of the cloned voice in `voice_id` and is refused with `not_owner` on a voice your account does not own), are refused with `biometric_terms_not_accepted` (403, not retryable; close code 3006 on a session) until the account accepts the biometric data terms on the data controls page of the AssemblyAI dashboard.
+
 ### Stream audio as it is generated
 
 ```typescript
@@ -928,7 +930,7 @@ await session.connect();
 // After a retryable close: await session.connect({ token: await getToken() });
 ```
 
-Mint a new token for every connection, reconnects included, and for every HTTP request (a token works as the `apiKey` of a client made for that request), and keep `expires_in_seconds` short. `createTemporaryToken()` mints on the token host of the client's zone: `https://token.eu.assemblyai.com` when `ttsBaseUrl` is `https://tts.eu.assemblyai.com`, `https://token.us.assemblyai.com` for `https://tts.us.assemblyai.com` (the default), and `https://token.assemblyai.com` for any other host; pass `{ tokenBaseUrl }` as its second argument to choose the host. A token works in every zone.
+Mint a new token for every connection, reconnects included, and for every HTTP request (a token works as the `apiKey` of a client made for that request), and keep `expires_in_seconds` short. `createTemporaryToken()` mints on the token host of the client's zone: `https://token.eu.assemblyai.com` when `ttsBaseUrl` is `https://tts.eu.assemblyai.com`, `https://token.us.assemblyai.com` for `https://tts.us.assemblyai.com` (the default), and `https://token.assemblyai.com` for any other host; pass `{ tokenBaseUrl }` as its second argument to choose the host. A token works in every zone. A refusal throws a `TextToSpeechError` whose message gives the token service's reason, such as `Invalid API key` or `expires_in_seconds: Input should be less than or equal to 600`.
 
 ## Contributing
 

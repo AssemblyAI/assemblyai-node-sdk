@@ -57,9 +57,15 @@ export type TextToSpeechVoiceOptions = {
   /** Output codec. Defaults to `pcm_s16le`. A session streams PCM or G.711 only. */
   encoding?: LiteralUnion<TextToSpeechEncoding, string>;
   /**
-   * `true` renews the biometric consent of the cloned voice in `voice_id`,
-   * which only the voice's owner may do; a cloned voice expires 60 days
-   * after its consent was last given.
+   * `true` renews the biometric consent of the cloned voice in `voice_id`; a
+   * cloned voice expires 60 days after its consent was last given. Needs
+   * `voice_id` (`422 invalid_parameter` without it). Refused with `not_owner`
+   * (422, `param: "extend_biometric_consent"`) on a voice the account does
+   * not own, and with `biometric_terms_not_accepted` (403, not retryable)
+   * until the account accepts the biometric data terms on the data controls
+   * page of the AssemblyAI dashboard. `voiceExpiresAt` on the response shows
+   * the new expiry after `synthesize()`; after `stream()` it is the expiry as
+   * the request started, because the headers leave with the first audio.
    */
   extend_biometric_consent?: boolean;
 };
@@ -170,7 +176,15 @@ export type TextToSpeechSessionParams = {
   wordBoundaries?: boolean;
   /** Seconds (5 to 120, default 120) after which an idle session is closed. */
   inactivityTimeout?: number;
-  /** `true` renews the consent of the cloned voice in `voiceId` (owner only). */
+  /**
+   * `true` renews the biometric consent of the cloned voice in `voiceId`.
+   * Needs `voiceId`. `connect()` is refused with `not_owner` (close 3006,
+   * `param: "extend_biometric_consent"`) on a voice the account does not
+   * own, and with `biometric_terms_not_accepted` (close 3006, not retryable)
+   * until the account accepts the biometric data terms on the data controls
+   * page of the AssemblyAI dashboard. The `Termination` summary's
+   * `voice_expires_at` shows the new expiry.
+   */
   extendBiometricConsent?: boolean;
   /**
    * A temporary token, for a session opened on a user's device. It is sent

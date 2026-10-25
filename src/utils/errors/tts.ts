@@ -5,7 +5,29 @@ export type TextToSpeechErrorFields = {
    * and only where the runtime reports it (Node does, a browser does not).
    */
   status?: number;
-  /** The API's stable code: `invalid_parameter`, `voice_not_found`, `rate_limited`, ... */
+  /**
+   * The API's stable code, the same on HTTP and on a session. Among them:
+   * - `invalid_parameter` (422; close 3006): `param` and `errors` say which field.
+   * - `rate_limited` (429, retryable; close 3009): wait `retryAfter` seconds.
+   * - `voice_not_found` (422; close 3012, `param: "voice_id"`).
+   * - `voice_expired` (422; close 3012, `param: "voice_id"`): the cloned
+   *   voice's consent period ended; its owner can create it again from a new
+   *   recording.
+   * - `voice_not_paired` (422; close 3014, `param: "model_id"`): the cloned
+   *   voice is not paired with the model, or the pairing is still in progress.
+   * - `not_owner` (422; close 3006, `param: "extend_biometric_consent"`):
+   *   `extend_biometric_consent` on a voice another account owns.
+   * - `biometric_terms_not_accepted` (403, not retryable; close 3006,
+   *   `param` `voice_id` or `extend_biometric_consent`): the account has not
+   *   accepted the biometric data terms that its own cloned voices and
+   *   `extend_biometric_consent` need; accept them on the data controls page
+   *   of the AssemblyAI dashboard.
+   * - `auth_unavailable` (503, retryable; close 1011): the credential, or the
+   *   account's biometric data terms, could not be checked just now.
+   *
+   * Absent on a refusal of `createTemporaryToken()`, whose message carries
+   * the token service's reason.
+   */
   errorCode?: string;
   /** The field at fault, if one. */
   param?: string;
