@@ -57,6 +57,8 @@ class PullQueue {
   closeEmitted = false;
   /** Requests up to this flush id were cancelled. */
   cancelledBefore = -1;
+  /** Readers consumed the `FlushDone` of the requests up to this flush id. */
+  doneThrough = -1;
 
   get size() {
     return this.items.length;
@@ -458,9 +460,15 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
     return error;
   }
 
-  /** Queues an item for `audio()`; nothing is queued while an `audio` listener receives the frames. */
+  /**
+   * Queues an item for `audio()`. While an `audio` listener receives the
+   * frames, audio is never queued, and markers are queued only for an
+   * `audio()` iteration already running, so it still ends.
+   */
   private enqueue(item: PullItem) {
-    if (this.listeners.audio) return;
+    if (this.listeners.audio && (item.kind === "audio" || !this.reading)) {
+      return;
+    }
     this.queue.push(item);
   }
 
@@ -609,27 +617,57 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
   }
 
   /**
-   * Yields the audio of request `flushId` until its `FlushDone`.
+   * The audio of request `flushId`: an async iterator that ends at its
+   * `FlushDone`, or early if the request is cancelled.
    *
-   * Without `flushId`, the request being written now, so audio can be read
-   * while `generate()` is still sending text. Requests are served in order,
-   * so read them in order, one iteration at a time. Audio is queued for
-   * pulling only while no `audio` listener is registered.
-   * @throws TextToSpeechError if the session fails before the request completes.
+   * The request is fixed when `audio()` is called, not when it is first
+   * iterated. Without `flushId` it is the request being written now, whose
+   * id the next `flush()` returns, so the iterator can be made before the
+   * first `generate()` and read while text is still being sent. Requests
+   * are served in order, so read each one once, in order, one iteration at
+   * a time. Audio is queued for pulling only while no `audio` listener is
+   * registered. The iteration rejects with a `TextToSpeechError` if the
+   * session fails before the request completes.
+   * @throws Error if the session was never connected.
+   * @throws RangeError for a request not flushed yet, or one already read
+   * (its `FlushDone` was consumed by an earlier iteration).
    */
-  async *audio(flushId?: number): AsyncGenerator<Uint8Array, void, undefined> {
-    if (!this.queue.hadSocket) {
+  audio(flushId?: number): AsyncGenerator<Uint8Array, void, undefined> {
+    // The connection this request is sent on.
+    const connection = this.queue;
+    if (!connection.hadSocket) {
       throw new Error("The session is not open: call connect() first");
     }
-    this.checkPullable();
-    if (flushId === undefined) flushId = this.nextFlushId;
-    else if (flushId > this.nextFlushId) {
-      throw new RangeError(`flush_id ${flushId} has not been flushed yet`);
+    const id = flushId ?? this.nextFlushId;
+    if (id > this.nextFlushId) {
+      throw new RangeError(`flush_id ${id} has not been flushed yet`);
     }
-    // The connection this request was sent on; a reconnect leaves it to
-    // drain to its own `closed` item.
-    const connection = this.queue;
-    this.reading = true;
+    this.checkUnread(connection, id);
+    return this.readAudio(connection, id);
+  }
+
+  private checkUnread(connection: PullQueue, flushId: number) {
+    if (flushId <= connection.doneThrough) {
+      throw new RangeError(
+        `flush_id ${flushId} was already read: read each request once, in order`,
+      );
+    }
+  }
+
+  /** Reads request `flushId` from `connection`, until its end. */
+  private async *readAudio(
+    connection: PullQueue,
+    flushId: number,
+  ): AsyncGenerator<Uint8Array, void, undefined> {
+    // After a reconnect the reader stays on its own connection, which drains
+    // to its `closed` item, and leaves the new connection's readers alone.
+    const current = this.queue === connection;
+    if (current) {
+      this.checkPullable();
+      // Another iterator may have read past this request since audio().
+      this.checkUnread(connection, flushId);
+      this.reading = true;
+    }
     try {
       for (;;) {
         // A Cancel drops every request before it and the text being written,
@@ -645,6 +683,12 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
             if (item.flushId === flushId) yield item.bytes;
             break;
           case "done":
+            // Counted when read, so a FlushDone still queued for a pipelined
+            // request leaves it readable.
+            connection.doneThrough = Math.max(
+              connection.doneThrough,
+              item.flushId,
+            );
             if (item.flushId === flushId) return;
             break;
           case "cancelled":
@@ -656,7 +700,7 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
         }
       }
     } finally {
-      if (this.queue === connection) this.reading = false;
+      if (current && this.queue === connection) this.reading = false;
     }
   }
 

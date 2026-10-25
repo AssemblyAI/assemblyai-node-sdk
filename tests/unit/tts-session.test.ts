@@ -729,11 +729,122 @@ describe("tts session", () => {
     expect(closes).toHaveLength(1);
   });
 
-  it("audio() before connect() says what to do", async () => {
+  it("audio() before connect() says what to do", () => {
     const session = client.tts.session({ websocketBaseUrl });
-    const first = outcome((async () => session.audio().next())());
-    expect(await first).toMatchObject({
-      message: expect.stringMatching(/call connect\(\) first/),
-    });
+    expect(() => session.audio()).toThrow(/call connect\(\) first/);
+  });
+
+  it("audio() takes its request when called, not at the first next()", async () => {
+    const session = client.tts.session({ websocketBaseUrl });
+    await connect(session);
+    const stream = session.audio(); // e.g. handed to a player that starts later
+    session.generate("Made before the text.");
+    expect(session.flush()).toBe(0);
+    await tick(); // the request's audio and FlushDone are queued
+    expect(await outcome(collect(stream))).toEqual(
+      Buffer.from("Made before the text."),
+    );
+    expect((await collect(session.speak("Next."))).toString()).toBe("Next.");
+    await session.close();
+  });
+
+  it("audio() refuses a request not flushed yet when called", async () => {
+    const session = client.tts.session({ websocketBaseUrl });
+    await connect(session);
+    expect(() => session.audio(99)).toThrow(RangeError);
+    expect(() => session.audio(99)).toThrow(/flush_id 99 has not been flushed/);
+    expect(() => session.audio(1)).toThrow(RangeError); // 0 is being written
+    await session.close();
+  });
+
+  it("audio() refuses a request already read instead of waiting for the session to end", async () => {
+    const session = client.tts.session({ websocketBaseUrl });
+    await connect(session);
+    expect((await collect(session.speak("Read me once."))).toString()).toBe(
+      "Read me once.",
+    );
+    expect(() => session.audio(0)).toThrow(RangeError);
+    expect(() => session.audio(0)).toThrow(/flush_id 0 was already read/);
+
+    // Reading a later request skips the FlushDone of an earlier one.
+    session.generate("Skipped.");
+    const skipped = session.flush();
+    const early = session.audio(skipped); // made before the skip
+    session.generate("Read.");
+    expect((await collect(session.audio(session.flush()))).toString()).toBe(
+      "Read.",
+    );
+    expect(() => session.audio(skipped)).toThrow(/already read/);
+    await expect(early.next()).rejects.toThrow(/already read/);
+    await session.close();
+  });
+
+  it("a pipelined request whose FlushDone is queued stays readable", async () => {
+    const session = client.tts.session({ websocketBaseUrl });
+    await connect(session);
+    session.generate("One. ");
+    const first = session.flush();
+    session.generate("Two.");
+    const second = session.flush();
+    await tick(); // both FlushDones are queued, neither read
+    const readSecond = session.audio(second); // made before the first is read
+    expect((await collect(session.audio(first))).toString()).toBe("One. ");
+    expect((await collect(readSecond)).toString()).toBe("Two.");
+    await session.close();
+  });
+
+  it("an iterator that is never iterated does not block the next reader", async () => {
+    const session = client.tts.session({ websocketBaseUrl });
+    await connect(session);
+    session.audio(); // dropped without a next()
+    expect((await collect(session.speak("Hi."))).toString()).toBe("Hi.");
+    await session.close();
+  });
+
+  it("an audio listener registered while a reader waits still lets it end at FlushDone", async () => {
+    api.answerFlush = false;
+    const session = client.tts.session({ websocketBaseUrl });
+    await connect(session);
+    const flushId = session.flush();
+    const reading = outcome(collect(session.audio(flushId)));
+    await tick();
+    const received: Uint8Array[] = [];
+    session.on("audio", (e) => received.push(e.audio));
+    api.sockets[0].send(
+      JSON.stringify({ type: "Audio", audio: "QQ==", flush_id: flushId }),
+    );
+    api.sockets[0].send(
+      JSON.stringify({ type: "FlushDone", flush_id: flushId }),
+    );
+    expect(await reading).toEqual(Buffer.alloc(0)); // the audio went to the listener
+    expect(received.map((a) => Buffer.from(a).toString())).toEqual(["A"]);
+    await session.close();
+  });
+
+  it("an audio listener registered while a reader waits still lets close() end it", async () => {
+    api.answerFlush = false;
+    const session = client.tts.session({ websocketBaseUrl });
+    await connect(session);
+    const reading = outcome(collect(session.audio(session.flush())));
+    await tick();
+    session.on("audio", () => undefined);
+    await session.close();
+    expect(await reading).toEqual(Buffer.alloc(0));
+  });
+
+  it("an audio listener with no reader queues nothing", async () => {
+    const session = client.tts.session({ websocketBaseUrl });
+    session.on("audio", () => undefined);
+    await connect(session);
+    for (const text of ["One.", "Two.", "Three."]) {
+      session.generate(text);
+      session.flush();
+    }
+    session.cancel();
+    await tick();
+    const queue = (session as unknown as { queue: { size: number } }).queue;
+    expect(queue.size).toBe(0);
+    await session.close();
+    expect(queue.size).toBe(0);
   });
 });
