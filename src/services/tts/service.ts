@@ -42,6 +42,27 @@ function requestDeadline(timeoutMs: number, external?: AbortSignal) {
 
 const ENDPOINT_SPEECH = "/v1/speech";
 const DEFAULT_TOKEN_BASE_URL = "https://token.assemblyai.com";
+/** A zone's TTS host (`tts.eu.assemblyai.com`); its zone is the first group. */
+const ZONE_TTS_HOST = /^(?:streaming-)?tts\.(us|eu)\.assemblyai\.com$/;
+
+/**
+ * The token host of the zone `ttsBaseUrl` is in, so a token is minted in the
+ * zone its sessions use: `https://token.eu.assemblyai.com` for
+ * `https://tts.eu.assemblyai.com`, `https://token.us.assemblyai.com` for
+ * `https://tts.us.assemblyai.com`, and `https://token.assemblyai.com` for any
+ * other host.
+ */
+function zoneTokenBaseUrl(ttsBaseUrl?: string): string {
+  let host = "";
+  try {
+    if (ttsBaseUrl) host = new URL(ttsBaseUrl).hostname;
+  } catch {
+    // not a URL, so no zone
+  }
+  const zone = ZONE_TTS_HOST.exec(host)?.[1];
+  return zone ? `https://token.${zone}.assemblyai.com` : DEFAULT_TOKEN_BASE_URL;
+}
+
 /** Each socket operation of a streamed request. */
 const DEFAULT_STREAM_TIMEOUT_MS = 30_000;
 /** A buffered request waits for the whole audio; the API caps a request at 600 s. */
@@ -383,7 +404,9 @@ export class TextToSpeechService extends BaseService {
    *
    * The client's API key is used when `params` has neither `token` nor
    * `apiKey`; the session host follows the client's `ttsBaseUrl` unless
-   * `websocketBaseUrl` is given.
+   * `websocketBaseUrl` is given. In a browser, open the session with
+   * `new TextToSpeechSession({ token })` instead, so the page needs no client
+   * and no API key.
    */
   session(params: TextToSpeechSessionParams = {}): TextToSpeechSession {
     const sessionParams = { ...params };
@@ -400,8 +423,18 @@ export class TextToSpeechService extends BaseService {
   }
 
   /**
-   * Mints a temporary token for a session opened on a user's device, where
-   * the API key must not go. Call this server-side.
+   * Mints a temporary token for a session or an HTTP request made from a
+   * user's device, where the API key must not go. Call this server-side,
+   * once per connection (reconnects included) and per HTTP request.
+   *
+   * The token is minted on the token host of the client's zone:
+   * `https://token.eu.assemblyai.com` when `ttsBaseUrl` is
+   * `https://tts.eu.assemblyai.com`, `https://token.us.assemblyai.com` when
+   * it is `https://tts.us.assemblyai.com` (the default), and
+   * `https://token.assemblyai.com` for any other host. A token works in
+   * every zone.
+   * @param options.tokenBaseUrl - The token host to use instead.
+   * @throws TextToSpeechError if the token service refuses the request.
    */
   async createTemporaryToken(
     params: TextToSpeechTokenParams,
@@ -412,10 +445,9 @@ export class TextToSpeechService extends BaseService {
       if (value !== undefined && value !== null)
         search.append(key, String(value));
     });
-    const base = (options.tokenBaseUrl ?? DEFAULT_TOKEN_BASE_URL).replace(
-      /\/$/,
-      "",
-    );
+    const base = (
+      options.tokenBaseUrl ?? zoneTokenBaseUrl(this.serviceParams.baseUrl)
+    ).replace(/\/$/, "");
     const response = await this.fetchResponse(
       `${base}/v1/token?${search.toString()}`,
       {

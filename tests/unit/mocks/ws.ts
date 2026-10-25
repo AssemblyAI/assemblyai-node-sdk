@@ -1,10 +1,12 @@
 import { WebSocket } from "mock-socket";
 
 export default class MockWebSocket extends WebSocket {
-  // the unused `options` parameter is required for properly mocking the ws WebSocket class
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  /** The options the client passed to the ws constructor, such as its `headers`. */
+  readonly clientOptions?: unknown;
+
   constructor(address: string | URL, options?: unknown) {
     super(address);
+    this.clientOptions = options;
   }
 
   removeAllListeners() {

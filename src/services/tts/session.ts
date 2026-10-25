@@ -175,7 +175,12 @@ function errorFromClose(code: number, reason: string): TextToSpeechError {
  * optional. A refusal rejects `connect()`; a failure mid-session rejects the
  * `audio()` iteration or the next send, and a failure nothing observed
  * rejects `close()`. The `error` and `close` listeners run once the
- * connection has ended, so either can `connect()` again.
+ * connection has ended, so either can `connect()` again; a session opened
+ * with a temporary token reconnects with a new one, `connect({ token })`.
+ *
+ * In a browser, create the session with a temporary token your server
+ * minted, `new TextToSpeechSession({ token })`: no client and no API key in
+ * the page.
  *
  * @example
  * ```ts
@@ -203,7 +208,12 @@ export class TextToSpeechSession {
   /** The error that ended the session, if one did. */
   error?: TextToSpeechError;
 
-  constructor(private readonly params: TextToSpeechSessionParams) {}
+  /** The temporary token of the next connection; `connect({ token })` replaces it. */
+  private token?: string;
+
+  constructor(private readonly params: TextToSpeechSessionParams) {
+    this.token = params.token;
+  }
 
   /** The current connection is over: sends refuse and readers drain. */
   private get stopped(): boolean {
@@ -252,7 +262,7 @@ export class TextToSpeechSession {
     set("word_boundaries", p.wordBoundaries ?? false);
     set("inactivity_timeout", p.inactivityTimeout);
     set("extend_biometric_consent", p.extendBiometricConsent);
-    set("token", p.token);
+    set("token", this.token);
     return url;
   }
 
@@ -271,10 +281,18 @@ export class TextToSpeechSession {
    * Opens the socket and waits for `Begin`.
    *
    * A session the API has ended can be connected again with the same object.
+   * A temporary token opens one connection, so a session opened with a token
+   * needs a new one for each connection, reconnects included: mint it on
+   * your server and pass it here. The API may refuse a token it has already
+   * seen, and always refuses an expired one, with close code 1008
+   * (`errorCode: "unauthorized"`, not retryable).
+   * @param options.token - A new temporary token. It replaces the session's
+   * token for this connection and the next ones, and is sent instead of the
+   * API key.
    * @throws TextToSpeechError if the API refuses the session, the handshake
    * fails, or `Begin` does not arrive in time.
    */
-  connect(): Promise<TtsBeginEvent> {
+  connect(options: { token?: string } = {}): Promise<TtsBeginEvent> {
     if (this.stopped) {
       // The previous connection's close, when its socket was released before
       // the close event arrived. The close listener may connect again.
@@ -284,6 +302,7 @@ export class TextToSpeechSession {
     if (this.socket && !this.stopped) {
       return Promise.reject(new Error("The session is already connected"));
     }
+    if (options.token) this.token = options.token;
     this.releaseSocket();
     this.reset();
     const connection = this.queue;
@@ -320,7 +339,8 @@ export class TextToSpeechSession {
         if (raised) this.listeners.error?.(raised);
       };
 
-      if (this.params.token) {
+      if (this.token) {
+        // The token alone: an Authorization header would override it.
         this.socket = polyfillWebSocketFactory(url.toString());
       } else {
         if (conditions.browser) {

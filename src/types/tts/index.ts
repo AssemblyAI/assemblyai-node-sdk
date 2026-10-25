@@ -134,7 +134,12 @@ export type SpeechResponse = SpeechResponseInfo & {
   audio: Uint8Array;
 };
 
-/** Parameters of `createTemporaryToken()`; the token opens one session from a browser. */
+/**
+ * Parameters of `createTemporaryToken()`. The token is a short-lived
+ * credential for a session or an HTTP request made from a user's device:
+ * mint a new one for every connection, reconnects included, and for every
+ * HTTP request, and keep `expires_in_seconds` short.
+ */
 export type TextToSpeechTokenParams = {
   /** 1 to 600 seconds the token can wait before it opens a session. */
   expires_in_seconds: number;
@@ -158,7 +163,13 @@ export type TextToSpeechSessionParams = {
   inactivityTimeout?: number;
   /** `true` renews the consent of the cloned voice in `voiceId` (owner only). */
   extendBiometricConsent?: boolean;
-  /** A temporary token, for a session opened on a user's device. */
+  /**
+   * A temporary token, for a session opened on a user's device. It is sent
+   * instead of the API key and opens one connection: to reconnect, pass a
+   * new token to `connect({ token })`. The API may refuse a token it has
+   * already seen, and always refuses an expired one, with close code 1008
+   * (`unauthorized`).
+   */
   token?: string;
   /** The API key; the client's key is used when neither this nor `token` is given. */
   apiKey?: string;

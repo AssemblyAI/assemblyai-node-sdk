@@ -8,7 +8,7 @@ import {
   TextToSpeechSession,
   TtsBeginEvent,
 } from "../../src";
-import { createClient } from "./utils";
+import { createClient, defaultApiKey } from "./utils";
 
 fetchMock.enableMocks();
 
@@ -38,6 +38,10 @@ type ServerSocket = {
     reason: string;
     wasClean: boolean;
   }) => void;
+  /** The URL the client connected to. */
+  url: string;
+  /** The options the client passed to the ws constructor (its headers). */
+  clientOptions?: unknown;
 };
 
 /**
@@ -50,6 +54,9 @@ class FakeApi {
   flushId = 0;
   answerFlush = true;
   closeOnTerminate = true;
+  /** Refuse a temporary token seen before, as the API may. */
+  singleUseTokens = false;
+  private usedTokens = new Set<string>();
   sent: Record<string, unknown>[] = [];
   /** The server side of each connection, in order. */
   sockets: ServerSocket[] = [];
@@ -59,6 +66,25 @@ class FakeApi {
       this.sockets.push(socket);
       this.text = ""; // a new connection is a new session: ids start at 0
       this.flushId = 0;
+      const token = new URL(socket.url).searchParams.get("token");
+      if (this.singleUseTokens && token !== null) {
+        if (this.usedTokens.has(token)) {
+          socket.send(
+            JSON.stringify({
+              type: "Error",
+              error_code: 1008,
+              error: "Unauthorized: token already used",
+              error_type: "unauthorized",
+              retryable: false,
+              param: null,
+              retry_after_seconds: null,
+            }),
+          );
+          socket.close({ code: 1008, reason: "", wasClean: true });
+          return;
+        }
+        this.usedTokens.add(token);
+      }
       socket.on("message", (raw) => {
         const frame = JSON.parse(String(raw)) as Record<string, unknown>;
         this.sent.push(frame);
@@ -397,28 +423,101 @@ describe("tts session", () => {
     expect(error.closeCode).toBe(1006);
   });
 
-  it("a token goes in the query and the session can be reused", async () => {
+  it("a token session reconnects with a new token, sent in the query alone", async () => {
+    api.singleUseTokens = true;
     const session = client.tts.session({
       websocketBaseUrl,
-      token: "tmp",
+      token: "tmp-1",
       inactivityTimeout: 30,
     });
     await connect(session);
-    const url = new URL(
-      (session as unknown as { socket: { url: string } }).socket.url,
-    );
-    expect(url.searchParams.get("token")).toBe("tmp");
+    const first = await connection(1);
+    const url = new URL(first.url);
+    expect(url.searchParams.get("token")).toBe("tmp-1");
     expect(url.searchParams.get("inactivity_timeout")).toBe("30");
+    expect(first.clientOptions).toBeUndefined(); // no Authorization header
     expect((await collect(session.speak("One."))).toString()).toBe("One.");
     await session.close();
 
-    // same object, new connection: `server.connected` already resolved once,
-    // so wait for the new socket before sending its Begin
-    const reconnect = session.connect();
-    await new Promise((resolve) => setTimeout(resolve, 50));
-    server.send(JSON.stringify(beginMessage));
+    // Same object, new connection, new token.
+    const reconnect = session.connect({ token: "tmp-2" });
+    const second = await connection(2);
+    expect(new URL(second.url).searchParams.get("token")).toBe("tmp-2");
+    second.send(JSON.stringify(beginMessage));
     await reconnect;
     expect((await collect(session.speak("Two."))).toString()).toBe("Two.");
+    await session.close();
+
+    // The new token stays the session's token, and a used token is refused.
+    const reused = session.connect().catch((error: unknown) => error);
+    const third = await connection(3);
+    expect(new URL(third.url).searchParams.get("token")).toBe("tmp-2");
+    expect(await reused).toMatchObject({
+      closeCode: 1008,
+      errorCode: "unauthorized",
+      retryable: false,
+    });
+  });
+
+  it("the error listener reconnects a token session with a token minted then", async () => {
+    api.singleUseTokens = true;
+    // As in a browser: no client and no API key.
+    const session = new TextToSpeechSession({
+      websocketBaseUrl,
+      token: "tmp-1",
+    });
+    let minted = 1;
+    const mintToken = async () => `tmp-${++minted}`;
+    let reconnecting: Promise<TtsBeginEvent> | undefined;
+    session.on("error", (error) => {
+      if (error.retryable) {
+        reconnecting = mintToken().then((token) => session.connect({ token }));
+      }
+    });
+    await connect(session);
+    api.sockets[0].send(errorFrame(1012, "service_restart", true));
+    api.sockets[0].close({ code: 1012, reason: "", wasClean: true });
+
+    const second = await connection(2);
+    expect(new URL(second.url).searchParams.get("token")).toBe("tmp-2");
+    second.send(JSON.stringify(beginMessage));
+    await expect(reconnecting).resolves.toMatchObject({ id: "sess-1" });
+    expect((await collect(session.speak("Back."))).toString()).toBe("Back.");
+    await session.close();
+  });
+
+  it("connect({ token }) sends the token instead of the API key", async () => {
+    const session = client.tts.session({ websocketBaseUrl });
+    await connect(session);
+    const first = await connection(1);
+    expect(new URL(first.url).searchParams.has("token")).toBe(false);
+    expect(first.clientOptions).toEqual({
+      headers: { Authorization: defaultApiKey },
+    });
+    await session.close();
+
+    const reconnect = session.connect({ token: "tmp" });
+    const second = await connection(2);
+    expect(new URL(second.url).searchParams.get("token")).toBe("tmp");
+    expect(second.clientOptions).toBeUndefined();
+    second.send(JSON.stringify(beginMessage));
+    await reconnect;
+    await session.close();
+  });
+
+  it("a connect({ token }) refused while connected keeps the session's token", async () => {
+    const session = client.tts.session({ websocketBaseUrl, token: "tmp-1" });
+    await connect(session);
+    await expect(session.connect({ token: "tmp-2" })).rejects.toThrow(
+      /already connected/,
+    );
+    await session.close();
+
+    const reconnect = session.connect();
+    const second = await connection(2);
+    expect(new URL(second.url).searchParams.get("token")).toBe("tmp-1");
+    second.send(JSON.stringify(beginMessage));
+    await reconnect;
     await session.close();
   });
 

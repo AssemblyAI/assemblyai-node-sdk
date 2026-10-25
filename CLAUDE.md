@@ -52,7 +52,7 @@ const client = new AssemblyAI({
 - `client.llmGateway.chatCompletions(request)` — OpenAI-compatible chat completions
 - `client.llmGateway.listModels()` — List models available on the LLM Gateway
 - `client.llmGateway.understanding(request)` / `client.llmGateway.validateUnderstanding(request)` — Run or validate a Speech Understanding request
-- `client.tts.synthesize({ text, voice_id? })` — one text's complete audio (`SpeechResponse.audio`, a Uint8Array, plus header fields); `client.tts.stream(request)` — async iterable of audio chunks as generated; `client.tts.session({ voiceId })` — WebSocket `TextToSpeechSession`: `connect()`, `speak(text)` (async iterable), `generate()`/`flush()`/`audio(flushId?)`, `cancel()`, `keepAlive()`, `close()`, `on("audio"|"flushDone"|"wordBoundaries"|"cancelled"|"termination"|"error"|"close", fn)`. Errors: `TextToSpeechError` (`errorCode`, `param`, `retryable`, `retryAfter`, `requestId`, `closeCode`, `body`)
+- `client.tts.synthesize({ text, voice_id? })` — one text's complete audio (`SpeechResponse.audio`, a Uint8Array, plus header fields); `client.tts.stream(request)` — async iterable of audio chunks as generated; `client.tts.session({ voiceId })` — WebSocket `TextToSpeechSession`: `connect({ token? })`, `speak(text)` (async iterable), `generate()`/`flush()`/`audio(flushId?)`, `cancel()`, `keepAlive()`, `close()`, `on("audio"|"flushDone"|"wordBoundaries"|"cancelled"|"termination"|"error"|"close", fn)`. Errors: `TextToSpeechError` (`errorCode`, `param`, `retryable`, `retryAfter`, `requestId`, `closeCode`, `body`)
 
 ## Common patterns
 
@@ -451,7 +451,7 @@ session.cancel(); // barge-in: ends the current audio() iteration at once
 await session.close(); // Terminate -> Termination summary; rejects with an unobserved session error
 ```
 
-Gotchas: a session streams raw PCM/G.711 only (no `mp3`, `container` or `bit_rate`); `generate()` takes at most 2,000 characters per frame (`speak()` splits); the API paces text at ~100 chars/s; an `audio` listener switches audio from pull to push; a session the API ended (idle after 120 s) can `connect()` again on the same object.
+Gotchas: a session streams raw PCM/G.711 only (no `mp3`, `container` or `bit_rate`); `generate()` takes at most 2,000 characters per frame (`speak()` splits); the API paces text at ~100 chars/s; an `audio` listener switches audio from pull to push; a session the API ended (idle after 120 s) can `connect()` again on the same object, but a session opened with a temporary token needs a new token for each connection: `connect({ token: newToken })` (a used or expired token is refused with 1008 `unauthorized`). In a browser use `new TextToSpeechSession({ token })` (no client, no API key); `client.tts.createTemporaryToken()` mints on the token host of the `ttsBaseUrl` zone (`token.eu`/`token.us`), `tokenBaseUrl` overrides.
 
 ## Important gotchas
 

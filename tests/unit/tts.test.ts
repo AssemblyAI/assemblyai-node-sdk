@@ -234,6 +234,59 @@ describe("tts", () => {
     ).toBe("tmp-token");
   });
 
+  it.each([
+    {
+      ttsBaseUrl: "https://tts.eu.assemblyai.com/",
+      tokenHost: "https://token.eu.assemblyai.com",
+    },
+    {
+      ttsBaseUrl: "https://streaming-tts.eu.assemblyai.com",
+      tokenHost: "https://token.eu.assemblyai.com",
+    },
+    {
+      ttsBaseUrl: "https://tts.us.assemblyai.com",
+      tokenHost: "https://token.us.assemblyai.com",
+    },
+    { ttsBaseUrl: undefined, tokenHost: "https://token.us.assemblyai.com" },
+    {
+      ttsBaseUrl: "https://tts.example.com",
+      tokenHost: "https://token.assemblyai.com",
+    },
+  ])(
+    "mints the token in the zone of ttsBaseUrl $ttsBaseUrl",
+    async ({ ttsBaseUrl, tokenHost }) => {
+      const zoned = new AssemblyAI({ apiKey: "k", ttsBaseUrl });
+      fetchMock.mockResponseOnce(
+        JSON.stringify({ token: "zone-token", expires_in_seconds: 60 }),
+      );
+      expect(
+        await zoned.tts.createTemporaryToken({ expires_in_seconds: 60 }),
+      ).toBe("zone-token");
+      expect(fetchMock.mock.calls[0][0]).toBe(
+        `${tokenHost}/v1/token?product=tts&expires_in_seconds=60`,
+      );
+    },
+  );
+
+  it("an explicit tokenBaseUrl wins over the client's zone", async () => {
+    const eu = new AssemblyAI({
+      apiKey: "k",
+      ttsBaseUrl: "https://tts.eu.assemblyai.com",
+    });
+    fetchMock.mockResponseOnce(
+      JSON.stringify({ token: "own-token", expires_in_seconds: 60 }),
+    );
+    expect(
+      await eu.tts.createTemporaryToken(
+        { expires_in_seconds: 60 },
+        { tokenBaseUrl: "https://token.example.com/" },
+      ),
+    ).toBe("own-token");
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      "https://token.example.com/v1/token?product=tts&expires_in_seconds=60",
+    );
+  });
+
   it("leaving a stream early cancels the body", async () => {
     const { TextToSpeechStream } = await import(
       "../../src/services/tts/service"
