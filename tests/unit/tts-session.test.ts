@@ -833,6 +833,64 @@ describe("tts session", () => {
     await session.close();
   });
 
+  it("the README's barge-in sends none of the interrupted reply after its Cancel", async () => {
+    // Given the README's token-streaming example, whose LLM is still
+    // writing when the user starts talking over the first audio
+    const session = client.tts.session({ websocketBaseUrl });
+    await connect(session);
+    const tokensAsked: string[] = [];
+    let llmStopped = false;
+    async function* llmTokens() {
+      try {
+        for (const token of ["Hello ", "there. ", "How ", "are ", "you?"]) {
+          tokensAsked.push(token);
+          yield token;
+          if (token === "there. ") {
+            server.send(audioFrame("Hello there. ", 0));
+            await tick();
+          }
+        }
+      } finally {
+        llmStopped = true;
+      }
+    }
+    const userStartedTalking = () => true;
+    const played: Uint8Array[] = [];
+
+    // When it runs as written
+    let interrupted = false as boolean;
+    const player = (async () => {
+      for await (const chunk of session.audio()) {
+        if (userStartedTalking()) {
+          interrupted = true;
+          session.cancel();
+          break;
+        }
+        played.push(chunk);
+      }
+    })();
+    for await (const token of llmTokens()) {
+      if (interrupted) break;
+      session.generate(token);
+    }
+    if (!interrupted) session.flush();
+    await player;
+    const summary = await session.close();
+
+    // Then the text after the Cancel is never sent, so no new request is
+    // synthesized and billed, and the LLM stream is stopped
+    expect(api.sent.map((f) => f.type)).toEqual([
+      "Generate",
+      "Generate",
+      "Cancel",
+      "Terminate",
+    ]);
+    expect(tokensAsked).toEqual(["Hello ", "there. ", "How "]);
+    expect(llmStopped).toBe(true);
+    expect(played).toHaveLength(0);
+    expect(summary?.type).toBe("Termination");
+  });
+
   it("refuses a second concurrent reader instead of losing audio", async () => {
     api.answerFlush = false;
     const session = client.tts.session({ websocketBaseUrl });

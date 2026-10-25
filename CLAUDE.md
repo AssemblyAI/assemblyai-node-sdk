@@ -1,6 +1,6 @@
 # AssemblyAI Node.js SDK
 
-Speech-to-text and audio intelligence SDK for Node.js, Deno, and Bun. Supports pre-recorded transcription, real-time streaming, and audio analysis features.
+Speech-to-text, text-to-speech and audio intelligence SDK for Node.js, Deno, and Bun. Supports pre-recorded transcription, real-time streaming, text-to-speech (HTTP requests and WebSocket sessions), and audio analysis features.
 
 ## Quick start
 
@@ -52,7 +52,11 @@ const client = new AssemblyAI({
 - `client.llmGateway.chatCompletions(request)` — OpenAI-compatible chat completions
 - `client.llmGateway.listModels()` — List models available on the LLM Gateway
 - `client.llmGateway.understanding(request)` / `client.llmGateway.validateUnderstanding(request)` — Run or validate a Speech Understanding request
-- `client.tts.synthesize({ text, voice_id? })` — one text's complete audio (`SpeechResponse.audio`, a Uint8Array, plus header fields); `client.tts.stream(request)` — async iterable of audio chunks as generated; `client.tts.session({ voiceId })` — WebSocket `TextToSpeechSession`: `connect({ token? })`, `speak(text)` (async iterable), `generate()`/`flush()`/`audio(flushId?)`, `cancel()`, `keepAlive()`, `close()`, `on("audio"|"flushDone"|"wordBoundaries"|"cancelled"|"termination"|"error"|"close", fn)`. Errors: `TextToSpeechError` (`errorCode`, `param`, `retryable`, `retryAfter`, `requestId`, `closeCode`, `body`)
+- `client.tts.synthesize({ text, voice_id? })` — Text-to-speech in one request: the complete audio (`SpeechResponse.audio`, a Uint8Array) plus the response header fields
+- `client.tts.stream(request, { signal? })` — Text-to-speech audio as it is generated: a `TextToSpeechStream`, an async iterable of Uint8Array chunks with `info` (header fields), `body`, `bytes()` and `cancel()`
+- `client.tts.session({ voiceId })` — WebSocket `TextToSpeechSession` that speaks text as it is written (voice agents): `connect({ token? })`, `speak(text)` (async iterable), `generate()`/`flush()`/`audio(flushId?)`, `cancel()`, `keepAlive()`, `close()`, `on("begin"|"audio"|"flushDone"|"wordBoundaries"|"cancelled"|"termination"|"error"|"close", fn)`
+- `client.tts.createTemporaryToken({ expires_in_seconds })` — Mint a short-lived token, server-side, for a session opened in a browser with `new TextToSpeechSession({ token })`; one token per connection
+- `TextToSpeechError` — What the `client.tts` methods throw on an API refusal: `errorCode`, `param`, `retryable`, `retryAfter`, `requestId`, `closeCode`, `body`
 
 ## Common patterns
 

@@ -1,7 +1,7 @@
 {
   "name": "assemblyai",
   "version": "4.42.0",
-  "description": "The AssemblyAI JavaScript SDK provides an easy-to-use interface for interacting with the AssemblyAI API, which supports async and real-time transcription.",
+  "description": "The AssemblyAI JavaScript SDK provides an easy-to-use interface for interacting with the AssemblyAI API, which supports async and real-time transcription and text-to-speech.",
   "engines": {
     "node": ">=18"
   },
@@ -106,6 +106,7 @@
     "AssemblyAI",
     "Speech-to-text",
     "Transcription",
+    "Text-to-speech",
     "Audio",
     "LLM"
   ],

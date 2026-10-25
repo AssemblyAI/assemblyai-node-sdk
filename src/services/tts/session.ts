@@ -831,9 +831,14 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
   }
 
   /**
-   * Resets the inactivity timer between sparse requests. Once `close()` was
-   * called it does nothing, so a keepalive timer still running while the
-   * session drains does not throw.
+   * Restarts the API's idle timer (`inactivityTimeout`, 120 s by default).
+   * Send one at least once per timeout while the session waits, including
+   * while audio already received is still playing: audio arrives much faster
+   * than it plays, and the timer counts from the last frame in either
+   * direction. Otherwise the API closes the session with 3006
+   * `inactivity_timeout` (retryable). Once `close()` was called it does
+   * nothing, so a keepalive timer still running while the session drains
+   * does not throw.
    */
   keepAlive() {
     if (this.terminating) return;

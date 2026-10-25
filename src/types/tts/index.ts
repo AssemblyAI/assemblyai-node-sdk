@@ -200,7 +200,11 @@ export type TextToSpeechSessionParams = {
   encoding?: LiteralUnion<Exclude<TextToSpeechEncoding, "mp3">, string>;
   /** Whether the server sends `wordBoundaries` events. Off by default here. */
   wordBoundaries?: boolean;
-  /** Seconds (5 to 120, default 120) after which an idle session is closed. */
+  /**
+   * Seconds (5 to 120, default 120) without a frame in either direction
+   * after which the API closes the session (3006 `inactivity_timeout`,
+   * retryable). See `keepAlive()`.
+   */
   inactivityTimeout?: number;
   /**
    * `true` renews the biometric consent of the cloned voice in `voiceId`.
