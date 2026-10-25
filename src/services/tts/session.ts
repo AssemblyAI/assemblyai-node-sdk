@@ -29,6 +29,10 @@ const DEFAULT_CONNECT_TIMEOUT_MS = 10_000;
 const DEFAULT_TERMINATE_TIMEOUT_MS = 35_000;
 /** Characters one `Generate` frame may carry, unless `Begin` says otherwise. */
 const MAX_GENERATE_CHARS = 2000;
+/** The unspoken characters the API holds by default, the limit before `Begin` reports one. */
+const DEFAULT_TEXT_MAX_BUFFER_CHARS = 8000;
+/** `readyState` of a WebSocket still opening, the same in every runtime. */
+const CONNECTING = 0;
 /** Audio frames queued for pulling before the oldest is dropped (~160 s). */
 const PULL_QUEUE_FRAMES = 2000;
 /** Closes after which a new session can succeed. */
@@ -268,6 +272,8 @@ function errorFromClose(code: number, reason: string): TextToSpeechError {
  * `connect()` opens the socket and waits for `Begin`. Send text with
  * `generate()` as it is produced, conclude each request with `flush()`, and
  * read its audio with `audio()`; `speak()` does all three for one text.
+ * Text need not wait for `connect()` to resolve: sent while the socket opens,
+ * it is held and sent the moment it opens.
  * `cancel()` is the barge-in: it stops the request in flight and ends its
  * `audio()` iteration at once. `close()` sends `Terminate` and waits for
  * the session's `Termination` summary.
@@ -299,6 +305,8 @@ export class TextToSpeechSession {
   private socket?: PolyfillWebSocket;
   private listeners: TextToSpeechSessionListeners = {};
   private queue = new PullQueue();
+  /** Frames sent while the socket was opening, sent in order once it opens. */
+  private pending: string[] = [];
   private nextFlushId = 0;
   private cancelIds: number[] = [];
   private errorRaised = false;
@@ -391,6 +399,7 @@ export class TextToSpeechSession {
 
   private reset() {
     this.queue = new PullQueue();
+    this.pending = [];
     this.nextFlushId = 0;
     this.cancelIds = [];
     this.errorRaised = false;
@@ -402,6 +411,18 @@ export class TextToSpeechSession {
 
   /**
    * Opens the socket and waits for `Begin`.
+   *
+   * Frames need not wait for `Begin`: `generate()`, `flush()`, `speak()`,
+   * `cancel()` and `keepAlive()` called while `connect()` is pending are
+   * held and sent, in order, the moment the socket opens, and the API reads
+   * them once it has sent `Begin`. A session opened for a reply then gets
+   * its first audio sooner: the text travels while the API runs its checks,
+   * which saves up to one network round trip. Until `Begin` arrives the
+   * API's default limits apply (2,000 characters per `Generate`, 8,000
+   * unspoken characters for `speak()`). If the connection fails, or
+   * `close()` is called, before the socket opens, the held frames are
+   * dropped and an `audio()` iteration rejects with the connection's error
+   * (or ends, after `close()`).
    *
    * A session the API has ended can be connected again with the same object.
    * A temporary token opens one connection, so a session opened with a token
@@ -524,7 +545,7 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
       this.socket = socket;
       connection.hadSocket = true;
       socket.binaryType = "arraybuffer";
-      socket.onopen = () => {};
+      socket.onopen = () => this.sendPending(socket);
 
       socket.onmessage = ({ data }: MessageEvent) => {
         connection.heardAt = Date.now();
@@ -673,6 +694,7 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
     const connection = this.queue;
     if (connection.ended) return;
     connection.ended = true;
+    this.pending = [];
     connection.error = this.error ?? cut;
     connection.termination = this.termination;
     this.enqueue({ kind: "closed", error: connection.error });
@@ -683,8 +705,10 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
   private releaseSocket() {
     const socket = this.socket;
     this.socket = undefined;
+    this.pending = [];
     if (!socket) return;
     socket.removeAllListeners?.();
+    socket.onopen = () => {};
     socket.onerror = () => {};
     socket.onclose = () => {};
     socket.onmessage = () => {};
@@ -711,6 +735,24 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
   }
 
   /**
+   * Sends the frames held while `socket` was opening, in order. The API reads
+   * them once it has sent `Begin`.
+   */
+  private sendPending(socket: PolyfillWebSocket) {
+    const frames = this.pending;
+    this.pending = [];
+    if (socket !== this.socket || this.stopped) return;
+    try {
+      for (const frame of frames) socket.send(frame);
+    } catch {
+      // the socket closed under us; the close handler ends the session
+    }
+  }
+
+  /**
+   * Sends `frame`, or holds it while the socket is still opening: the API
+   * reads frames sent before `Begin` once it has sent `Begin`, so text need
+   * not wait for it.
    * @throws Error once `close()` has sent `Terminate`, since the API reads
    * no frame after it, and when the session is not connected.
    * @throws TextToSpeechError the error that ended the session; or, while
@@ -723,7 +765,12 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
       throw new Error("The session is closing: close() was called");
     }
     if (socket && !this.stopped && socket.readyState === socket.OPEN) {
+      if (this.pending.length > 0) this.sendPending(socket);
       socket.send(JSON.stringify(frame));
+      return;
+    }
+    if (socket && !this.stopped && socket.readyState === CONNECTING) {
+      this.pending.push(JSON.stringify(frame));
       return;
     }
     if (this.error) throw this.surfaced();
@@ -749,9 +796,11 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
 
   /**
    * The unspoken characters the API holds before it ends the session with
-   * 3010, as `Begin` reports it; `0` for no limit.
+   * 3010, as `Begin` reports it (the API's default before `Begin`); `0` for
+   * no limit.
    */
   private backlogLimit(): number {
+    if (!this.begin) return DEFAULT_TEXT_MAX_BUFFER_CHARS;
     const limits = this.limits();
     if (limits?.text_throttle_enabled === false) return 0;
     const limit = limits?.text_max_buffer_chars;

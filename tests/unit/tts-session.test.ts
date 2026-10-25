@@ -803,20 +803,16 @@ describe("tts session", () => {
     expect(() => session.generate("Hi.")).toThrow(/connect\(\)/);
   });
 
-  it("a send while the socket is still opening is not reported as a lost connection", async () => {
+  it("a send while the socket is still opening is held, not reported as a lost connection", async () => {
+    api.answerFlush = false;
     const session = client.tts.session({ websocketBaseUrl });
     const connecting = session.connect();
-    let thrown: unknown;
-    try {
-      session.generate("Hi.");
-    } catch (error) {
-      thrown = error;
-    }
-    expect(thrown).not.toBeInstanceOf(TextToSpeechError);
-    expect(thrown).toMatchObject({ message: /connect\(\)/ });
+    expect(() => session.generate("Hi.")).not.toThrow();
     await server.connected;
     server.send(JSON.stringify(beginMessage));
     await connecting;
+    await tick();
+    expect(api.frames("Generate")).toEqual([{ type: "Generate", text: "Hi." }]);
     await session.close();
   });
 
@@ -2226,5 +2222,168 @@ describe("tts session", () => {
         await session.close();
       },
     );
+  });
+
+  describe("text sent before Begin", () => {
+    type DrivenSocket = {
+      OPEN: number;
+      readyState: number;
+      binaryType: string;
+      onopen: (() => void) | null;
+      onerror: ((event: unknown) => void) | null;
+      onclose: ((event: unknown) => void) | null;
+      onmessage: ((event: unknown) => void) | null;
+      send: jest.Mock;
+      close: jest.Mock;
+    };
+
+    /** Hands the session a socket the test opens or fails, as the runtime would. */
+    function drivenSocket(): DrivenSocket {
+      const socket: DrivenSocket = {
+        OPEN: 1,
+        readyState: 0, // CONNECTING
+        binaryType: "blob",
+        onopen: null,
+        onerror: null,
+        onclose: null,
+        onmessage: null,
+        send: jest.fn(),
+        close: jest.fn(),
+      };
+      jest
+        .spyOn(websocketPolyfill, "factory")
+        .mockReturnValueOnce(
+          socket as unknown as ReturnType<typeof websocketPolyfill.factory>,
+        );
+      return socket;
+    }
+
+    const sentFrames = (socket: DrivenSocket) =>
+      socket.send.mock.calls.map(([data]) => JSON.parse(data as string));
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    it("holds text sent while the socket opens and sends it in order, before Begin", async () => {
+      // Given a session whose connect() has not resolved yet
+      api.answerFlush = false;
+      const session = client.tts.session({ websocketBaseUrl });
+      const connecting = session.connect();
+
+      // When the app sends text right away
+      session.generate("Hello ");
+      const audio = session.speak("early.");
+
+      // Then nothing is sent before the socket opens, and everything is sent,
+      // in order, once it opens, without waiting for Begin
+      expect(api.sent).toEqual([]);
+      await server.connected;
+      await tick();
+      expect(api.sent).toEqual([
+        { type: "Generate", text: "Hello " },
+        { type: "Generate", text: "early." },
+        { type: "Flush" },
+      ]);
+      expect(session.begin).toBeUndefined();
+
+      // And the audio the API sends after Begin reaches the iterator made before it
+      server.send(JSON.stringify(beginMessage));
+      await expect(connecting).resolves.toMatchObject({ id: "sess-1" });
+      server.send(audioFrame("Hello early.", 0));
+      server.send(
+        JSON.stringify({
+          type: "FlushDone",
+          flush_id: 0,
+          audio_duration_ms: 80,
+        }),
+      );
+      expect((await collect(audio)).toString()).toBe("Hello early.");
+      await session.close();
+    });
+
+    it("keeps the order of frames held and frames sent once the socket is open", async () => {
+      // Given text held while the socket opened
+      const socket = drivenSocket();
+      const session = client.tts.session({ websocketBaseUrl });
+      void session.connect().catch(() => undefined);
+      expect(session.speak("a".repeat(4500))).toBeDefined();
+      expect(session.cancel()).toBe(1);
+
+      // When the socket is open and the app sends before its open event ran
+      socket.readyState = 1;
+      session.keepAlive();
+
+      // Then the held frames go first, split as speak() splits, then the new one
+      expect(sentFrames(socket)).toEqual([
+        { type: "Generate", text: "a".repeat(2000) },
+        { type: "Generate", text: "a".repeat(2000) },
+        { type: "Generate", text: "a".repeat(500) },
+        { type: "Flush" },
+        { type: "Cancel" },
+        { type: "KeepAlive" },
+      ]);
+
+      // And the open event sends nothing twice
+      socket.onopen?.();
+      expect(socket.send).toHaveBeenCalledTimes(6);
+      await session.close(false);
+    });
+
+    it("speak() before Begin refuses text over the API's default backlog", async () => {
+      // Given a session still connecting, so no Begin reports the backlog
+      const socket = drivenSocket();
+      const session = client.tts.session({ websocketBaseUrl });
+      void session.connect().catch(() => undefined);
+
+      // When the app speaks more than the API's default 8,000 characters
+      // Then speak() throws before holding any of it
+      expect(() => session.speak("a".repeat(8001))).toThrow(
+        /^text is 8001 characters, over the 8000 unspoken characters/,
+      );
+      socket.readyState = 1;
+      socket.onopen?.();
+      expect(socket.send).not.toHaveBeenCalled();
+      await session.close(false);
+    });
+
+    it("a connection that fails before it opens drops the held text and fails its audio", async () => {
+      // Given text held while the socket opens
+      const socket = drivenSocket();
+      const session = client.tts.session({ websocketBaseUrl });
+      const connecting = session.connect();
+      const audio = session.speak("Never sent.");
+
+      // When the socket fails before it opens
+      socket.onerror?.({ type: "error" });
+
+      // Then connect() and the audio reject with the same error, and nothing is sent
+      const error = await connecting.catch((e: unknown) => e);
+      expect(error).toBeInstanceOf(TextToSpeechError);
+      await expect(collect(audio)).rejects.toBe(error);
+      socket.readyState = 1;
+      socket.onopen?.();
+      expect(socket.send).not.toHaveBeenCalled();
+    });
+
+    it("close() while the socket opens drops the held text", async () => {
+      // Given text held while the socket opens
+      const socket = drivenSocket();
+      const session = client.tts.session({ websocketBaseUrl });
+      const connecting = session.connect();
+      const audio = session.speak("Dropped.");
+
+      // When the app closes the session before it began
+      await expect(session.close()).resolves.toBeUndefined();
+
+      // Then connect() rejects, the audio ends, and the held text is never sent
+      await expect(connecting).rejects.toThrow(
+        "The session was closed before it began",
+      );
+      expect((await collect(audio)).byteLength).toBe(0);
+      socket.readyState = 1;
+      socket.onopen?.();
+      expect(socket.send).not.toHaveBeenCalled();
+    });
   });
 });
