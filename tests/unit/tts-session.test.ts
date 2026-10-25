@@ -615,6 +615,7 @@ describe("tts session", () => {
     // No Authorization header: it would override the token.
     expect(first.clientOptions).toEqual({
       headers: { "User-Agent": sdkUserAgent },
+      noDelay: true,
     });
     expect((await collect(session.speak("One."))).toString()).toBe("One.");
     await session.close();
@@ -673,6 +674,7 @@ describe("tts session", () => {
     expect(new URL(first.url).searchParams.has("token")).toBe(false);
     expect(first.clientOptions).toEqual({
       headers: { Authorization: defaultApiKey, "User-Agent": sdkUserAgent },
+      noDelay: true,
     });
     await session.close();
 
@@ -681,6 +683,7 @@ describe("tts session", () => {
     expect(new URL(second.url).searchParams.get("token")).toBe("tmp");
     expect(second.clientOptions).toEqual({
       headers: { "User-Agent": sdkUserAgent },
+      noDelay: true,
     });
     second.send(JSON.stringify(beginMessage));
     await reconnect;
@@ -699,6 +702,29 @@ describe("tts session", () => {
     expect(url.searchParams.get("extend_biometric_consent")).toBe("true");
     await session.close();
   });
+
+  it.each([
+    ["an API key", { websocketBaseUrl }],
+    ["a temporary token, without a client", { websocketBaseUrl, token: "tmp" }],
+  ])(
+    "a session opened with %s turns Nagle's algorithm off before the upgrade request",
+    async (_, params) => {
+      // Given a runtime where the socket comes from the ws package
+      const session =
+        "token" in params
+          ? new TextToSpeechSession(params)
+          : client.tts.session(params);
+
+      // When it connects
+      await connect(session);
+
+      // Then the socket is asked for TCP_NODELAY from the start
+      expect((await connection(1)).clientOptions).toMatchObject({
+        noDelay: true,
+      });
+      await session.close();
+    },
+  );
 
   it("keepAlive() sends a KeepAlive frame", async () => {
     const session = client.tts.session({ websocketBaseUrl });
@@ -731,6 +757,7 @@ describe("tts session", () => {
       const second = await connection(2);
       expect(second.clientOptions).toEqual({
         headers: { "User-Agent": userAgent },
+        noDelay: true,
       });
       second.send(JSON.stringify(beginMessage));
       await reconnect;
@@ -747,12 +774,13 @@ describe("tts session", () => {
       await connect(session);
       expect((await connection(1)).clientOptions).toEqual({
         headers: { Authorization: defaultApiKey },
+        noDelay: true,
       });
       await session.close();
 
       const reconnect = session.connect({ token: "tmp" });
       const second = await connection(2);
-      expect(second.clientOptions).toBeUndefined();
+      expect(second.clientOptions).toEqual({ noDelay: true });
       second.send(JSON.stringify(beginMessage));
       await reconnect;
       await session.close();
@@ -764,7 +792,7 @@ describe("tts session", () => {
         token: "tmp",
       });
       await connect(session);
-      expect((await connection(1)).clientOptions).toBeUndefined();
+      expect((await connection(1)).clientOptions).toEqual({ noDelay: true });
       await session.close();
     });
 

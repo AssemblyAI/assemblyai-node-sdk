@@ -525,11 +525,20 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
       if (this.internal.userAgent && !conditions.browser) {
         headers["User-Agent"] = this.internal.userAgent;
       }
+      const options: { headers?: Record<string, string>; noDelay?: boolean } =
+        {};
+      if (Object.keys(headers).length > 0) options.headers = headers;
+      // Nagle's algorithm off before the upgrade request is written, not only
+      // once the socket is open as `ws` does. Under Deno's Node compatibility
+      // the request otherwise waits about 40 ms in most handshakes (connect to
+      // Begin 60 ms instead of 19 ms in our tests). A browser's WebSocket
+      // takes no options.
+      if (!conditions.browser) options.noDelay = true;
       let socket: PolyfillWebSocket;
       try {
         socket =
-          Object.keys(headers).length > 0
-            ? polyfillWebSocketFactory(url.toString(), { headers })
+          Object.keys(options).length > 0
+            ? polyfillWebSocketFactory(url.toString(), options)
             : polyfillWebSocketFactory(url.toString());
       } catch (cause) {
         // The runtime refused to create the socket (a browser's WebSocket
