@@ -546,6 +546,23 @@ describe("tts session", () => {
     expect(() => session.generate("Hi.")).toThrow(/connect\(\)/);
   });
 
+  it("a send while the socket is still opening is not reported as a lost connection", async () => {
+    const session = client.tts.session({ websocketBaseUrl });
+    const connecting = session.connect();
+    let thrown: unknown;
+    try {
+      session.generate("Hi.");
+    } catch (error) {
+      thrown = error;
+    }
+    expect(thrown).not.toBeInstanceOf(TextToSpeechError);
+    expect(thrown).toMatchObject({ message: /connect\(\)/ });
+    await server.connected;
+    server.send(JSON.stringify(beginMessage));
+    await connecting;
+    await session.close();
+  });
+
   it("cancel ends a reader following the request being written", async () => {
     api.answerFlush = false;
     const session = client.tts.session({ websocketBaseUrl });
@@ -597,6 +614,69 @@ describe("tts session", () => {
     );
     expect(() => session.generate("\u{1F600}".repeat(2000))).not.toThrow();
     await session.close();
+  });
+
+  describe("speak() and the API's text backlog", () => {
+    const withLimits = (limits: Record<string, unknown>) => ({
+      ...beginMessage,
+      configuration: {
+        ...beginMessage.configuration,
+        limits: { max_generate_text_length: 2000, ...limits },
+      },
+    });
+
+    it("refuses text over the backlog before sending anything", async () => {
+      // Given a session whose Begin reports an 8,000-character backlog
+      const session = client.tts.session({ websocketBaseUrl });
+      await connect(
+        session,
+        withLimits({
+          text_throttle_enabled: true,
+          text_max_buffer_chars: 8000,
+        }),
+      );
+
+      // When the app speaks 8,001 characters at once
+      const speaking = () => session.speak("a".repeat(8001));
+
+      // Then speak() throws a RangeError naming the limit, and sends nothing
+      expect(speaking).toThrow(RangeError);
+      expect(speaking).toThrow(
+        /^text is 8001 characters, over the 8000 unspoken characters .* 3010 input_rate_exceeded; split it and speak\(\) each part/,
+      );
+      await tick();
+      expect(api.sent).toEqual([]);
+
+      // And text at the limit, counted in code points as the API counts it,
+      // is spoken: 8,000 emoji are 16,000 UTF-16 code units
+      const text = "\u{1F600}".repeat(8000);
+      expect((await collect(session.speak(text))).toString()).toBe(text);
+      expect(api.frames("Generate")).toHaveLength(4);
+      await session.close();
+    });
+
+    it.each([
+      [
+        "the throttle is off",
+        { text_throttle_enabled: false, text_max_buffer_chars: 8000 },
+      ],
+      ["Begin reports no backlog", {}],
+      [
+        "the backlog is 0",
+        { text_throttle_enabled: true, text_max_buffer_chars: 0 },
+      ],
+    ])("sends long text when %s", async (_case, limits) => {
+      // Given a session whose API sets no text backlog
+      const session = client.tts.session({ websocketBaseUrl });
+      await connect(session, withLimits(limits));
+
+      // When the app speaks 8,001 characters
+      const text = "a".repeat(8001);
+
+      // Then the text is sent and spoken
+      expect((await collect(session.speak(text))).toString()).toBe(text);
+      await session.close();
+    });
   });
 
   it("close() rejects a connect() still pending instead of letting it time out", async () => {
@@ -1077,6 +1157,97 @@ describe("tts session", () => {
     );
     await expect(session.close()).resolves.toEqual(terminationMessage);
     expect(api.frames("Terminate")).toHaveLength(2);
+  });
+
+  it("sends after close() sent Terminate throw, and the drain still reaches its reader", async () => {
+    // Given a session whose close() waits for the API to speak pending text
+    api.answerTerminate = false;
+    const session = client.tts.session({ websocketBaseUrl });
+    await connect(session);
+    session.generate("Pending text.");
+    const reading = outcome(collect(session.audio()), 1000); // Terminate flushes it
+    const closing = outcome(session.close(), 1000);
+
+    // When the app goes on sending, as an LLM token loop still running would
+    const closed = "The session is closing: close() was called";
+
+    // Then text, flushes and cancels throw instead of being dropped unread,
+    // a keepalive does nothing, and the API sees nothing after Terminate
+    expect(() => session.generate("Too late.")).toThrow(closed);
+    expect(() => session.flush()).toThrow(closed);
+    expect(() => session.cancel()).toThrow(closed);
+    expect(() => session.keepAlive()).not.toThrow();
+    await tick();
+    expect(api.sent.map((frame) => frame.type)).toEqual([
+      "Generate",
+      "Terminate",
+    ]);
+
+    // And the refused cancel did not end the reader of the drained request
+    for (const audio of ["Pending ", "text."]) {
+      api.sockets[0].send(
+        JSON.stringify({
+          type: "Audio",
+          audio: Buffer.from(audio).toString("base64"),
+          flush_id: 0,
+        }),
+      );
+      await tick();
+    }
+    api.sockets[0].send(JSON.stringify({ type: "FlushDone", flush_id: 0 }));
+    api.sockets[0].send(JSON.stringify(terminationMessage));
+    expect(await closing).toEqual(terminationMessage);
+    expect(await reading).toEqual(Buffer.from("Pending text."));
+
+    // And once the session ended, a send says to connect again
+    expect(() => session.generate("Later.")).toThrow(/call connect\(\) first/);
+  });
+
+  it("a send while the socket closes without an Error frame throws a retryable error", async () => {
+    // Given a connection whose close frame (1011, no Error frame) arrived
+    // and whose close event has not run yet, as with ws between the two
+    const session = client.tts.session({ websocketBaseUrl });
+    const errors: TextToSpeechError[] = [];
+    session.on("error", (error) => errors.push(error));
+    await connect(session);
+    const socket = (session as unknown as { socket: { readyState: number } })
+      .socket;
+    socket.readyState = 2; // CLOSING
+
+    // When the app sends
+    const sends = [
+      () => session.generate("Hello."),
+      () => session.flush(),
+      () => session.cancel(),
+      () => session.keepAlive(),
+    ];
+
+    // Then each send throws a retryable TextToSpeechError with the session id
+    for (const send of sends) {
+      let thrown: unknown;
+      try {
+        send();
+      } catch (error) {
+        thrown = error;
+      }
+      expect(thrown).toBeInstanceOf(TextToSpeechError);
+      expect(thrown).toMatchObject({
+        message: "The connection is closing",
+        retryable: true,
+        requestId: "sess-1",
+      });
+    }
+
+    // And the close event that follows reports the close itself
+    api.sockets[0].close({
+      code: 1011,
+      reason: "keepalive ping timeout",
+      wasClean: false,
+    });
+    await tick();
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toMatchObject({ closeCode: 1011, retryable: true });
+    expect(() => session.generate("Hello.")).toThrow(errors[0]);
   });
 
   it("connect() reports the previous connection's close before opening a new one", async () => {

@@ -63,6 +63,8 @@ class PullQueue {
   heardAt = 0;
   /** The connection's one `close()`, which every call shares. */
   closing?: Promise<TtsTerminationEvent | undefined>;
+  /** `close()` sent `Terminate`; the API reads no frame after it. */
+  terminating = false;
   /** The socket's own close event, when it arrived. */
   closedWith?: [code: number, reason: string];
   closeEmitted = false;
@@ -676,24 +678,57 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
     return this.surface(this.error as TextToSpeechError);
   }
 
+  /** `close()` sent `Terminate` and the connection has not ended yet. */
+  private get terminating(): boolean {
+    return this.queue.terminating && !this.stopped;
+  }
+
+  /**
+   * @throws Error once `close()` has sent `Terminate`, since the API reads
+   * no frame after it, and when the session is not connected.
+   * @throws TextToSpeechError the error that ended the session; or, while
+   * the socket is closing and its close event has not run yet, a retryable
+   * one: a close without an `Error` frame, such as 1006 or 1011.
+   */
   private send(frame: Record<string, unknown>) {
-    if (
-      !this.socket ||
-      this.stopped ||
-      this.socket.readyState !== this.socket.OPEN
-    ) {
-      if (this.error) throw this.surfaced();
-      throw new Error("The session is not open: call connect() first");
+    const socket = this.socket;
+    if (this.terminating) {
+      throw new Error("The session is closing: close() was called");
     }
-    this.socket.send(JSON.stringify(frame));
+    if (socket && !this.stopped && socket.readyState === socket.OPEN) {
+      socket.send(JSON.stringify(frame));
+      return;
+    }
+    if (this.error) throw this.surfaced();
+    if (socket && this.begin && !this.stopped) {
+      throw new TextToSpeechError("The connection is closing", {
+        retryable: true,
+        requestId: this.begin.id,
+      });
+    }
+    throw new Error("The session is not open: call connect() first");
+  }
+
+  private limits(): Record<string, unknown> | undefined {
+    return this.begin?.configuration?.limits as
+      | Record<string, unknown>
+      | undefined;
   }
 
   private generateLimit(): number {
-    const limits = this.begin?.configuration?.limits as
-      | Record<string, unknown>
-      | undefined;
-    const limit = limits?.max_generate_text_length;
+    const limit = this.limits()?.max_generate_text_length;
     return typeof limit === "number" && limit >= 0 ? limit : MAX_GENERATE_CHARS;
+  }
+
+  /**
+   * The unspoken characters the API holds before it ends the session with
+   * 3010, as `Begin` reports it; `0` for no limit.
+   */
+  private backlogLimit(): number {
+    const limits = this.limits();
+    if (limits?.text_throttle_enabled === false) return 0;
+    const limit = limits?.text_max_buffer_chars;
+    return typeof limit === "number" && limit > 0 ? limit : 0;
   }
 
   private checkPullable() {
@@ -716,6 +751,7 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
    * Audio may start before `flush()` once enough complete sentences have
    * arrived; `flush()` is what concludes the request.
    * @throws RangeError for a text over one frame's limit (2,000 characters); split it.
+   * @throws Error once `close()` was called: the API would not read the text.
    */
   generate(text: string) {
     if (typeof text !== "string") throw new TypeError("text must be a string");
@@ -736,9 +772,8 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
    * Flushes can be pipelined; the audio comes in order.
    */
   flush(): number {
-    const flushId = this.nextFlushId++;
     this.send({ type: "Flush" });
-    return flushId;
+    return this.nextFlushId++;
   }
 
   /**
@@ -747,30 +782,52 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
    * An `audio()` iteration of a cancelled request, or of the text being
    * written, ends at once; audio of it still in transit is discarded. Like
    * `flush()`, a cancel takes a `flush_id`, so the next request's id skips one.
+   * A cancel the session refuses (after `close()`, or once the connection
+   * is lost) changes nothing: the iterations go on to their own end.
    */
   cancel() {
+    this.send({ type: "Cancel" });
     const cancelId = this.nextFlushId++;
     this.cancelIds.push(cancelId);
     this.queue.cancelledBefore = Math.max(this.queue.cancelledBefore, cancelId);
-    this.send({ type: "Cancel" });
   }
 
-  /** Resets the inactivity timer between sparse requests. */
+  /**
+   * Resets the inactivity timer between sparse requests. Once `close()` was
+   * called it does nothing, so a keepalive timer still running while the
+   * session drains does not throw.
+   */
   keepAlive() {
+    if (this.terminating) return;
     this.send({ type: "KeepAlive" });
   }
 
   /**
    * Speaks one text: `generate()`, `flush()`, then its audio.
    *
-   * Text longer than one frame is split across frames. Returns an async
-   * iterable of the request's audio that ends at its `FlushDone`, or early
-   * if the request is cancelled.
+   * Text longer than one frame is split across frames, sent at once. The
+   * API holds a limited backlog of text it has not spoken yet (`Begin`'s
+   * `limits.text_max_buffer_chars`, 8,000 characters by default) and ends
+   * the session with a non-retryable 3010 when a burst passes it, so longer
+   * text is refused before anything is sent. The backlog counts all the
+   * session's unspoken text, so this check prevents a sure 3010 without
+   * guaranteeing success: split long text and `speak()` each part once the
+   * previous part's audio is read, or pace it with `generate()`. Returns an
+   * async iterable of the request's audio that ends at its `FlushDone`, or
+   * early if the request is cancelled.
+   * @throws RangeError for text over the backlog limit.
    */
   speak(text: string): AsyncIterable<Uint8Array> {
     if (typeof text !== "string") throw new TypeError("text must be a string");
     this.checkPullable();
-    const limit = this.generateLimit() || Math.max(codePointLength(text), 1);
+    const length = codePointLength(text);
+    const backlog = this.backlogLimit();
+    if (backlog && length > backlog) {
+      throw new RangeError(
+        `text is ${length} characters, over the ${backlog} unspoken characters the API holds before it ends the session with 3010 input_rate_exceeded; split it and speak() each part once the previous part's audio is read, or pace it with generate()`,
+      );
+    }
+    const limit = this.generateLimit() || Math.max(length, 1);
     for (const piece of splitCodePoints(text, limit)) this.generate(piece);
     return this.audio(this.flush());
   }
@@ -914,6 +971,7 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
         this.terminationResolve = resolve;
       });
       connection.heardAt = Date.now();
+      connection.terminating = true;
       try {
         socket.send(JSON.stringify({ type: "Terminate" }));
       } catch {
