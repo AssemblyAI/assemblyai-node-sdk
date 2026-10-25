@@ -7,7 +7,8 @@ import { buildUserAgent } from "../utils/userAgent";
  * Base class for services that communicate with the API.
  */
 export abstract class BaseService {
-  private userAgent: string | undefined;
+  /** The User-Agent the client sends, or `undefined` with `userAgent: false`. */
+  protected readonly userAgent: string | undefined;
   /**
    * Create a new service.
    * @param params - The parameters to use for the service.

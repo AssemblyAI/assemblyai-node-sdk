@@ -468,7 +468,9 @@ export class TextToSpeechService extends BaseService {
       base.pathname = base.pathname.replace(/\/$/, "") + "/v1/ws";
       sessionParams.websocketBaseUrl = base.toString();
     }
-    return new TextToSpeechSession(sessionParams);
+    return new TextToSpeechSession(sessionParams, {
+      userAgent: this.userAgent,
+    });
   }
 
   /**

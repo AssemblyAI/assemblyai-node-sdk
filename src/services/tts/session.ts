@@ -319,8 +319,16 @@ export class TextToSpeechSession {
   /** The temporary token of the next connection; `connect({ token })` replaces it. */
   private token?: string;
 
-  /** @throws Error if neither `apiKey` nor `token` is given. */
-  constructor(private readonly params: TextToSpeechSessionParams) {
+  /**
+   * @param params - The session's parameters.
+   * @param internal - Set by `client.tts.session()`: `userAgent` is the
+   * client's User-Agent, which the handshake sends on Node.
+   * @throws Error if neither `apiKey` nor `token` is given.
+   */
+  constructor(
+    private readonly params: TextToSpeechSessionParams,
+    private readonly internal: { userAgent?: string } = {},
+  ) {
     if (!params.token && !params.apiKey) {
       throw new Error("API key or temporary token is required.");
     }
@@ -488,14 +496,23 @@ export class TextToSpeechSession {
 Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/compat.md#browser-compatibility.`,
         );
       }
+      const headers: Record<string, string> = {};
+      // The token alone: an Authorization header would override it.
+      if (!token && this.params.apiKey) {
+        headers.Authorization = this.params.apiKey;
+      }
+      // The API records the handshake's User-Agent with the session's usage.
+      // A browser sends its own and its WebSocket takes no headers: the
+      // second argument there is the subprotocols.
+      if (this.internal.userAgent && !conditions.browser) {
+        headers["User-Agent"] = this.internal.userAgent;
+      }
       let socket: PolyfillWebSocket;
       try {
-        socket = token
-          ? // The token alone: an Authorization header would override it.
-            polyfillWebSocketFactory(url.toString())
-          : polyfillWebSocketFactory(url.toString(), {
-              headers: { Authorization: this.params.apiKey },
-            });
+        socket =
+          Object.keys(headers).length > 0
+            ? polyfillWebSocketFactory(url.toString(), { headers })
+            : polyfillWebSocketFactory(url.toString());
       } catch (cause) {
         // The runtime refused to create the socket (a browser's WebSocket
         // takes no headers, for one), so there is no connection to close.

@@ -9,7 +9,8 @@ import {
   TtsBeginEvent,
 } from "../../src";
 import * as websocketPolyfill from "../../src/polyfills/websocket/default";
-import { createClient, defaultApiKey } from "./utils";
+import { conditions } from "#conditions";
+import { createClient, defaultApiKey, defaultBaseUrl } from "./utils";
 
 fetchMock.enableMocks();
 
@@ -173,6 +174,11 @@ async function collect(iterable: AsyncIterable<Uint8Array>): Promise<Buffer> {
 }
 
 const tick = () => new Promise((resolve) => setTimeout(resolve, 20));
+
+/** The User-Agent the client builds by default, as the HTTP calls send it. */
+const sdkUserAgent = expect.stringMatching(
+  /AssemblyAI\/1\.0 \(sdk=JavaScript\/\S+/,
+);
 
 /** The server side of connection `n` (1-based), once the client opened it. */
 async function connection(n: number): Promise<ServerSocket> {
@@ -459,7 +465,10 @@ describe("tts session", () => {
     const url = new URL(first.url);
     expect(url.searchParams.get("token")).toBe("tmp-1");
     expect(url.searchParams.get("inactivity_timeout")).toBe("30");
-    expect(first.clientOptions).toBeUndefined(); // no Authorization header
+    // No Authorization header: it would override the token.
+    expect(first.clientOptions).toEqual({
+      headers: { "User-Agent": sdkUserAgent },
+    });
     expect((await collect(session.speak("One."))).toString()).toBe("One.");
     await session.close();
 
@@ -516,17 +525,92 @@ describe("tts session", () => {
     const first = await connection(1);
     expect(new URL(first.url).searchParams.has("token")).toBe(false);
     expect(first.clientOptions).toEqual({
-      headers: { Authorization: defaultApiKey },
+      headers: { Authorization: defaultApiKey, "User-Agent": sdkUserAgent },
     });
     await session.close();
 
     const reconnect = session.connect({ token: "tmp" });
     const second = await connection(2);
     expect(new URL(second.url).searchParams.get("token")).toBe("tmp");
-    expect(second.clientOptions).toBeUndefined();
+    expect(second.clientOptions).toEqual({
+      headers: { "User-Agent": sdkUserAgent },
+    });
     second.send(JSON.stringify(beginMessage));
     await reconnect;
     await session.close();
+  });
+
+  describe("the handshake's User-Agent", () => {
+    it("is the client's, on both the API key and the token path", async () => {
+      const custom = new AssemblyAI({
+        apiKey: defaultApiKey,
+        ttsBaseUrl: defaultBaseUrl,
+        userAgent: { integration: { name: "Pipecat", version: "1.2.3" } },
+      });
+      const session = custom.tts.session({ websocketBaseUrl });
+      await connect(session);
+      const userAgent = (
+        (await connection(1)).clientOptions as {
+          headers: Record<string, string>;
+        }
+      ).headers["User-Agent"];
+      expect(userAgent).toEqual(sdkUserAgent);
+      expect(userAgent).toContain("integration=Pipecat/1.2.3");
+      await session.close();
+
+      const reconnect = session.connect({ token: "tmp" });
+      const second = await connection(2);
+      expect(second.clientOptions).toEqual({
+        headers: { "User-Agent": userAgent },
+      });
+      second.send(JSON.stringify(beginMessage));
+      await reconnect;
+      await session.close();
+    });
+
+    it("is not sent with userAgent: false", async () => {
+      const anonymous = new AssemblyAI({
+        apiKey: defaultApiKey,
+        ttsBaseUrl: defaultBaseUrl,
+        userAgent: false,
+      });
+      const session = anonymous.tts.session({ websocketBaseUrl });
+      await connect(session);
+      expect((await connection(1)).clientOptions).toEqual({
+        headers: { Authorization: defaultApiKey },
+      });
+      await session.close();
+
+      const reconnect = session.connect({ token: "tmp" });
+      const second = await connection(2);
+      expect(second.clientOptions).toBeUndefined();
+      second.send(JSON.stringify(beginMessage));
+      await reconnect;
+      await session.close();
+    });
+
+    it("is not sent by a session created without a client", async () => {
+      const session = new TextToSpeechSession({
+        websocketBaseUrl,
+        token: "tmp",
+      });
+      await connect(session);
+      expect((await connection(1)).clientOptions).toBeUndefined();
+      await session.close();
+    });
+
+    it("is left to the browser, whose WebSocket takes no headers", async () => {
+      // The browser polyfill passes a second argument as the subprotocols.
+      conditions.browser = true;
+      try {
+        const session = client.tts.session({ websocketBaseUrl, token: "tmp" });
+        await connect(session);
+        expect((await connection(1)).clientOptions).toBeUndefined();
+        await session.close();
+      } finally {
+        conditions.browser = false;
+      }
+    });
   });
 
   it("a connect({ token }) refused while connected keeps the session's token", async () => {
