@@ -458,6 +458,163 @@ describe("tts", () => {
   );
 
   /**
+   * A web stream that sends one chunk and then nothing, as a body whose
+   * connection stalls without a reset; `cancelled` records its cancel.
+   */
+  const stallingSource = () => {
+    const cancelled = jest.fn();
+    let sent = false;
+    const source = new ReadableStream<Uint8Array>(
+      {
+        pull(c) {
+          if (sent) return new Promise<void>(() => undefined);
+          sent = true;
+          c.enqueue(new Uint8Array([1, 2, 3, 4]));
+        },
+        cancel: cancelled,
+      },
+      { highWaterMark: 0 },
+    );
+    return { source, cancelled };
+  };
+
+  it.each([
+    ["the default 30 s", {}, 30_000],
+    ["its readTimeout", { readTimeout: 5_000 }, 5_000],
+  ])(
+    "stream gives up a body that stalls after the first audio after %s, as a retryable cut, and releases the connection",
+    async (_name, options, limit) => {
+      jest.useFakeTimers();
+      try {
+        const { source, cancelled } = stallingSource();
+        mockStreamedBody(source);
+        const speech = await client.tts.stream({ text: "Hi." }, options);
+        const chunks: Uint8Array[] = [];
+        let error: unknown;
+        const loop = (async () => {
+          for await (const chunk of speech) chunks.push(chunk);
+        })().catch((e) => {
+          error = e;
+        });
+        await jest.advanceTimersByTimeAsync(limit - 1);
+        expect(chunks).toHaveLength(1);
+        expect(error).toBeUndefined();
+        expect(cancelled).not.toHaveBeenCalled();
+        await jest.advanceTimersByTimeAsync(1);
+        await loop;
+        expect(error).toBeInstanceOf(TextToSpeechError);
+        expect(error).toMatchObject({
+          status: 200,
+          retryable: true,
+          requestId: "req-1",
+        });
+        expect((error as Error).message).toContain(`no audio for ${limit} ms`);
+        expect(cancelled).toHaveBeenCalledTimes(1); // the connection is released
+        expect(jest.getTimerCount()).toBe(0);
+      } finally {
+        jest.useRealTimers();
+      }
+    },
+  );
+
+  it("stream bounds a read of body with the caller's own reader too", async () => {
+    jest.useFakeTimers();
+    try {
+      const { source, cancelled } = stallingSource();
+      mockStreamedBody(source);
+      const speech = await client.tts.stream(
+        { text: "Hi." },
+        { readTimeout: 1_000 },
+      );
+      const reader = speech.body.getReader();
+      expect((await reader.read()).value).toEqual(new Uint8Array([1, 2, 3, 4]));
+      const next = reader.read().catch((e) => e);
+      await jest.advanceTimersByTimeAsync(1_000);
+      expect(await next).toMatchObject({
+        name: "TextToSpeechError",
+        status: 200,
+        retryable: true,
+      });
+      expect(cancelled).toHaveBeenCalledTimes(1);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it("stream never times a caller that plays each chunk at its own pace", async () => {
+    jest.useFakeTimers();
+    try {
+      let pulls = 0;
+      const source = new ReadableStream<Uint8Array>(
+        {
+          pull(c) {
+            pulls++;
+            c.enqueue(audio.slice((pulls - 1) * 320, pulls * 320));
+            if (pulls === 3) c.close();
+          },
+        },
+        { highWaterMark: 0 },
+      );
+      mockStreamedBody(source);
+      const speech = await client.tts.stream(
+        { text: "Hi." },
+        { readTimeout: 1_000 },
+      );
+      const chunks: Uint8Array[] = [];
+      for await (const chunk of speech) {
+        chunks.push(chunk);
+        await jest.advanceTimersByTimeAsync(60_000); // playing the chunk takes a minute
+      }
+      expect(Buffer.concat(chunks)).toEqual(Buffer.from(audio));
+      expect(jest.getTimerCount()).toBe(0); // no read timer outlives its read
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it.each([
+    [0, 0],
+    [Infinity, 0],
+    [Number.MAX_SAFE_INTEGER, 1], // past setTimeout's range, where a timer fires at once
+  ])(
+    "stream with readTimeout %p waits for a stalled body until cancelled",
+    async (readTimeout, timers) => {
+      jest.useFakeTimers();
+      try {
+        const { source, cancelled } = stallingSource();
+        mockStreamedBody(source);
+        const speech = await client.tts.stream(
+          { text: "Hi." },
+          { readTimeout },
+        );
+        const chunks: Uint8Array[] = [];
+        let settled = false;
+        let error: unknown;
+        const loop = (async () => {
+          for await (const chunk of speech) chunks.push(chunk);
+        })().then(
+          () => (settled = true),
+          (e) => {
+            error = e;
+            settled = true;
+          },
+        );
+        await jest.advanceTimersByTimeAsync(3_600_000);
+        expect(chunks).toHaveLength(1);
+        expect(settled).toBe(false);
+        expect(jest.getTimerCount()).toBe(timers);
+        expect(cancelled).not.toHaveBeenCalled();
+        await speech.cancel();
+        await loop;
+        expect(error).toBeUndefined();
+        expect(cancelled).toHaveBeenCalledTimes(1);
+      } finally {
+        jest.useRealTimers();
+      }
+    },
+  );
+
+  /**
    * Answers the next fetch the way fetch does: once the request's signal
    * aborts, the body errors with the signal's reason. The body sends `total`
    * one-byte chunks, then ends, or with `hang` waits forever for more.
@@ -641,6 +798,10 @@ describe("tts", () => {
     await (await client.tts.stream({ text: "Hi." }, { signal }))
       .bytes()
       .catch(() => undefined);
+    mockStreamedBody(stallingSource().source); // stalled past its read timeout
+    await (await client.tts.stream({ text: "Hi." }, { signal, readTimeout: 5 }))
+      .bytes()
+      .catch(() => undefined);
     mockAudio(); // a body read whole
     await (await client.tts.stream({ text: "Hi." }, { signal })).bytes();
     fetchMock.mockResponseOnce("busy", { status: 503 }); // refused
@@ -648,7 +809,7 @@ describe("tts", () => {
     fetchMock.mockRejectOnce(new TypeError("fetch failed")); // no answer
     await client.tts.stream({ text: "Hi." }, { signal }).catch(() => undefined);
 
-    expect(fetchMock).toHaveBeenCalledTimes(8);
+    expect(fetchMock).toHaveBeenCalledTimes(9);
     expect(listeners()).toBe(0);
   });
 });

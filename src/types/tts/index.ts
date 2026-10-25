@@ -81,8 +81,8 @@ export type SpeechRequestOptions = {
    * `TimeoutError`. For `synthesize()` the whole request, 610 000 by default
    * (the response waits for the complete audio; the API caps a request at
    * 600 seconds). For `stream()` the wait for the headers and first audio,
-   * 30 000 by default; reading the body is not timed, so playback at its own
-   * pace never trips it.
+   * 30 000 by default; each later read of the body is bounded by
+   * `readTimeout` instead.
    *
    * On Node, the built-in `fetch` also gives up after 300 seconds without
    * response headers (undici's `headersTimeout`), so a `synthesize()` longer
@@ -92,6 +92,15 @@ export type SpeechRequestOptions = {
    * `undici` package.
    */
   timeout?: number;
+  /**
+   * For `stream()`: milliseconds a read of the body may wait for audio,
+   * 30 000 by default; `0` turns it off. Only the time a read spends waiting
+   * counts, so playback at its own pace never trips it. A body that stalls
+   * without being reset (a dropped NAT mapping, a hung proxy) then ends with
+   * the same retryable `TextToSpeechError` as a cut, and the connection is
+   * released.
+   */
+  readTimeout?: number;
   /**
    * An external abort signal, combined with the timeout. Aborting it rejects
    * the request with the signal's reason; for `stream()` it also stops the

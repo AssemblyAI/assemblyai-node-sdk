@@ -40,6 +40,38 @@ function requestDeadline(timeoutMs: number, external?: AbortSignal) {
   };
 }
 
+/** The longest delay `setTimeout` keeps; a longer one fires at once. */
+const MAX_TIMER_MS = 2_147_483_647;
+
+/**
+ * `reader.read()`, given up after `timeoutMs` without a chunk: the reader is
+ * then cancelled, which releases the connection, and the read rejects with
+ * `stalled()`. The timer runs only while this read waits. A `timeoutMs` of
+ * `0` (or `Infinity`) waits as long as the body does.
+ */
+async function readWithin<T>(
+  reader: ReadableStreamDefaultReader<T>,
+  timeoutMs: number,
+  stalled: () => Error,
+): Promise<ReadableStreamReadResult<T>> {
+  if (!(timeoutMs > 0 && Number.isFinite(timeoutMs))) return reader.read();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const expired = new Promise<"expired">((resolve) => {
+    timer = setTimeout(
+      () => resolve("expired"),
+      Math.min(timeoutMs, MAX_TIMER_MS),
+    );
+  });
+  try {
+    const result = await Promise.race([reader.read(), expired]);
+    if (result !== "expired") return result;
+  } finally {
+    clearTimeout(timer);
+  }
+  await reader.cancel().catch(() => undefined);
+  throw stalled();
+}
+
 const ENDPOINT_SPEECH = "/v1/speech";
 const DEFAULT_TOKEN_BASE_URL = "https://token.assemblyai.com";
 /** A zone's TTS host (`tts.eu.assemblyai.com`); its zone is the first group. */
@@ -63,8 +95,10 @@ function zoneTokenBaseUrl(ttsBaseUrl?: string): string {
   return zone ? `https://token.${zone}.assemblyai.com` : DEFAULT_TOKEN_BASE_URL;
 }
 
-/** Each socket operation of a streamed request. */
+/** A streamed request's wait for the headers and first audio. */
 const DEFAULT_STREAM_TIMEOUT_MS = 30_000;
+/** How long one read of a streamed body may wait for audio. */
+const DEFAULT_READ_TIMEOUT_MS = 30_000;
 /** A buffered request waits for the whole audio; the API caps a request at 600 s. */
 const DEFAULT_SYNTHESIZE_TIMEOUT_MS = 610_000;
 
@@ -167,9 +201,12 @@ export function speechResponseInfo(
  * Iterate it (`for await (const chunk of speech)`) or read `body`, a web
  * `ReadableStream`. Chunk sizes vary and are not aligned to samples. A
  * failure after the first audio cuts the body: the iteration then throws a
- * `TextToSpeechError` with `retryable: true`. Aborting the request's
- * `signal` stops the download, and the iteration throws the signal's reason
- * (an `AbortError` unless you gave another) instead.
+ * `TextToSpeechError` with `retryable: true`. So does a body that sends no
+ * audio for the request's `readTimeout` while a read waits for it; a read
+ * of `body` with your own reader then rejects with that error too.
+ * Aborting the request's `signal` stops the download, and the iteration
+ * throws the signal's reason (an `AbortError` unless you gave another)
+ * instead.
  */
 export class TextToSpeechStream implements AsyncIterable<Uint8Array> {
   /** The reader of the running iteration, which `cancel()` goes through. */
@@ -198,9 +235,11 @@ export class TextToSpeechStream implements AsyncIterable<Uint8Array> {
         let result: ReadableStreamReadResult<Uint8Array>;
         try {
           result = await reader.read();
-        } catch {
+        } catch (error) {
           if (signal?.aborted) throw signal.reason;
           finished = true;
+          // A stalled read rejects with its own cut error, which names the wait.
+          if (error instanceof TextToSpeechError) throw error;
           throw new TextToSpeechError(
             "The response was cut before the audio was complete. Retry the request.",
             { status: 200, requestId: this.info.requestId, retryable: true },
@@ -316,8 +355,11 @@ export class TextToSpeechService extends BaseService {
    * Speaks `request.text` and returns the audio as it is generated.
    *
    * Resolves once the API has sent the first audio. The API commits to `200`
-   * then, so a later failure cuts the body and the iteration throws.
-   * `options.signal` keeps covering the body: aborting it stops the download.
+   * then, so a later failure cuts the body and the iteration throws. So does
+   * a body that sends nothing for `options.readTimeout` (30 000 ms by
+   * default) while the iteration waits for audio; the connection is then
+   * released. `options.signal` keeps covering the body: aborting it stops
+   * the download.
    * @throws TextToSpeechError if the API refuses the request before any audio.
    * A network failure or a timeout rejects with the runtime's own error
    * instead: a `TypeError`, a `DOMException` named `TimeoutError` once
@@ -373,12 +415,20 @@ export class TextToSpeechService extends BaseService {
     // The request stays tied to `options.signal` until the body ends, however
     // it ends, also when the caller reads `body` with a reader of its own.
     const reader = response.body.getReader();
+    // `pull` runs only while a read of `body` waits (`highWaterMark: 0`), so
+    // the read timeout counts that wait and never the caller's playback.
+    const readTimeout = options.readTimeout ?? DEFAULT_READ_TIMEOUT_MS;
+    const stalled = () =>
+      new TextToSpeechError(
+        `The response was cut before the audio was complete: no audio for ${readTimeout} ms. Retry the request.`,
+        { status: 200, requestId: info.requestId, retryable: true },
+      );
     const body = new ReadableStream<Uint8Array>(
       {
         async pull(controller) {
           let result: ReadableStreamReadResult<Uint8Array>;
           try {
-            result = await reader.read();
+            result = await readWithin(reader, readTimeout, stalled);
           } catch (error) {
             deadline.release();
             throw error;

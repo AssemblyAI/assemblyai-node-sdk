@@ -863,7 +863,7 @@ for await (const chunk of speech) {
 }
 ```
 
-`stream()` resolves once the API has sent the first audio. Chunk sizes vary and are not aligned to samples or frames: for 16-bit PCM carry an odd trailing byte over to the next chunk, and re-frame for a fixed-size sink (20 ms of 8 kHz mu-law is 160 bytes). The API commits to `200` with the first audio, so a failure after that cuts the body: the loop then throws a `TextToSpeechError` with `retryable: true`, and the whole request should be retried. `speech.body` is the underlying web `ReadableStream`.
+`stream()` resolves once the API has sent the first audio. Chunk sizes vary and are not aligned to samples or frames: for 16-bit PCM carry an odd trailing byte over to the next chunk, and re-frame for a fixed-size sink (20 ms of 8 kHz mu-law is 160 bytes). The API commits to `200` with the first audio, so a failure after that cuts the body: the loop then throws a `TextToSpeechError` with `retryable: true`, and the whole request should be retried. A body that sends no audio for 30 seconds while the loop waits for it ends the same way, and its connection is released, so a stalled connection (a dropped NAT mapping, a hung proxy) cannot hang the loop. Set the limit in milliseconds with the `readTimeout` option (`0` turns it off); only the wait counts, so playing a chunk at its own pace never trips it. `speech.body` is the underlying web `ReadableStream`, and a read of it waits under the same limit.
 
 For a barge-in, pass `{ signal }` as the second argument and abort it: the download stops and the loop throws the signal's reason (an `AbortError`), not a `TextToSpeechError`. `speech.cancel()` stops it too, and the loop just ends. One signal can serve every request of a call.
 
