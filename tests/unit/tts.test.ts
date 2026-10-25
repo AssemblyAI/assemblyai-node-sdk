@@ -154,6 +154,26 @@ describe("tts", () => {
     expect(Buffer.from(await speech.bytes())).toEqual(Buffer.from(audio));
   });
 
+  it("stream refuses before sending on a runtime without a global ReadableStream", async () => {
+    // React Native (the react-native condition) has no ReadableStream without a polyfill.
+    const saved = globalThis.ReadableStream;
+    // @ts-expect-error -- removed to emulate such a runtime
+    delete globalThis.ReadableStream;
+    try {
+      mockAudio();
+      const error = await client.tts
+        .stream({ text: "Hello there." })
+        .catch((e: unknown) => e);
+      expect(error).toBeInstanceOf(TextToSpeechError);
+      expect((error as TextToSpeechError).retryable).toBe(false);
+      expect((error as TextToSpeechError).message).toContain("synthesize()");
+      expect(fetchMock).not.toHaveBeenCalled();
+    } finally {
+      globalThis.ReadableStream = saved;
+    }
+    expect(typeof globalThis.ReadableStream).toBe("function");
+  });
+
   it("maps the error envelope to a TextToSpeechError", async () => {
     fetchMock.doMockOnceIf(
       requestMatches({ url: "/v1/speech", method: "POST" }),

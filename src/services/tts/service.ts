@@ -404,7 +404,15 @@ export class TextToSpeechService extends BaseService {
    * default) while the iteration waits for audio; the connection is then
    * released. `options.signal` keeps covering the body: aborting it stops
    * the download.
-   * @throws TextToSpeechError if the API refuses the request before any audio.
+   *
+   * The audio comes as a web `ReadableStream`, so the runtime needs a global
+   * `ReadableStream` (React Native has none without a polyfill). Without
+   * one, `stream()` rejects before sending anything; use `synthesize()`
+   * there. A runtime with `ReadableStream` whose `fetch` gives no streamed
+   * body gets the whole audio as one chunk once it has all arrived.
+   * @throws TextToSpeechError if the API refuses the request before any audio,
+   * or, with `retryable: false` and before any request, if the runtime has
+   * no global `ReadableStream`.
    * A network failure or a timeout rejects with the runtime's own error
    * instead: a `TypeError`, a `DOMException` named `TimeoutError` once
    * `options.timeout` passes, or the reason of `options.signal`.
@@ -413,6 +421,14 @@ export class TextToSpeechService extends BaseService {
     request: SpeechRequest,
     options: SpeechRequestOptions = {},
   ): Promise<TextToSpeechStream> {
+    // Checked before sending, so a runtime that could not hand the audio
+    // over is not billed for it.
+    if (typeof ReadableStream !== "function") {
+      throw new TextToSpeechError(
+        "stream() needs web streams (a global ReadableStream), which this runtime does not have. Use synthesize() to get the whole audio, or install a ReadableStream polyfill.",
+        { retryable: false },
+      );
+    }
     const deadline = requestDeadline(
       options.timeout ?? DEFAULT_STREAM_TIMEOUT_MS,
       options.signal,
