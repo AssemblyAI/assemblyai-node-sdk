@@ -253,6 +253,122 @@ describe("tts", () => {
     expect(cancelled).toHaveBeenCalledTimes(1);
   });
 
+  /** Answers the next fetch with a real web stream as the body. */
+  const mockStreamedBody = (
+    body: ReadableStream<Uint8Array>,
+    headers: Record<string, string> = okHeaders,
+  ) =>
+    fetchMock.mockImplementationOnce(
+      async () =>
+        ({
+          ok: true,
+          status: 200,
+          headers: new Headers(headers),
+          body,
+        }) as unknown as Response,
+    );
+
+  it("stream turns a body cut after the first audio into a retryable TextToSpeechError", async () => {
+    const body = new ReadableStream<Uint8Array>({
+      start(c) {
+        c.enqueue(new Uint8Array([1, 2, 3, 4]));
+      },
+      pull(c) {
+        c.error(new TypeError("terminated"));
+      },
+    });
+    fetchMock.mockImplementationOnce(
+      async () =>
+        ({
+          ok: true,
+          status: 200,
+          headers: new Headers({ "x-request-id": "req-cut" }),
+          body,
+        }) as unknown as Response,
+    );
+    const speech = await client.tts.stream({ text: "Hi." });
+    const chunks: Uint8Array[] = [];
+    const error = await (async () => {
+      try {
+        for await (const c of speech) chunks.push(c);
+      } catch (e) {
+        return e;
+      }
+    })();
+    expect(chunks).toHaveLength(1);
+    expect(error).toBeInstanceOf(TextToSpeechError);
+    expect(error).toMatchObject({
+      status: 200,
+      retryable: true,
+      requestId: "req-cut",
+    });
+  });
+
+  it("stream locks the response body as soon as the headers arrive", async () => {
+    // Node 20+ fetch cancels the body of a garbage-collected Response only
+    // while that body is unlocked, so a locked one keeps its audio.
+    const source = new ReadableStream<Uint8Array>({
+      start(c) {
+        c.enqueue(audio.subarray(0, 480));
+        c.enqueue(audio.subarray(480));
+        c.close();
+      },
+    });
+    mockStreamedBody(source);
+    const speech = await client.tts.stream({ text: "Hello there." });
+    expect(source.locked).toBe(true);
+    await new Promise((resolve) => setTimeout(resolve, 5)); // the caller awaits something else first
+    expect(speech.info.requestId).toBe("req-1");
+    expect(Buffer.from(await speech.bytes())).toEqual(Buffer.from(audio));
+  });
+
+  it("stream cancel() from outside a running loop ends it and cancels the body", async () => {
+    const sourceCancelled = jest.fn();
+    let sent = false;
+    const source = new ReadableStream<Uint8Array>(
+      {
+        pull(c) {
+          if (sent) return new Promise<void>(() => undefined); // the rest of the audio never arrives
+          sent = true;
+          c.enqueue(new Uint8Array([1, 2, 3, 4]));
+        },
+        cancel: sourceCancelled,
+      },
+      { highWaterMark: 0 },
+    );
+    mockStreamedBody(source);
+    const speech = await client.tts.stream({ text: "Hello there." });
+    const chunks: Uint8Array[] = [];
+    let firstChunk!: () => void;
+    const gotFirst = new Promise<void>((resolve) => (firstChunk = resolve));
+    const loop = (async () => {
+      for await (const chunk of speech) {
+        chunks.push(chunk);
+        firstChunk();
+      }
+    })();
+    await gotFirst;
+    await speech.cancel(); // a barge-in callback while the loop waits for audio
+    await loop;
+    expect(chunks).toHaveLength(1);
+    expect(sourceCancelled).toHaveBeenCalledTimes(1);
+  });
+
+  it("stream cancel() before any read cancels the body", async () => {
+    const sourceCancelled = jest.fn();
+    const source = new ReadableStream<Uint8Array>({
+      pull: () => new Promise<void>(() => undefined),
+      cancel: sourceCancelled,
+    });
+    mockStreamedBody(source);
+    const speech = await client.tts.stream({ text: "Hello there." });
+    await speech.cancel();
+    expect(sourceCancelled).toHaveBeenCalledTimes(1);
+    const chunks: Uint8Array[] = [];
+    for await (const chunk of speech) chunks.push(chunk);
+    expect(chunks).toHaveLength(0);
+  });
+
   it("a stream timeout covers the headers, not the body", async () => {
     jest.useFakeTimers();
     try {

@@ -145,6 +145,9 @@ export function speechResponseInfo(
  * `TextToSpeechError` with `retryable: true`.
  */
 export class TextToSpeechStream implements AsyncIterable<Uint8Array> {
+  /** The reader of the running iteration, which `cancel()` goes through. */
+  private reader?: ReadableStreamDefaultReader<Uint8Array>;
+
   constructor(
     /** What the response headers say: model, voice, encoding, sample rate, request id. */
     public readonly info: SpeechResponseInfo,
@@ -153,7 +156,7 @@ export class TextToSpeechStream implements AsyncIterable<Uint8Array> {
   ) {}
 
   async *[Symbol.asyncIterator](): AsyncIterator<Uint8Array> {
-    const reader = this.body.getReader();
+    const reader = (this.reader = this.body.getReader());
     let finished = false;
     try {
       for (;;) {
@@ -177,6 +180,7 @@ export class TextToSpeechStream implements AsyncIterable<Uint8Array> {
       // A loop left early (a barge-in) must not keep downloading the rest.
       if (!finished) await reader.cancel().catch(() => undefined);
       reader.releaseLock();
+      if (this.reader === reader) this.reader = undefined;
     }
   }
 
@@ -195,9 +199,14 @@ export class TextToSpeechStream implements AsyncIterable<Uint8Array> {
     return out;
   }
 
-  /** Stops reading; the connection is released. */
+  /**
+   * Stops reading and releases the connection. Safe to call from outside a
+   * running `for await` (a barge-in callback): the loop then ends after the
+   * chunk it holds. When you read `body` with your own reader, cancel that
+   * reader instead.
+   */
   async cancel(): Promise<void> {
-    await this.body.cancel().catch(() => undefined);
+    await (this.reader ?? this.body).cancel().catch(() => undefined);
   }
 }
 
@@ -290,9 +299,24 @@ export class TextToSpeechService extends BaseService {
         body,
       );
     }
+    // Lock the body now and read it through this reader. Node 20+ fetch
+    // cancels the unlocked body of a garbage-collected `Response`, which
+    // would end an iteration that starts after an `await` with no audio.
+    const reader = response.body.getReader();
+    const body = new ReadableStream<Uint8Array>(
+      {
+        async pull(controller) {
+          const { done, value } = await reader.read();
+          if (done) controller.close();
+          else controller.enqueue(value);
+        },
+        cancel: (reason) => reader.cancel(reason),
+      },
+      { highWaterMark: 0 },
+    );
     return new TextToSpeechStream(
       speechResponseInfo(response.headers, request.voice_id),
-      response.body,
+      body,
     );
   }
 
