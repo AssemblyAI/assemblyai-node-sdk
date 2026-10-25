@@ -126,11 +126,77 @@ function codePointLength(text: string): number {
   return Array.from(text).length;
 }
 
+/** @throws DOMException for text that is not base64, which makes its frame unreadable. */
 function base64ToBytes(data: string): Uint8Array {
   const binary = atob(data);
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
   return bytes;
+}
+
+/** A server frame after `Begin`, read into the event its listener receives. */
+type SessionFrame =
+  | TtsAudioEvent
+  | TtsFlushDoneEvent
+  | TtsWordBoundariesEvent
+  | TtsCancelledEvent
+  | TtsTerminationEvent;
+
+/**
+ * The message, text or UTF-8 bytes, as a JSON object; `undefined` for
+ * anything else, which carries nothing this SDK reads.
+ */
+function parseFrame(data: unknown): Record<string, unknown> | undefined {
+  if (typeof data !== "string" && !(data instanceof ArrayBuffer)) return;
+  const text = typeof data === "string" ? data : new TextDecoder().decode(data);
+  let frame: unknown;
+  try {
+    frame = JSON.parse(text);
+  } catch {
+    return;
+  }
+  if (typeof frame !== "object" || frame === null || Array.isArray(frame)) {
+    return;
+  }
+  return frame as Record<string, unknown>;
+}
+
+function flushIdOf(frame: Record<string, unknown>): number {
+  const flushId = frame.flush_id;
+  if (typeof flushId !== "number" || !Number.isInteger(flushId)) {
+    throw new TypeError(
+      `${String(frame.type)} frame without an integer flush_id`,
+    );
+  }
+  return flushId;
+}
+
+/**
+ * Checks the fields this SDK reads and decodes the audio; `undefined` for a
+ * frame type this SDK does not know.
+ * @throws Error for a frame the SDK cannot read.
+ */
+function readFrame(frame: Record<string, unknown>): SessionFrame | undefined {
+  switch (frame.type) {
+    case "Audio":
+      if (typeof frame.audio !== "string") {
+        throw new TypeError("Audio frame without base64 audio");
+      }
+      return {
+        type: "Audio",
+        flush_id: flushIdOf(frame),
+        audio: base64ToBytes(frame.audio),
+      };
+    case "FlushDone":
+      flushIdOf(frame);
+      return frame as unknown as TtsFlushDoneEvent;
+    case "WordBoundaries":
+    case "Cancelled":
+    case "Termination":
+      return frame as unknown as SessionFrame;
+    default:
+      return;
+  }
 }
 
 function errorFromFrame(frame: TtsErrorMessage): TextToSpeechError {
@@ -172,9 +238,10 @@ function errorFromClose(code: number, reason: string): TextToSpeechError {
  * one request at a time in order, or pushed to an `audio` listener
  * registered with `on()`. Listeners for the other events (`flushDone`,
  * `wordBoundaries`, `cancelled`, `termination`, `error`, `close`) are
- * optional. A refusal rejects `connect()`; a failure mid-session rejects the
- * `audio()` iteration or the next send, and a failure nothing observed
- * rejects `close()`. The `error` and `close` listeners run once the
+ * optional. A listener that throws is logged with `console.error` and the
+ * session goes on. A refusal rejects `connect()`; a failure mid-session
+ * rejects the `audio()` iteration or the next send, and a failure nothing
+ * observed rejects `close()`. The `error` and `close` listeners run once the
  * connection has ended, so either can `connect()` again; a session opened
  * with a temporary token reconnects with a new one, `connect({ token })`.
  *
@@ -336,7 +403,21 @@ export class TextToSpeechSession {
       const fail = (error: TextToSpeechError) => {
         const raised = this.fail(error);
         settle(() => reject(this.surfaced()));
-        if (raised) this.listeners.error?.(raised);
+        if (raised) this.emit("error", raised);
+      };
+      // A frame the SDK cannot read fails the session, and closing the socket
+      // stops the API from synthesizing for it. The socket is released before
+      // the error listener runs, which may connect again.
+      const unreadable = (cause: unknown) => {
+        const raised = this.fail(
+          new TextToSpeechError(
+            `Unreadable frame from the API: ${String(cause)}`,
+          ),
+        );
+        this.releaseSocket();
+        settle(() => reject(this.surfaced()));
+        if (raised) this.emit("error", raised);
+        this.emitClose(connection);
       };
 
       if (this.token) {
@@ -359,34 +440,27 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
       socket.onopen = () => {};
 
       socket.onmessage = ({ data }: MessageEvent) => {
-        if (typeof data !== "string" && !(data instanceof ArrayBuffer)) return;
-        const text =
-          typeof data === "string" ? data : new TextDecoder().decode(data);
-        let frame: Record<string, unknown>;
-        try {
-          frame = JSON.parse(text) as Record<string, unknown>;
-        } catch {
-          return;
-        }
+        const frame = parseFrame(data);
+        if (!frame) return;
         if (frame.type === "Begin") {
-          this.begin = frame as unknown as TtsBeginEvent;
-          this.listeners.begin?.(this.begin);
-          settle(() => resolve(this.begin as TtsBeginEvent));
+          const begin = frame as unknown as TtsBeginEvent;
+          this.begin = begin;
+          settle(() => resolve(begin));
+          this.emit("begin", begin);
           return;
         }
         if (frame.type === "Error") {
           fail(errorFromFrame(frame as unknown as TtsErrorMessage));
           return;
         }
+        let event: SessionFrame | undefined;
         try {
-          this.dispatch(frame);
+          event = readFrame(frame);
         } catch (cause) {
-          fail(
-            new TextToSpeechError(
-              `Unreadable frame from the API: ${String(cause)}`,
-            ),
-          );
+          unreadable(cause);
+          return;
         }
+        if (event) this.dispatch(event);
       };
 
       socket.onclose = ({ code, reason }: CloseEvent) => {
@@ -401,11 +475,8 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
         settle(() =>
           reject(this.error ? this.surfaced() : errorFromClose(code, text)),
         );
-        try {
-          if (raised) this.listeners.error?.(raised);
-        } finally {
-          this.emitClose(connection);
-        }
+        if (raised) this.emit("error", raised);
+        this.emitClose(connection);
       };
 
       socket.onerror = (event: ErrorEvent) => {
@@ -423,15 +494,11 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
     });
   }
 
-  private dispatch(frame: Record<string, unknown>) {
-    switch (frame.type) {
-      case "Audio": {
-        const event: TtsAudioEvent = {
-          type: "Audio",
-          flush_id: frame.flush_id as number,
-          audio: base64ToBytes(frame.audio as string),
-        };
-        if (this.listeners.audio) this.listeners.audio(event);
+  /** Applies a frame to the session's state, then calls its listener. */
+  private dispatch(event: SessionFrame) {
+    switch (event.type) {
+      case "Audio":
+        if (this.listeners.audio) this.emit("audio", event);
         else {
           this.enqueue({
             kind: "audio",
@@ -440,31 +507,44 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
           });
         }
         return;
-      }
-      case "FlushDone": {
-        const event = frame as unknown as TtsFlushDoneEvent;
+      case "FlushDone":
         this.enqueue({ kind: "done", flushId: event.flush_id });
-        this.listeners.flushDone?.(event);
+        this.emit("flushDone", event);
         return;
-      }
       case "WordBoundaries":
-        this.listeners.wordBoundaries?.(
-          frame as unknown as TtsWordBoundariesEvent,
-        );
+        this.emit("wordBoundaries", event);
         return;
       case "Cancelled": {
         const cancelId = this.cancelIds.shift() ?? -1;
         this.enqueue({ kind: "cancelled", cancelId });
-        this.listeners.cancelled?.(frame as unknown as TtsCancelledEvent);
+        this.emit("cancelled", event);
         return;
       }
       case "Termination":
-        this.termination = frame as unknown as TtsTerminationEvent;
+        this.termination = event;
         this.end();
-        this.listeners.termination?.(this.termination);
+        this.emit("termination", event);
         return;
-      default:
-        return; // a frame type this SDK does not know
+    }
+  }
+
+  /**
+   * Calls the listener of `event`. A listener that throws is logged and the
+   * session goes on: an error in the app never fails the session.
+   */
+  private emit<E extends TextToSpeechSessionEvents>(
+    event: E,
+    ...args: Parameters<NonNullable<TextToSpeechSessionListeners[E]>>
+  ) {
+    const listener = this.listeners[event] as
+      | ((
+          ...args: Parameters<NonNullable<TextToSpeechSessionListeners[E]>>
+        ) => void)
+      | undefined;
+    try {
+      listener?.(...args);
+    } catch (error) {
+      console.error(`TextToSpeechSession: the ${event} listener threw`, error);
     }
   }
 
@@ -497,7 +577,7 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
     if (!connection.hadSocket || connection.closeEmitted) return;
     connection.closeEmitted = true;
     const [code, reason] = connection.close();
-    this.listeners.close?.(code, reason);
+    this.emit("close", code, reason);
   }
 
   /** Marks the connection over with the session's error: readers drain, sends refuse. */
