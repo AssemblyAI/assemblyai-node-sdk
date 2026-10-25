@@ -44,6 +44,27 @@ function requestDeadline(timeoutMs: number, external?: AbortSignal) {
 const MAX_TIMER_MS = 2_147_483_647;
 
 /**
+ * Releases the response of a `stream()` result that nothing can read any
+ * more, when it is garbage-collected. `stream()` locks the response body at
+ * the headers, which turns off the runtime's own release of an unread body
+ * (Node 20+ `fetch` cancels it with its `Response`), so a stream dropped
+ * without being read or cancelled would otherwise keep its connection and
+ * the request's abort listener until the API gave up on the download.
+ */
+const unreadBodies = (() => {
+  // Read from `globalThis`, so the ES2015 builds need no ES2021 types.
+  const Registry = (
+    globalThis as {
+      FinalizationRegistry?: new (cleanup: (release: () => void) => void) => {
+        register(target: object, release: () => void, token: object): void;
+        unregister(token: object): void;
+      };
+    }
+  ).FinalizationRegistry;
+  return Registry ? new Registry((release) => release()) : undefined;
+})();
+
+/**
  * `reader.read()`, given up after `timeoutMs` without a chunk: the reader is
  * then cancelled, which releases the connection, and the read rejects with
  * `stalled()`. The timer runs only while this read waits. A `timeoutMs` of
@@ -405,7 +426,9 @@ export class TextToSpeechService extends BaseService {
    * a body that sends nothing for `options.readTimeout` (30 000 ms by
    * default) while the iteration waits for audio; the connection is then
    * released. `options.signal` keeps covering the body: aborting it stops
-   * the download.
+   * the download. A stream dropped before its end without `cancel()` keeps
+   * its connection until it is garbage-collected, so cancel one you will
+   * not read.
    *
    * The audio comes as a web `ReadableStream`, so the runtime needs a global
    * `ReadableStream` (React Native has none without a polyfill). Without
@@ -486,6 +509,12 @@ export class TextToSpeechService extends BaseService {
         `The response was cut before the audio was complete: no audio for ${readTimeout} ms. Retry the request.`,
         { status: 200, requestId: info.requestId, retryable: true },
       );
+    // The body's registration with `unreadBodies`, dropped once it ends.
+    const registration = {};
+    const ended = () => {
+      unreadBodies?.unregister(registration);
+      deadline.release();
+    };
     const body = new ReadableStream<Uint8Array>(
       {
         async pull(controller) {
@@ -493,21 +522,28 @@ export class TextToSpeechService extends BaseService {
           try {
             result = await readWithin(reader, readTimeout, stalled);
           } catch (error) {
-            deadline.release();
+            ended();
             throw error;
           }
           if (result.done) {
-            deadline.release();
+            ended();
             controller.close();
           } else controller.enqueue(result.value);
         },
         cancel: (reason) => {
-          deadline.release();
+          ended();
           return reader.cancel(reason);
         },
       },
       { highWaterMark: 0 },
     );
+    // What runs once `body` is garbage-collected unread; it must not refer
+    // to `body`, or `body` would never be collected.
+    const releaseUnread = () => {
+      deadline.release();
+      reader.cancel().catch(() => undefined);
+    };
+    unreadBodies?.register(body, releaseUnread, registration);
     return new TextToSpeechStream(info, body, { signal: options.signal });
   }
 

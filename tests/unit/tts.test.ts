@@ -1,6 +1,6 @@
 import { getEventListeners } from "events";
 import fetchMock from "jest-fetch-mock";
-import { AssemblyAI, TextToSpeechError } from "../../src";
+import { AssemblyAI, TextToSpeechError, TextToSpeechStream } from "../../src";
 import { createClient, defaultApiKey, requestMatches } from "./utils";
 
 fetchMock.enableMocks();
@@ -925,6 +925,71 @@ describe("tts", () => {
       .catch(() => undefined);
     expect(fetchMock).toHaveBeenCalledTimes(15);
     expect(getEventListeners(controller.signal, "abort")).toHaveLength(0);
+  });
+
+  it("stream releases the connection and the signal of a stream dropped unread once it is garbage-collected", async () => {
+    // Given a stream nobody reads or cancels
+    const register = jest.spyOn(FinalizationRegistry.prototype, "register");
+    const { source, cancelled } = stallingSource();
+    mockStreamedBody(source);
+    const controller = new AbortController();
+    let speech: TextToSpeechStream;
+    let calls: Parameters<FinalizationRegistry<unknown>["register"]>[];
+    try {
+      speech = await client.tts.stream(
+        { text: "Hi." },
+        { signal: controller.signal },
+      );
+    } finally {
+      calls = register.mock.calls.slice();
+      register.mockRestore();
+    }
+    const registered = calls.find(([target]) => target === speech.body);
+    expect(registered).toBeDefined();
+    expect(getEventListeners(controller.signal, "abort")).toHaveLength(1);
+
+    // When the runtime collects its body and runs the cleanup
+    const release = registered![1] as () => void;
+    release();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    // Then the response body is cancelled, which releases the connection,
+    // and the shared signal keeps no listener
+    expect(cancelled).toHaveBeenCalledTimes(1);
+    expect(getEventListeners(controller.signal, "abort")).toHaveLength(0);
+  });
+
+  it.each([
+    [
+      "read to the end",
+      async (speech: TextToSpeechStream) => void (await speech.bytes()),
+    ],
+    ["cancelled", (speech: TextToSpeechStream) => speech.cancel()],
+    [
+      "left early",
+      async (speech: TextToSpeechStream) => {
+        for await (const chunk of speech) if (chunk) break;
+      },
+    ],
+  ])("a stream %s drops its garbage-collection cleanup", async (_name, end) => {
+    const register = jest.spyOn(FinalizationRegistry.prototype, "register");
+    const unregister = jest.spyOn(FinalizationRegistry.prototype, "unregister");
+    try {
+      mockStreamedBody(audioSource());
+      const speech = await client.tts.stream({ text: "Hi." });
+      const registered = register.mock.calls.find(
+        ([target]) => target === speech.body,
+      );
+      expect(registered).toBeDefined();
+      expect(unregister).not.toHaveBeenCalled();
+
+      await end(speech);
+
+      expect(unregister).toHaveBeenCalledWith(registered![2]);
+    } finally {
+      register.mockRestore();
+      unregister.mockRestore();
+    }
   });
 
   it("stream calls sharing one signal leave no listener on it, however they end", async () => {
