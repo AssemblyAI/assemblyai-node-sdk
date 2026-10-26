@@ -128,6 +128,15 @@ class PullQueue {
     resolve({ kind: "wake" });
   }
 
+  /** Whether audio or the `FlushDone` of request `flushId` is queued. */
+  holds(flushId: number): boolean {
+    return this.items.some(
+      (item) =>
+        (item.kind === "audio" || item.kind === "done") &&
+        item.flushId === flushId,
+    );
+  }
+
   next(): Promise<PullItem> {
     const item = this.items.shift();
     if (item) {
@@ -789,7 +798,23 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
         requestId: this.begin.id,
       });
     }
-    throw new Error("The session is not open: call connect() first");
+    throw this.notOpen();
+  }
+
+  /** The error of a send or a read on a session that is not connected. */
+  private notOpen(): Error {
+    if (this.error) return this.surfaced();
+    if (this.abortConnect) {
+      return new Error(
+        "The session is not open: connect() is still pending; await it for the outcome",
+      );
+    }
+    if (this.queue.hadSocket) {
+      return new Error(
+        "The session is closed: close() ended it, or the API did; connect() again to open a new one",
+      );
+    }
+    return new Error("The session is not open: call connect() first");
   }
 
   private limits(): Record<string, unknown> | undefined {
@@ -833,8 +858,10 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
    * Appends `text` to the current request.
    *
    * Consecutive texts are joined exactly as sent, so include the spaces.
-   * Audio may start before `flush()` once enough complete sentences have
-   * arrived; `flush()` is what concludes the request.
+   * The API speaks a complete sentence before `flush()` once more text has
+   * arrived after it and the request is long enough (about 200 characters,
+   * or 50 for the first sentence of text sent in several calls); a shorter
+   * request is spoken at `flush()`, which is what concludes the request.
    * @throws RangeError for a text over one frame's limit (2,000 characters); split it.
    * @throws Error once `close()` was called: the API would not read the text.
    */
@@ -942,17 +969,27 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
    * a time. Audio is queued for pulling only while no `audio` listener is
    * registered. The iteration rejects with a `TextToSpeechError` if the
    * session fails before the request completes.
-   * @throws Error if the session was never connected.
-   * @throws RangeError for a request not flushed yet, or one already read
-   * (its `FlushDone` was consumed by an earlier iteration).
+   * @throws Error if the session was never connected; and, without
+   * `flushId`, once the session has ended with nothing queued for the text
+   * being written, since it can no longer be flushed on that connection.
+   * @throws RangeError for a request not flushed yet, or one an iteration
+   * already read past (its `FlushDone` was consumed by that iteration).
    */
   audio(flushId?: number): AsyncGenerator<Uint8Array, void, undefined> {
     // The connection this request is sent on.
     const connection = this.queue;
-    if (!connection.hadSocket) {
-      throw new Error("The session is not open: call connect() first");
-    }
+    if (!connection.hadSocket) throw this.notOpen();
     const id = flushId ?? this.nextFlushId;
+    // A flushed request may still drain, and so may the text being written
+    // that `close()` had spoken; the text being written otherwise never will.
+    if (
+      flushId === undefined &&
+      connection.ended &&
+      !connection.error &&
+      !connection.holds(id)
+    ) {
+      throw this.notOpen();
+    }
     if (id > this.nextFlushId) {
       throw new RangeError(`flush_id ${id} has not been flushed yet`);
     }
@@ -963,7 +1000,7 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
   private checkUnread(connection: PullQueue, flushId: number) {
     if (flushId <= connection.doneThrough) {
       throw new RangeError(
-        `flush_id ${flushId} was already read: read each request once, in order`,
+        `flush_id ${flushId} is no longer readable: an iteration already read through flush_id ${connection.doneThrough}, and requests are served in order, so read each one once, in order`,
       );
     }
   }

@@ -31,7 +31,10 @@ export type TextToSpeechErrorFields = {
   errorCode?: string;
   /** The field at fault, if one. */
   param?: string;
-  /** The request's id, or the session's id on a session. */
+  /**
+   * The request's id; on a session, the session's id from `Begin`, so a
+   * session refused before `Begin` has none: read `errorCode` and `closeCode`.
+   */
   requestId?: string;
   /** Whether the same request, or a new session, can succeed later. */
   retryable?: boolean;
@@ -39,7 +42,7 @@ export type TextToSpeechErrorFields = {
   retryAfter?: number;
   /** For `invalid_parameter`, every failing field. */
   errors?: { message: string; param: string | null }[];
-  /** The WebSocket close code that ended a session. */
+  /** The WebSocket close code that ended a session; see `errorCode` for the codes. */
   closeCode?: number;
   /** The whole error envelope or frame the API sent. */
   body?: Record<string, unknown>;

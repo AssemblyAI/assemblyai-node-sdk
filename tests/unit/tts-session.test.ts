@@ -1655,8 +1655,12 @@ describe("tts session", () => {
     expect(await closing).toEqual(terminationMessage);
     expect(await reading).toEqual(Buffer.from("Pending text."));
 
-    // And once the session ended, a send says to connect again
-    expect(() => session.generate("Later.")).toThrow(/call connect\(\) first/);
+    // And once the session ended, a send says so, and to connect again
+    expect(() => session.generate("Later.")).toThrow(
+      /The session is closed: close\(\) ended it.*connect\(\) again/,
+    );
+    expect(() => session.cancel()).toThrow(/The session is closed/);
+    expect(() => session.audio()).toThrow(/The session is closed/);
   });
 
   it("a send while the socket closes without an Error frame throws a retryable error", async () => {
@@ -1782,7 +1786,9 @@ describe("tts session", () => {
       "Read me once.",
     );
     expect(() => session.audio(0)).toThrow(RangeError);
-    expect(() => session.audio(0)).toThrow(/flush_id 0 was already read/);
+    expect(() => session.audio(0)).toThrow(
+      /flush_id 0 is no longer readable: an iteration already read through flush_id 0/,
+    );
 
     // Reading a later request skips the FlushDone of an earlier one.
     session.generate("Skipped.");
@@ -1792,8 +1798,36 @@ describe("tts session", () => {
     expect((await collect(session.audio(session.flush()))).toString()).toBe(
       "Read.",
     );
-    expect(() => session.audio(skipped)).toThrow(/already read/);
-    await expect(early.next()).rejects.toThrow(/already read/);
+    expect(() => session.audio(skipped)).toThrow(
+      new RegExp(`flush_id ${skipped} is no longer readable`),
+    );
+    await expect(early.next()).rejects.toThrow(
+      new RegExp(`already read through flush_id ${skipped + 1}`),
+    );
+    await session.close();
+  });
+
+  it("audio() after close() still reads the text close() had spoken", async () => {
+    const session = client.tts.session({ websocketBaseUrl });
+    await connect(session);
+    session.generate("Spoken at close.");
+    await session.close();
+    expect((await collect(session.audio())).toString()).toBe(
+      "Spoken at close.",
+    );
+    // Read once; with nothing left for the text being written, it is misuse
+    expect(() => session.audio()).toThrow(/The session is closed/);
+  });
+
+  it("the later of two speak() iterators read first says which request it read past", async () => {
+    const session = client.tts.session({ websocketBaseUrl });
+    await connect(session);
+    const first = session.speak("First.");
+    const second = session.speak("Second.");
+    expect((await collect(second)).toString()).toBe("Second.");
+    await expect(collect(first)).rejects.toThrow(
+      /flush_id 0 is no longer readable: an iteration already read through flush_id 1/,
+    );
     await session.close();
   });
 
