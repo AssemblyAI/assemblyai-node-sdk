@@ -24,3 +24,4 @@ export type UserAgentItem = {
 export type UserAgent = {
   [component: string]: UserAgentItem | undefined | null | false;
 };
+export * from "./tts";

@@ -47,6 +47,31 @@ However, there are still incompatibilities between Node.js and the browser.
   });
   ```
 
+- `TextToSpeechSession` doesn't support the AssemblyAI API key in the browser either.
+  Mint a temporary token on the server with `client.tts.createTemporaryToken`, and open the session with it in the page.
+
+  ```js
+  // On the server
+  const token = await client.tts.createTemporaryToken({
+    expires_in_seconds: 60,
+  });
+  ```
+
+  ```js
+  // In the page: no client and no API key
+  import { TextToSpeechSession } from "assemblyai";
+
+  const session = new TextToSpeechSession({
+    token: await getToken(), // getToken is a function for you to implement
+    voiceId: "aai-jane",
+  });
+  await session.connect();
+  ```
+
+  A token is for one connection: to reconnect, get a new token from your server and pass it to `session.connect({ token })`.
+  Mint a new token for every HTTP request too, and keep `expires_in_seconds` short.
+  For the EU data zone, add `websocketBaseUrl: "wss://tts.eu.assemblyai.com/v1/ws"`; a client whose `ttsBaseUrl` is `https://tts.eu.assemblyai.com` mints the token on `https://token.eu.assemblyai.com`.
+
 - You can't pass local audio file paths to `client.files.upload`, `client.transcripts.transcribe`, and `client.transcripts.submit`. If you do, you'll get the following error: "Interacting with the file system is not supported in this environment.".
   If you want to transcribe audio files, you must use a public URL, a stream, or a buffer.
 
