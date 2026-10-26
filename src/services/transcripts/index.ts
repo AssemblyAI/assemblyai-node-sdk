@@ -128,11 +128,15 @@ export class TranscriptService extends BaseService {
       const transcript = await this.get(transcriptId);
       if (transcript.status === "completed" || transcript.status === "error") {
         return transcript;
-      } else if (
-        pollingTimeout > 0 &&
-        Date.now() - startTime > pollingTimeout
-      ) {
-        throw new Error("Polling timeout");
+      }
+      if (pollingTimeout > 0) {
+        const elapsed = Date.now() - startTime;
+        if (elapsed >= pollingTimeout) {
+          throw new Error("Polling timeout");
+        }
+        const remaining = pollingTimeout - elapsed;
+        const sleepDelay = Math.min(pollingInterval, remaining);
+        await new Promise((resolve) => setTimeout(resolve, sleepDelay));
       } else {
         await new Promise((resolve) => setTimeout(resolve, pollingInterval));
       }

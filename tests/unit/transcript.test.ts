@@ -338,6 +338,20 @@ describe("transcript", () => {
     fetchMock.resetMocks();
   }, 5000);
 
+  it("waitUntilReady should cap polling delay at remaining pollingTimeout budget", async () => {
+    fetchMock.mockResponse(JSON.stringify({ status: "processing" }));
+    const startTime = Date.now();
+    const promise = assembly.transcripts.waitUntilReady(transcriptId, {
+      pollingInterval: 5_000,
+      pollingTimeout: 200,
+    });
+
+    await expect(promise).rejects.toThrow("Polling timeout");
+    const duration = Date.now() - startTime;
+    expect(duration).toBeLessThan(2_000);
+    fetchMock.resetMocks();
+  }, 5000);
+
   it("create should fail to poll", async () => {
     fetchMock.mockResponse(JSON.stringify({ status: "queued" }));
     const promise = assembly.transcripts.create(
