@@ -1,5 +1,9 @@
 # Changelog
 
+## [5.0.0]
+
+- **Breaking**: Require Node.js 22 or later. `engines.node` is now `>=22` (was `>=18`), because Node.js 18 and 20 have reached end of life. There is no runtime change in this release, but installing it on Node.js 18 or 20 fails under package managers that enforce `engines` (Yarn 1, or npm and pnpm with `engine-strict`)
+
 ## [4.42.0]
 
 - Add Text-to-Speech: `client.tts.synthesize(request)` returns one text's complete audio (`TextToSpeechResponse`: `audio` plus the response headers as `requestId`, `region`, `model`, `voiceId`, `encoding`, `sampleRate`, `billedCharacters`, `audioDurationMs`, ...), `client.tts.stream(request)` returns it as the API generates it (`TextToSpeechStream`, an async iterable over a web `ReadableStream`), and `client.tts.session(params)` opens a WebSocket `TextToSpeechSession` for voice agents: `connect()`, `generate()` / `flush()` / `audio()`, `speak()`, `cancel()`, `keepAlive()`, `close()`, with `on("audio" | "flushDone" | "wordBoundaries" | "cancelled" | "termination" | "error" | "close", ...)`. Requests take the API's fields (`text`, `voice_id`, `model_id`, `language`, `sample_rate`, `encoding`, `container`, `bit_rate`); failures throw `TextToSpeechError` (`status`, `errorCode`, `param`, `requestId`, `retryable`, `retryAfter`, `errors`, `closeCode`, `body`). New client option `ttsBaseUrl` (default `https://tts.us.assemblyai.com`); `client.tts.createTemporaryToken()` mints a token for browser sessions. Text sent while `connect()` is pending is held and sent the moment the socket opens, so it need not wait for `Begin`

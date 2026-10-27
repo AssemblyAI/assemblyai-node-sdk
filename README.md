@@ -67,6 +67,8 @@ pnpm add assemblyai
 bun add assemblyai
 ```
 
+On Node.js, the SDK requires version 22 or later. On Node.js 18 or 20, install version 4 instead: `npm install assemblyai@4`.
+
 Then, import the `assemblyai` module and create an AssemblyAI object with your API key:
 
 ```js
