@@ -139,6 +139,19 @@ export type StreamingTranscriberParams = {
   inactivityTimeout?: number;
   speakerLabels?: boolean;
   maxSpeakers?: number;
+  /**
+   * Cadence, in milliseconds of audio time, at which the server emits
+   * mid-stream `speakerRevision` events with corrected speaker labels for
+   * earlier turns (plus a final one at end of stream). Unset or `0` sends no
+   * mid-stream revisions — only the end-of-stream one. Non-zero values are
+   * clamped server-side to 120 000–300 000 ms; the server rejects values
+   * outside 0–86 400 000 (24 h). Only used when `speakerLabels` is enabled.
+   *
+   * The first mid-stream revision can only arrive after ~120 s of speech has
+   * been streamed, and a revision is sent only when some earlier turn's label
+   * actually changed — so expect "at most one per interval", not exactly one.
+   */
+  speakerLabelsRevisionIntervalMs?: number;
   voiceFocus?: VoiceFocusModel;
   voiceFocusThreshold?: number;
   continuousPartials?: boolean;

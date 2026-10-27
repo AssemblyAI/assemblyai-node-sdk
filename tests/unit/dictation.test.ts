@@ -433,6 +433,7 @@ describe("dictation config", () => {
       stt_prompt: "A doctor dictating a patient visit note.",
       keyterms_prompt: ["AssemblyAI", "U3-Pro"],
       llm_instruction: "Format this as a SOAP note.",
+      rewrite_mode: "smart",
     });
     expect(await configPart()).toEqual({
       sample_rate: 16000,
@@ -441,7 +442,16 @@ describe("dictation config", () => {
       stt_prompt: "A doctor dictating a patient visit note.",
       keyterms_prompt: ["AssemblyAI", "U3-Pro"],
       llm_instruction: "Format this as a SOAP note.",
+      rewrite_mode: "smart",
     });
+  });
+
+  it("should leave rewrite_mode out when it is unset", async () => {
+    mockOk();
+    await assembly.dictation.transcribeLive(chunks(bytes("RIFF")), {
+      llm_instruction: "Clean this up.",
+    });
+    expect(await configPart()).toEqual({ llm_instruction: "Clean this up." });
   });
 
   it("should never send keys the dictation API does not accept", async () => {

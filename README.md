@@ -13,7 +13,7 @@
 # AssemblyAI JavaScript SDK
 
 The AssemblyAI JavaScript SDK provides an easy-to-use interface for interacting with the AssemblyAI API,
-which supports async and streaming transcription.
+which supports async and streaming transcription and text-to-speech.
 It is written primarily for Node.js in TypeScript with all types exported, but also [compatible with other runtimes](./docs/compat.md).
 
 ## Claude Code
@@ -674,6 +674,17 @@ console.log(result.final_text); // llm_response when there is one, text otherwis
 When the LLM pass fails, `llm_response` is `null` and `llm_error` says why — the
 transcript itself still comes back.
 
+`rewrite_mode` picks the model tier that runs the rewrite. `"fast"` is the
+default; `"smart"` follows detailed formatting instructions more reliably, at
+higher latency:
+
+```typescript
+const result = await client.dictation.transcribeLive(micStream, {
+  llm_instruction: "Lowercase unless a name, no final punctuation.",
+  rewrite_mode: "smart",
+});
+```
+
 </details>
 
 <details>
@@ -687,6 +698,7 @@ const result = await client.dictation.transcribeLive(micStream, {
   stt_prompt: "A doctor dictating a patient visit note.", // max 6000 chars
   keyterms_prompt: ["AssemblyAI", "Universal-3"], // max 100 terms, 8000 chars total
   llm_instruction: "Format this as a SOAP note.", // max 2048 chars
+  rewrite_mode: "smart", // rewrite model tier: "fast" (default) or "smart"
 });
 ```
 
@@ -811,6 +823,178 @@ Close the connection when you're finished.
 ```typescript
 await transcriber.close();
 ```
+
+## Text-To-Speech
+
+`client.tts` speaks text with the Text-to-Speech API. `synthesize()` returns one text's complete audio, `stream()` returns it as the API generates it, and `session()` opens a WebSocket session that speaks text as it is written, for voice agents. Requests go to `ttsBaseUrl`, `https://tts.us.assemblyai.com` by default; pass `https://tts.eu.assemblyai.com` to keep them in the EU data zone.
+
+An HTTP request takes the API's own field names. A session takes the same options in camelCase, like the other session clients of this SDK.
+
+| HTTP request               | Session                  | Values                                                                                                                                    | Default                    |
+| -------------------------- | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
+| `text`                     |                          | 1 to 5,000 characters                                                                                                                     |                            |
+| `voice_id`                 | `voiceId`                | a voice of the AssemblyAI voice library by its slug, such as `aai-jane`, `aai-alba` or `aai-michael`, or a voice cloned in your dashboard | `aai-jane`                 |
+| `model_id`                 | `modelId`                | `assemblyai-tts-1`                                                                                                                        | the region's default model |
+| `language`                 | `language`               | `english`, `spanish`, `german`, `french`, `italian`, `portuguese`                                                                         | the voice's own language   |
+| `sample_rate`              | `sampleRate`             | 8000, 16000, 22050, 24000, 44100, 48000                                                                                                   | 24000                      |
+| `encoding`                 | `encoding`               | `pcm_s16le`, `pcm_mulaw` or `pcm_alaw` for telephony, `mp3` over HTTP only                                                                | `pcm_s16le`                |
+| `container`                |                          | `raw` or `wav`, with a PCM or G.711 encoding                                                                                              | `raw`                      |
+| `bit_rate`                 |                          | MP3 bits per second: 32000, 48000, 64000, 96000, 128000                                                                                   | 64000                      |
+| `extend_biometric_consent` | `extendBiometricConsent` | `true` renews the consent of the cloned voice in `voice_id`                                                                               | `false`                    |
+|                            | `wordBoundaries`         | `true` sends word timings per request                                                                                                     | `false`                    |
+|                            | `inactivityTimeout`      | seconds without a frame before the API closes the session, 5 to 120                                                                       | 120                        |
+
+### Synthesize a WAV file
+
+```typescript
+import { writeFileSync } from "fs";
+
+const response = await client.tts.synthesize({
+  text: "Hello from AssemblyAI.",
+  voice_id: "aai-jane",
+  container: "wav",
+});
+writeFileSync("hello.wav", response.audio);
+console.log(response.model, response.voiceId, response.audioDurationMs, "ms");
+```
+
+`synthesize()` waits for the whole audio, so an API refusal is always a `TextToSpeechError` and the WAV header carries real sizes. The response headers are on the result: `requestId`, `region`, `model`, `voiceId`, `language`, `encoding`, `sampleRate`, `container`, `bitRate`, `billedCharacters`, `audioDurationMs` and `unknownParams`. The API ignores body fields it does not know, and `unknownParams` names them (the SDK also warns once), so a camelCase `sampleRate` in a request held in a variable shows up instead of silently giving 24 kHz audio. A network failure or a timeout rejects with the runtime's own error instead (a `TypeError`, or a `DOMException` named `TimeoutError` or `AbortError`). On Node, the built-in `fetch` gives up after 300 seconds without response headers, whatever `timeout` says; for longer requests use `stream()`, or raise the limit with `setGlobalDispatcher(new Agent({ headersTimeout: 610_000 }))` from the `undici` package.
+
+Branch on a refusal's `errorCode`, not its message, and on `retryable` to decide whether to try again (`retryAfter` says how many seconds to wait). The same codes come back from a session, where the error's `closeCode` is the WebSocket close code that ended it.
+
+| `errorCode`                    | HTTP | Session | Meaning                                                                                                                                                             |
+| ------------------------------ | ---- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `invalid_parameter`            | 422  | 3006    | `param` and `errors` name the fields at fault                                                                                                                       |
+| `rate_limited`                 | 429  | 3009    | retryable after `retryAfter` seconds                                                                                                                                |
+| `voice_not_found`              | 422  | 3012    | `param: "voice_id"`                                                                                                                                                 |
+| `voice_expired`                | 422  | 3012    | the cloned voice's consent period ended; its owner can create it again from a new recording                                                                         |
+| `voice_not_paired`             | 422  | 3014    | the cloned voice is not paired with the model, or the pairing is still in progress                                                                                  |
+| `not_owner`                    | 422  | 3006    | `extend_biometric_consent: true` on a voice another account owns                                                                                                    |
+| `biometric_terms_not_accepted` | 403  | 3006    | your own cloned voices, and `extend_biometric_consent`, need the biometric data terms accepted on the data controls page of the AssemblyAI dashboard; not retryable |
+| `auth_unavailable`             | 503  | 1011    | the credential could not be checked just now; retryable                                                                                                             |
+| `unauthorized`                 |      | 1008    | a temporary token the API had already seen, or an expired one                                                                                                       |
+| `inactivity_timeout`           |      | 3006    | no frame in either direction for `inactivityTimeout` seconds; retryable                                                                                             |
+| `input_rate_exceeded`          |      | 3010    | more unspoken text than the API holds; not retryable                                                                                                                |
+
+The session rows come from the `Error` frame the API sends before it closes. A connection that closes without one, such as a network cut, gives an error with `closeCode` only, retryable for 1006, 1011, 1012, 3005, 3008 and 3009.
+
+### Stream audio as it is generated
+
+```typescript
+const speech = await client.tts.stream({
+  text: "Streaming straight to the speakers.",
+  voice_id: "aai-alba",
+});
+console.log(
+  "speaking with",
+  speech.info.model,
+  "at",
+  speech.info.sampleRate,
+  "Hz",
+);
+for await (const chunk of speech) {
+  play(chunk); // raw 24 kHz 16-bit mono PCM, as a Uint8Array
+}
+```
+
+`stream()` resolves once the API has sent the first audio. Chunk sizes vary and are not aligned to samples or frames: for 16-bit PCM carry an odd trailing byte over to the next chunk, and re-frame for a fixed-size sink (20 ms of 8 kHz mu-law is 160 bytes). The API commits to `200` with the first audio, so a failure after that cuts the body: the loop then throws a `TextToSpeechError` with `retryable: true`, and the whole request should be retried. The headers leave with the first audio too, so `speech.info.billedCharacters` and `speech.info.voiceExpiresAt` are the values as the stream started (a body cut by a server failure bills 0), and `speech.info.audioDurationMs` is never set, since the duration is known only once the audio is complete; measure the bytes received instead. A body that sends no audio for 30 seconds while the loop waits for it ends the same way, and its connection is released, so a stalled connection (a dropped NAT mapping, a hung proxy) cannot hang the loop. Set the limit in milliseconds with the `readTimeout` option (`0` turns it off); only the wait counts, so playing a chunk at its own pace never trips it. `speech.body` is the underlying web `ReadableStream`, and a read of it waits under the same limit. So `stream()` needs a global `ReadableStream`: on a runtime without one (React Native without a polyfill) it throws a `TextToSpeechError` before sending the request; use `synthesize()` there.
+
+For a barge-in, pass `{ signal }` as the second argument and abort it: the download stops and the loop throws the signal's reason (an `AbortError`), not a `TextToSpeechError`. `speech.cancel()` stops it too, and the loop just ends. One signal can serve every request of a call. Cancel a stream you will not read, such as a reply requested ahead that a barge-in made obsolete: a stream dropped unread keeps its connection until the runtime garbage-collects it.
+
+### Speak text as it is written (voice agents)
+
+A `TextToSpeechSession` keeps one WebSocket open and speaks text as it is written, so an LLM's reply can be voiced sentence by sentence with no per-request handshake. `speak()` sends one text and returns its audio; `generate()` / `flush()` do the same in two steps, so tokens can be sent as they arrive; `cancel()` is the barge-in. `close()` ends the session and resolves with its summary once the API has spoken the text still pending. It stops waiting after `terminateTimeout` milliseconds (default 35,000) without a message from the API; an `audio()` iteration still running then rejects with a retryable `TextToSpeechError`, and `close()` resolves `undefined`. Calling `close()` again, or from two places at once, waits for the same end. Once `close()` has sent `Terminate` the API reads nothing more, so `generate()`, `flush()`, `cancel()` and `speak()` throw instead of sending text that would never be spoken, and `keepAlive()` does nothing; once the session has ended they say so, and that `connect()` opens a new one. Text need not wait for `connect()` to resolve: what is sent while the socket opens is held and sent the moment it opens (see [Keep the time to first audio low](#keep-the-time-to-first-audio-low)).
+
+```typescript
+const session = client.tts.session({ voiceId: "aai-jane" });
+await session.connect();
+
+for (const sentence of llmReplySentences()) {
+  for await (const chunk of session.speak(sentence)) play(chunk);
+}
+
+const summary = await session.close();
+console.log(summary?.audio_duration_seconds, "s spoken");
+```
+
+Streaming the text in as it is generated, with a barge-in. The API speaks a complete sentence before `flush()` once more text has arrived after it and the request is long enough, about 200 characters, or 50 for the first sentence of text sent in several `generate()` calls; a shorter request, or one whose last sentence has nothing after it yet, is spoken at `flush()`. So read `session.audio()` with no id while the tokens are still being sent:
+
+```typescript
+const session = client.tts.session({ voiceId: "aai-jane" });
+await session.connect();
+
+let interrupted = false;
+const player = (async () => {
+  for await (const chunk of session.audio()) {
+    if (userStartedTalking()) {
+      interrupted = true;
+      session.cancel(); // drops the text sent so far; text sent after it is a new request
+      break;
+    }
+    play(chunk);
+  }
+})();
+for await (const token of llmTokens()) {
+  if (interrupted) break; // stops the LLM stream too
+  session.generate(token); // joined as sent: include the spaces
+}
+if (!interrupted) session.flush();
+await player;
+await session.close();
+```
+
+The API reads frames in the order sent, so a `cancel()` retires only the text sent before it. Stop sending the interrupted reply once the user barges in: text sent after the cancel is a new request, which is synthesized and billed, and which `close()` waits for.
+
+`audio()` fixes its request when it is called, so the iterator can be made before the first `generate()` and handed to a player that starts later. Requests can be pipelined: `flush()` again before reading the previous request's audio, then read each `audio(flushId)` in order, once; `audio()` throws a `RangeError` for an id not flushed yet, or one an iteration already read past, since reading a later request consumes the end of the earlier ones. Every `flush()` and `cancel()` takes the next id and returns it, so ids skip one after a cancel, and the requests a cancel retires are those up to its id. Audio of a retired request that the API sent before it read the `Cancel` can still arrive; the session drops it, so neither `audio()` nor the `audio` listener keeps playing the interrupted reply. A `Generate` frame takes at most 2,000 characters (`speak()` splits longer text; `generate()` throws); the API accepts text at about 100 characters per second after an initial 1,500 and holds at most 8,000 unspoken characters (`limits.text_max_buffer_chars` in `Begin`), ending the session with a non-retryable 3010 past that, so pace text to the audio. `speak()` throws a `RangeError` for a longer text before sending any of it; split it and speak each part once the previous part's audio is read. A session streams raw `pcm_s16le`, `pcm_mulaw` or `pcm_alaw` only, ends after an hour, and closes with a retryable 3006 `inactivity_timeout` after `inactivityTimeout` seconds (5 to 120, default 120) without a frame in either direction. Audio arrives much faster than it plays, so the session can idle out while received audio is still playing: call `keepAlive()` at least once per timeout while the session waits.
+
+Register listeners with `session.on(event, listener)`: `begin`, `flushDone`, `wordBoundaries` (word timings per request, with `wordBoundaries: true`; `start`/`end` count from the start of the session's audio, so subtract the event's `audio_start_ms` for a time within the request), `cancelled`, `termination`, `error` and `close`. An `audio` listener receives the audio frames instead of the pull iterators, which then throw. A listener that throws is logged with `console.error` and the session goes on.
+
+A failure is a `TextToSpeechError`. A refusal rejects `connect()`; a failure mid-session rejects the `audio()` iteration or the next send (a send in the moment between a lost connection and its close event throws a retryable error saying the connection is closing), reaches the `error` listener, and, if nothing else observed it, rejects `close()`; a frame the SDK cannot read fails the session with `Unreadable frame from the API` and closes the socket. On a session read `errorCode` and `closeCode`, the WebSocket close code the API ended it with (see the table above). `requestId` is the session id from `Begin`, so a session refused before `Begin`, such as one with an unknown voice or a bad key, has none. `status` is set only when the server answered the WebSocket upgrade itself with an HTTP status the runtime reports (Node does, a browser does not): a 404 for a wrong `websocketBaseUrl` path is not retryable, a 503 is.
+
+`retryable: true` means a new session can succeed, and the same session object can `connect()` again, also from the `error` or `close` listener, which run once the connection has ended; an `audio()` iteration of the old connection still rejects. That works as is with an API key; a session opened with a temporary token needs a new token for each connection, passed as `connect({ token })`, because the API may refuse a token it has seen and always refuses an expired one (close code 1008, `errorCode: "unauthorized"`). The `close` listener gets the socket's close code, or the error's close code (1000 without one) when the session released the socket first.
+
+In a browser the API key must stay on your server. Mint a temporary token there, and open the session in the page with `new TextToSpeechSession({ token })`, which needs no client and no API key:
+
+```typescript
+// Server
+const token = await client.tts.createTemporaryToken({ expires_in_seconds: 60 });
+```
+
+```typescript
+// Page
+import { TextToSpeechSession } from "assemblyai";
+
+const session = new TextToSpeechSession({
+  token: await getToken(), // fetches a new token from your server
+  voiceId: "aai-jane",
+  // websocketBaseUrl: "wss://tts.eu.assemblyai.com/v1/ws", // EU data zone
+});
+await session.connect();
+// After a retryable close: await session.connect({ token: await getToken() });
+```
+
+Mint a new token for every connection, reconnects included, and for every HTTP request (a token works as the `apiKey` of a client made for that request), and keep `expires_in_seconds` short. `createTemporaryToken()` mints on the token host of the client's zone: `https://token.eu.assemblyai.com` when `ttsBaseUrl` is `https://tts.eu.assemblyai.com`, `https://token.us.assemblyai.com` for `https://tts.us.assemblyai.com` (the default), and `https://token.assemblyai.com` for any other host; pass `{ tokenBaseUrl }` as its second argument to choose the host. A token works in every zone. A refusal throws a `TextToSpeechError` whose message gives the token service's reason, such as `Invalid API key` or `expires_in_seconds: Input should be less than or equal to 600`.
+
+### Keep the time to first audio low
+
+The wait for first audio is mostly synthesis on our servers, plus whatever your client does before the text reaches them. These habits take the client's part away from the moment a user is waiting:
+
+- **Connect the session before the reply is ready**, when the call starts or the page loads, and keep it for the whole conversation instead of opening one per turn. A turn on an open session skips the TCP, TLS and WebSocket handshakes and the API's checks before `Begin`: in the API's region that saved about 25 ms per turn, and about 75 ms on the first turn with a voice the API had not used recently, because the API loads the voice when the session opens. Farther away, each new session also costs three network round trips. Between turns call `keepAlive()` at least once per `inactivityTimeout`, and before `session.begin.expires_at` (at most an hour after `Begin`) open the next session in a pause and move the following turns to it.
+- **When a session must be opened for a reply, send the text without waiting for `Begin`.** Text sent while `connect()` is still pending is held and sent the moment the socket opens, and the API reads it as soon as it has sent `Begin`, so the text travels while the API checks the session instead of after:
+
+  ```typescript
+  const connecting = session.connect();
+  const audio = session.speak(reply); // sent as soon as the socket opens
+  await connecting; // a refused session rejects here
+  for await (const chunk of audio) play(chunk);
+  ```
+
+  This saves up to one network round trip, and never more than the API's checks take. With 60 ms of round trip added between our test client and the API's region, first audio came 14 ms sooner (median of 30 sessions per arm); inside the region the difference was too small to measure. Keep and await `connect()`'s promise all the same: a refused session rejects it, and a rejection nothing handles ends a Node process.
+
+- **In a browser, mint the next token before the page needs it**, for example when the pointer enters the text box after the idle session closed, so that opening the session does not wait for your server and the token service (about 24 ms per new session in our tests, before the round trip to your server). Mint it only when a session will have to be opened, use it for one connection, and drop it well before it expires.
+- **On Node, keep HTTP connections between replies** if your voice agent calls `stream()` or `synthesize()` more than 4 seconds apart. Node's built-in `fetch` closes an idle connection after about 4 seconds when the server sends no `Keep-Alive` hint, and the API sends none, so a later reply opens a new TCP and TLS connection. Keep connections for 2 minutes with `setGlobalDispatcher(new Agent({ keepAliveTimeout: 120_000 }))` from the `undici` package, which applies to every `fetch` of the process. With requests 6 seconds apart, that brought the first audio 5 to 10 ms sooner in the API's region (median of 30 requests per arm, Node 20 and 22) and 125 ms sooner with 60 ms of round trip added, since each new connection costs two network round trips. An idle kept connection does not keep the process from exiting. Bun and Deno already keep idle connections for over a minute.
+
+Node needs no shared TLS context for sessions: after its first TLS connection it keeps the parsed root certificates, so later connections set up their TLS context in about a tenth of a millisecond.
 
 ## Contributing
 

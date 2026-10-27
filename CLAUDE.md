@@ -1,6 +1,6 @@
 # AssemblyAI Node.js SDK
 
-Speech-to-text and audio intelligence SDK for Node.js, Deno, and Bun. Supports pre-recorded transcription, real-time streaming, and audio analysis features.
+Speech-to-text, text-to-speech and audio intelligence SDK for Node.js, Deno, and Bun. Supports pre-recorded transcription, real-time streaming, text-to-speech (HTTP requests and WebSocket sessions), and audio analysis features.
 
 ## Quick start
 
@@ -52,6 +52,11 @@ const client = new AssemblyAI({
 - `client.llmGateway.chatCompletions(request)` — OpenAI-compatible chat completions
 - `client.llmGateway.listModels()` — List models available on the LLM Gateway
 - `client.llmGateway.understanding(request)` / `client.llmGateway.validateUnderstanding(request)` — Run or validate a Speech Understanding request
+- `client.tts.synthesize({ text, voice_id? })` — Text-to-speech in one request: the complete audio (`TextToSpeechResponse.audio`, a Uint8Array) plus the response header fields
+- `client.tts.stream(request, { signal? })` — Text-to-speech audio as it is generated: a `TextToSpeechStream`, an async iterable of Uint8Array chunks with `info` (header fields), `body`, `bytes()` and `cancel()`
+- `client.tts.session({ voiceId })` — WebSocket `TextToSpeechSession` that speaks text as it is written (voice agents): `connect({ token? })` (text sent before it resolves is held until the socket opens), `speak(text)` (async iterable), `generate()`/`flush()`/`audio(flushId?)`, `cancel()`, `keepAlive()`, `close()`, `on("begin"|"audio"|"flushDone"|"wordBoundaries"|"cancelled"|"termination"|"error"|"close", fn)`
+- `client.tts.createTemporaryToken({ expires_in_seconds })` — Mint a short-lived token, server-side, for a session opened in a browser with `new TextToSpeechSession({ token })`; one token per connection
+- `TextToSpeechError` — What the `client.tts` methods throw on an API refusal: `errorCode`, `param`, `retryable`, `retryAfter`, `requestId`, `closeCode`, `body`
 
 ## Common patterns
 
@@ -103,7 +108,11 @@ when `speakerLabels` is enabled). Sent once per offline-recluster resolve; each
 message batches every earlier Turn whose speaker label changed (unchanged turns
 are omitted). For each `revisions[i]`, match `turn_order` against the original
 Turn and replace its per-word `speaker` (and the turn-level `speaker_label`)
-with the revision's values — text and word timestamps are unchanged:
+with the revision's values — text and word timestamps are unchanged.
+By default only the end-of-stream revision is sent; set
+`speakerLabelsRevisionIntervalMs` (ms of audio time, clamped server-side to
+120 000–300 000) to also get them mid-stream — the first can only arrive after
+~120 s of speech, and one is sent only when a label actually changed:
 
 ```typescript
 transcriber.on("speakerRevision", (event) => {
@@ -356,6 +365,7 @@ const result = await client.dictation.transcribeLive(mic, {
   stt_prompt: "A doctor dictating a patient visit note.", // max 6000 chars; describes the recording
   keyterms_prompt: ["AssemblyAI", "U3-Pro"], // whitespace stripped, empties dropped, max 100 terms, 8000 chars total
   llm_instruction: "Format this as a SOAP note.", // max 2048 chars; follow-up LLM pass over the transcript
+  rewrite_mode: "smart", // rewrite model tier: "fast" (server default) or "smart" (follows detailed instructions, slower)
 });
 ```
 
@@ -388,7 +398,7 @@ upload, the transcription and the LLM pass; the service caps audio at 120 s. `si
 
 **Exports** from the package root: `DictationTranscriber`, `DictationLiveSession`,
 `DictationError`, and the `DictationAudioInput`, `DictationConfig`, `DictationLiveOptions`,
-`DictationWord` and `DictationResponse` types.
+`DictationRewriteMode`, `DictationWord` and `DictationResponse` types.
 
 ## LLM Gateway
 
@@ -419,6 +429,33 @@ const result = await client.llmGateway.understanding({
 
 Failures throw `LlmGatewayError` with `.status`, `.requestId`, and `.errors` (validation detail
 strings, when present).
+
+## Text-to-Speech
+
+One text per HTTP request, or a WebSocket session for voice agents. Request fields use the API's names (`voice_id`, `sample_rate`, `encoding`, `container`); session parameters are camelCase (`voiceId`, `sampleRate`, `wordBoundaries`, `inactivityTimeout`, `token`). Host: `ttsBaseUrl` (`https://tts.us.assemblyai.com`; EU: `https://tts.eu.assemblyai.com`).
+
+```typescript
+const { audio } = await client.tts.synthesize({
+  text: "Hello.",
+  voice_id: "aai-jane",
+  container: "wav",
+});
+
+const speech = await client.tts.stream({
+  text: "Hello.",
+  encoding: "pcm_mulaw",
+  sample_rate: 8000,
+});
+for await (const chunk of speech) send(chunk); // chunk sizes vary; re-frame to 160 B for 20 ms
+
+const session = client.tts.session({ voiceId: "aai-jane" });
+await session.connect();
+for await (const chunk of session.speak("Hello.")) play(chunk);
+session.cancel(); // barge-in: ends the current audio() iteration at once
+await session.close(); // Terminate -> Termination summary; rejects with an unobserved session error
+```
+
+Gotchas: `stream()` gives up a body that sends no audio for `readTimeout` ms (30,000 by default, `0` off) while a read waits, with the same retryable `TextToSpeechError` as a cut; `stream()` needs a global `ReadableStream` and, on a runtime without one (React Native without a polyfill), throws a non-retryable `TextToSpeechError` before sending (use `synthesize()`); a session streams raw PCM/G.711 only (no `mp3`, `container` or `bit_rate`); `generate()` takes at most 2,000 characters per frame (`speak()` splits); the API paces text at ~100 chars/s; an `audio` listener switches audio from pull to push; a session the API ended (idle after 120 s) can `connect()` again on the same object, but a session opened with a temporary token needs a new token for each connection: `connect({ token: newToken })` (a used or expired token is refused with 1008 `unauthorized`). In a browser use `new TextToSpeechSession({ token })` (no client, no API key); `client.tts.createTemporaryToken()` mints on the token host of the `ttsBaseUrl` zone (`token.eu`/`token.us`), `tokenBaseUrl` overrides.
 
 ## Important gotchas
 

@@ -4,6 +4,22 @@
 
 - **Breaking**: Require Node.js 22 or later. `engines.node` is now `>=22` (was `>=18`), because Node.js 18 and 20 have reached end of life. There is no runtime change in this release, but installing it on Node.js 18 or 20 fails under package managers that enforce `engines` (Yarn 1, or npm and pnpm with `engine-strict`)
 
+## [4.42.0]
+
+- Add Text-to-Speech: `client.tts.synthesize(request)` returns one text's complete audio (`TextToSpeechResponse`: `audio` plus the response headers as `requestId`, `region`, `model`, `voiceId`, `encoding`, `sampleRate`, `billedCharacters`, `audioDurationMs`, ...), `client.tts.stream(request)` returns it as the API generates it (`TextToSpeechStream`, an async iterable over a web `ReadableStream`), and `client.tts.session(params)` opens a WebSocket `TextToSpeechSession` for voice agents: `connect()`, `generate()` / `flush()` / `audio()`, `speak()`, `cancel()`, `keepAlive()`, `close()`, with `on("audio" | "flushDone" | "wordBoundaries" | "cancelled" | "termination" | "error" | "close", ...)`. Requests take the API's fields (`text`, `voice_id`, `model_id`, `language`, `sample_rate`, `encoding`, `container`, `bit_rate`); failures throw `TextToSpeechError` (`status`, `errorCode`, `param`, `requestId`, `retryable`, `retryAfter`, `errors`, `closeCode`, `body`). New client option `ttsBaseUrl` (default `https://tts.us.assemblyai.com`); `client.tts.createTemporaryToken()` mints a token for browser sessions. Text sent while `connect()` is pending is held and sent the moment the socket opens, so it need not wait for `Begin`
+
+## [4.41.7]
+
+- Add `summarization` to the speech understanding feature requests and responses (`SummarizationRequest`, `SummarizationResponse`): `summary_type`, `headline_length`, `approximate_chapters` and `effort`. The feature was already accepted by the API but missing from the SDK types, so setting it failed to type check
+
+## [4.41.6]
+
+- Add `rewrite_mode` to `DictationConfig` — the model tier that runs the dictation rewrite: `"fast"` (the server default) or `"smart"`, which follows detailed formatting instructions more reliably at higher latency. Unset, it is not sent. The `DictationRewriteMode` type is exported from the package root
+
+## [4.41.5]
+
+- Add `speakerLabelsRevisionIntervalMs` streaming param (sent as `speaker_labels_revision_interval_ms`) — the cadence, in ms of audio time, at which the server emits mid-stream `speakerRevision` events when `speakerLabels` is enabled. Unset or `0` sends only the end-of-stream revision; non-zero values are clamped server-side to 120 000–300 000 ms. The first mid-stream revision needs ~120 s of streamed speech, and one is sent only when some earlier turn's label changed
+
 ## [4.41.4]
 
 - Fix `RealtimeTranscriber.connect()` promise hanging indefinitely when a socket error or unexpected close occurs before `SessionBegins`. The promise now rejects, and the socket reference is discarded so that connections can be safely retried.

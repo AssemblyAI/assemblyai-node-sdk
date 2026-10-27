@@ -406,6 +406,13 @@ export class StreamingTranscriber {
       searchParams.set("max_speakers", this.params.maxSpeakers.toString());
     }
 
+    if (this.params.speakerLabelsRevisionIntervalMs !== undefined) {
+      searchParams.set(
+        "speaker_labels_revision_interval_ms",
+        this.params.speakerLabelsRevisionIntervalMs.toString(),
+      );
+    }
+
     if (this.params.voiceFocus) {
       searchParams.set("voice_focus", this.params.voiceFocus);
     }
