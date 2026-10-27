@@ -20,8 +20,8 @@ const encoder = new TextEncoder();
 
 /**
  * Generates a multipart boundary. Random alphanumerics behind a fixed prefix,
- * as `FormData` implementations do; `Math.random` rather than Web Crypto
- * because `globalThis.crypto` was flagged on Node 18.
+ * as `FormData` implementations do. `Math.random` is enough for a boundary,
+ * and unlike Web Crypto it needs no polyfill on React Native.
  * @returns The boundary token, without the leading dashes.
  */
 export function multipartBoundary(): string {
@@ -559,7 +559,8 @@ export function resolveFormat(
 
 /**
  * A signal that aborts when `timeoutMs` elapses or when `external` aborts,
- * whichever comes first. `AbortSignal.any` would do this but needs Node 20.
+ * whichever comes first. `AbortSignal.any` would do this, but browsers only
+ * have it since Chrome 116 and Safari 17.4.
  * @param timeoutMs - The deadline in milliseconds.
  * @param external - An optional caller-supplied signal.
  * @returns The combined signal.
