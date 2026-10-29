@@ -328,7 +328,8 @@ transcript when the audio ends.
 iterable, or a web `ReadableStream<Uint8Array>` — or audio already held whole: a local file path
 (Node/Bun/Deno), a data URL, raw bytes (`Uint8Array`/`ArrayBuffer`), or a Blob/File, which is
 sent as a single chunk over the same connection. **Not** a URL — that throws, pointing at
-`client.transcripts`. Audio must be WAV or raw 16-bit PCM, ≤120 s per request.
+`client.transcripts`. Audio must be WAV or raw 16-bit PCM. The live upload takes ≤120 s; longer
+dictations (≤20 min) fall back to the buffered endpoint by default (below).
 
 ```typescript
 await client.dictation.warm(); // open the connection ahead of time (does not validate the key)
@@ -386,15 +387,28 @@ timestamps), `confidence`, `llm_response` (`string | null`, the rewrite when the
 429/503. Auth, rate-limit, size and capacity failures can surface part-way through the upload
 rather than only at the end.
 
+**Past 120 s — buffered fallback** (`DictationLiveOptions.fallbackToBuffered`, default `true`, applies
+to `transcribeLive()` and `openLive()`): the SDK keeps an in-memory copy of every audio byte it
+uploads. When the live request fails with 413 `audio_too_large`, it keeps reading the source until
+it ends (stream/iterable ends, or `close()`/`result()`), then posts the whole copy once to `POST
+/v1/transcribe` (≤20 min / 256 MB, same config, file name and content type) and returns that result
+like a live one, `final_text` included. A failed buffered request throws its own error; any other
+live failure is thrown unchanged. `abort()`/`signal` drop everything, with no fallback request. The
+live deadline stops applying once the fallback engages; the buffered request gets a fresh `timeout`.
+Trade-offs: a fallback result waits for the whole recording to upload and be transcribed (slower
+than live), and the copy costs ~32 KB/s at 16 kHz mono (~38 MB at 20 min); a copy past 256 MB is
+dropped and the call throws `DictationError` (413, `audio_too_large`). `fallbackToBuffered: false`
+keeps no copy and throws the live 413 as before.
+
 **Pre-warming**: `await client.dictation.warm()` issues a `GET /v1/warm` to take DNS + TCP + TLS
 off the critical path. It returns `true` once the socket is open — any HTTP response counts, even
 a non-200 one, because it does not validate the key — and `false` on a transport failure. Call it
 shortly before the request; the pooled connection idles out after a few seconds.
 
-**Client-side timeout**: third argument, `DictationLiveOptions` — `{ timeout, signal }`.
-`timeout` (default 300 000 ms) is a **total** deadline from the start of the request, spanning the
-upload, the transcription and the LLM pass; the service caps audio at 120 s. `signal` cancels a
-`transcribeLive()` from outside; sessions manage their own.
+**Client-side timeout**: third argument, `DictationLiveOptions` — `{ timeout, signal,
+fallbackToBuffered }`. `timeout` (default 300 000 ms) is a **total** deadline from the start of the
+request, spanning the upload, the transcription and the LLM pass; the live upload caps audio at
+120 s. `signal` cancels a `transcribeLive()` from outside; sessions manage their own.
 
 **Exports** from the package root: `DictationTranscriber`, `DictationLiveSession`,
 `DictationError`, and the `DictationAudioInput`, `DictationConfig`, `DictationLiveOptions`,
@@ -464,7 +478,7 @@ Gotchas: `stream()` gives up a body that sends no audio for `readTimeout` ms (30
 - **Streaming uses universal-3-5-pro** as the speech model
 - **Never expose API keys client-side** — use temporary auth tokens for browser streaming
 - **Sync timeout is a total deadline** — `transcribe()`, `transcribeLive()` and `openLive()` all default to a 180 s deadline spanning the whole request (upload plus transcription), and the sync API still caps audio at 120 s
-- **Dictation timeout is a total 300 s deadline** — `client.dictation` spans the upload, the transcription and the LLM pass in one deadline; the service caps audio at 120 s and accepts WAV or raw 16-bit PCM only
+- **Dictation timeout is a total 300 s deadline** — `client.dictation` spans the upload, the transcription and the LLM pass in one deadline; the live upload caps audio at 120 s (longer dictations fall back to the buffered endpoint, up to 20 min, unless `fallbackToBuffered: false`) and accepts WAV or raw 16-bit PCM only
 - **Node >= 18 required**
 - **Only runtime dependency**: ws (WebSocket library)
 - **Multi-runtime support**: Works in Node.js, Deno, Bun, Cloudflare Workers, and browsers

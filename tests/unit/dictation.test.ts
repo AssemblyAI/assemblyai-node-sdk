@@ -1,4 +1,10 @@
-import { createReadStream, mkdtempSync, rmSync, writeFileSync } from "fs";
+import {
+  createReadStream,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "fs";
 import fetchMock from "jest-fetch-mock";
 import { tmpdir } from "os";
 import path from "path";
@@ -625,8 +631,10 @@ describe("dictation errors", () => {
       title: "Audio Too Large",
       detail: "the audio exceeds the size limit",
     });
+    // This 413 is the one the buffered fallback answers; switch it off to see
+    // the live error itself.
     const error = await assembly.dictation
-      .transcribeLive(chunks(bytes("RIFF")))
+      .transcribeLive(chunks(bytes("RIFF")), {}, { fallbackToBuffered: false })
       .catch((e) => e);
     expect(error).toBeInstanceOf(DictationError);
     expect(error.errorCode).toBe("audio_too_large");
@@ -960,7 +968,7 @@ describe("dictation session", () => {
 });
 
 describe("dictation routing", () => {
-  it("should never request the buffered transcription endpoint", async () => {
+  it("should not request the buffered endpoint when the live one succeeds", async () => {
     mockOk();
     mockOk();
     await assembly.dictation.transcribeLive(
@@ -971,5 +979,462 @@ describe("dictation routing", () => {
     for (const [url] of fetchMock.mock.calls) {
       expect(url).toBe(defaultBaseUrl + liveUrl);
     }
+  });
+});
+
+describe("dictation buffered fallback", () => {
+  const bufferedUrl = "/v1/transcribe";
+  // The body production returns for a dictation past the live 120 s cap.
+  const tooLong = {
+    error: "audio exceeds 120000 ms",
+    error_code: "audio_too_large",
+  };
+  const pcm = { sample_rate: 16000, channels: 1 };
+  const sleep = (ms: number) =>
+    new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+  function deferred() {
+    let resolve: () => void = () => undefined;
+    const promise = new Promise<void>((r) => (resolve = r));
+    return { promise, resolve };
+  }
+
+  /**
+   * Reads `count` pieces of the streamed live body (the framing head is the
+   * first), as a server part-way through the upload would, then lets go.
+   */
+  async function readSome(count: number, index = 0): Promise<void> {
+    const reader = (
+      requestInit(index).body as ReadableStream<Uint8Array>
+    ).getReader();
+    for (let i = 0; i < count; i++) {
+      if ((await reader.read()).done) break;
+    }
+    reader.releaseLock();
+  }
+
+  /**
+   * The live endpoint refusing the dictation for its length: after reading
+   * `count` pieces of the body (mid-upload), or all of it when unset.
+   */
+  function mockTooLong(count?: number, onRefuse?: () => void) {
+    fetchMock.doMockOnceIf(
+      requestMatches({ url: liveUrl, method: "POST" }),
+      async () => {
+        if (count === undefined) await requestBodyBytes();
+        else await readSome(count);
+        onRefuse?.();
+        return { body: JSON.stringify(tooLong), status: 413 };
+      },
+    );
+  }
+
+  function mockBuffered(body: object = okResponse, status = 200, headers = {}) {
+    fetchMock.doMockOnceIf(
+      requestMatches({ url: bufferedUrl, method: "POST" }),
+      JSON.stringify(body),
+      { status, headers },
+    );
+  }
+
+  /** The parts of the buffered request, whose body is sent whole. */
+  function bufferedParts(index = 1): Part[] {
+    return parseParts(requestInit(index).body as Uint8Array, index);
+  }
+
+  const urls = () => fetchMock.mock.calls.map(([url]) => url);
+
+  /**
+   * A recording that is still going: `count` two-byte chunks `[i, i]`, one
+   * every `delayMs`. Tracks how much it produced and whether it was let go.
+   */
+  function microphone(count: number, delayMs = 2) {
+    const state = {
+      produced: 0,
+      producedAfterRefusal: 0,
+      refused: false,
+      finished: false,
+    };
+    async function* source() {
+      try {
+        for (let i = 0; i < count; i++) {
+          await sleep(delayMs);
+          state.produced++;
+          if (state.refused) state.producedAfterRefusal++;
+          yield new Uint8Array([i, i]);
+        }
+      } finally {
+        state.finished = true;
+      }
+    }
+    return { state, source: source() };
+  }
+
+  const audioOf = (count: number) =>
+    Array.from({ length: count }, (_, i) => [i, i]).flat();
+
+  it("should fall back mid-upload and send all the audio, including what was produced after the 413", async () => {
+    const mic = microphone(20);
+    mockTooLong(4, () => (mic.state.refused = true));
+    mockBuffered({ ...okResponse, llm_response: "Take 2 tablets daily." });
+
+    const result = await assembly.dictation.transcribeLive(mic.source, {
+      ...pcm,
+      llm_instruction: "Clean this up.",
+    });
+
+    expect(urls()).toEqual([
+      defaultBaseUrl + liveUrl,
+      defaultBaseUrl + bufferedUrl,
+    ]);
+    // Returned exactly like a live result, final_text included.
+    expect(result.text).toBe("take two tablets daily");
+    expect(result.final_text).toBe("Take 2 tablets daily.");
+    expect(result.session_id).toBe(okResponse.session_id);
+
+    // The recording went on after the 413, and the buffered request carries
+    // every byte of it, from the first chunk to the last, once each.
+    expect(mic.state.producedAfterRefusal).toBeGreaterThan(0);
+    expect(mic.state.produced).toBe(20);
+    const parts = bufferedParts();
+    expect(parts.map((p) => p.name)).toEqual(["config", "audio"]);
+    expect(JSON.parse(decode(parts[0].body))).toEqual({
+      ...pcm,
+      llm_instruction: "Clean this up.",
+    });
+    expect(parts[0].type).toBe("application/json");
+    expect(parts[1].filename).toBe("audio.pcm");
+    expect(parts[1].type).toBe("audio/pcm");
+    expect(Array.from(parts[1].body)).toEqual(audioOf(20));
+    expect(requestHeaders(1)["Content-Type"]).toMatch(
+      /^multipart\/form-data; boundary=----assemblyai-[0-9a-z]{32}$/,
+    );
+    expect(requestHeaders(1)["Authorization"]).toBe(defaultApiKey);
+    expect(requestInit(1).body).toBeInstanceOf(Uint8Array);
+
+    // The live upload itself was ended at the 413, not streamed on.
+    const live = decode(await requestBodyBytes(0));
+    expect(live.trimEnd().endsWith("--")).toBe(true);
+  });
+
+  it("should fall back when the 413 arrives after the whole body was sent", async () => {
+    mockTooLong();
+    mockBuffered();
+    const filePath = path.join(testDir, "gore-short.wav");
+    const result = await assembly.dictation.transcribeLive(
+      createReadStream(filePath),
+    );
+
+    expect(result.final_text).toBe("take two tablets daily");
+    expect(urls()).toEqual([
+      defaultBaseUrl + liveUrl,
+      defaultBaseUrl + bufferedUrl,
+    ]);
+    const parts = bufferedParts();
+    expect(decode(parts[0].body)).toBe("{}");
+    // The same file name and content type as the live request.
+    expect(parts[1].filename).toBe("gore-short.wav");
+    expect(parts[1].type).toBe("audio/wav");
+    // The whole file, byte for byte (parseParts is not binary-exact, so look
+    // for it in the raw body).
+    const file = readFileSync(filePath);
+    const raw = Buffer.from(requestInit(1).body as Uint8Array);
+    expect(parts[1].body.length).toBe(file.length);
+    expect(raw.indexOf(file)).toBeGreaterThan(0);
+  });
+
+  it("should fall back for audio held whole, sent as one chunk", async () => {
+    mockTooLong();
+    mockBuffered();
+    await assembly.dictation.transcribeLive(bytes("\x00\x01\x02\x03"), pcm);
+    const parts = bufferedParts();
+    expect(Array.from(parts[1].body)).toEqual([0, 1, 2, 3]);
+    expect(JSON.parse(decode(parts[0].body))).toEqual(pcm);
+  });
+
+  it("should throw the live 413 as before when fallbackToBuffered is false", async () => {
+    const mic = microphone(200);
+    mockTooLong(3);
+    const error = await assembly.dictation
+      .transcribeLive(mic.source, pcm, { fallbackToBuffered: false })
+      .catch((e) => e);
+
+    expect(error).toBeInstanceOf(DictationError);
+    expect(error.status).toBe(413);
+    expect(error.errorCode).toBe("audio_too_large");
+    expect(error.message).toBe("audio exceeds 120000 ms");
+    expect(fetchMock.mock.calls).toHaveLength(1);
+    // The producer was let go of, as before.
+    await sleep(10);
+    expect(mic.state.finished).toBe(true);
+    expect(mic.state.produced).toBeLessThan(200);
+  });
+
+  it.each([
+    [
+      "another 413 code",
+      413,
+      { error: "request body too large", error_code: "payload_too_large" },
+    ],
+    [
+      "a 413 problem-details body for another reason",
+      413,
+      { status: 413, title: "Payload Too Large", detail: "too many bytes" },
+    ],
+    ["a 429", 429, { error: "slow down", error_code: "rate_limited" }],
+    ["a 500", 500, { error: "boom", error_code: "internal_error" }],
+    ["a 401", 401, { error: "Invalid API key", error_code: "unauthorized" }],
+  ])("should not fall back on %s", async (_, status, body) => {
+    const mic = microphone(200);
+    fetchMock.doMockOnceIf(
+      requestMatches({ url: liveUrl, method: "POST" }),
+      async () => {
+        await readSome(3);
+        return { body: JSON.stringify(body), status };
+      },
+    );
+    const error = await assembly.dictation
+      .transcribeLive(mic.source, pcm)
+      .catch((e) => e);
+
+    expect(error).toBeInstanceOf(DictationError);
+    expect(error.status).toBe(status);
+    expect(fetchMock.mock.calls).toHaveLength(1);
+    await sleep(10);
+    expect(mic.state.finished).toBe(true);
+  });
+
+  it("should not fall back when the live request fails without a response", async () => {
+    fetchMock.mockRejectOnce(new TypeError("fetch failed"));
+    const error = await assembly.dictation
+      .transcribeLive(chunks(bytes("RIFF")))
+      .catch((e) => e);
+    expect(error).toBeInstanceOf(TypeError);
+    expect(fetchMock.mock.calls).toHaveLength(1);
+  });
+
+  it("should throw the buffered request's own error when the fallback fails", async () => {
+    mockTooLong();
+    mockBuffered(
+      { error: "audio exceeds 1200000 ms", error_code: "audio_too_large" },
+      413,
+    );
+    const error = await assembly.dictation
+      .transcribeLive(chunks(bytes("\x00\x00")), pcm)
+      .catch((e) => e);
+
+    expect(error).toBeInstanceOf(DictationError);
+    expect(error.status).toBe(413);
+    expect(error.message).toBe("audio exceeds 1200000 ms");
+    // One fallback, not a loop.
+    expect(fetchMock.mock.calls).toHaveLength(2);
+  });
+
+  it("should throw a failed fallback's status and Retry-After", async () => {
+    mockTooLong();
+    mockBuffered(
+      { status: 503, title: "Capacity Exceeded", detail: "no capacity" },
+      503,
+      { "Retry-After": "7" },
+    );
+    const error = await assembly.dictation
+      .transcribeLive(chunks(bytes("\x00\x00")), pcm)
+      .catch((e) => e);
+    expect(error).toBeInstanceOf(DictationError);
+    expect(error.status).toBe(503);
+    expect(error.errorCode).toBe("capacity_exceeded");
+    expect(error.retryAfter).toBe(7);
+  });
+
+  it("should rethrow a producer error while draining, with no fallback request", async () => {
+    mockTooLong(2);
+    async function* failing() {
+      yield bytes("\x00\x00");
+      await sleep(10);
+      yield bytes("\x00\x00");
+      throw new Error("microphone unplugged");
+    }
+    await expect(
+      assembly.dictation.transcribeLive(failing(), pcm),
+    ).rejects.toThrow("microphone unplugged");
+    expect(fetchMock.mock.calls).toHaveLength(1);
+  });
+
+  it("should make no fallback request after an abort signal while draining", async () => {
+    const controller = new AbortController();
+    const refused = deferred();
+    const mic = microphone(10_000);
+    mockTooLong(2, refused.resolve);
+    const pending = assembly.dictation
+      .transcribeLive(mic.source, pcm, { signal: controller.signal })
+      .catch((e) => e);
+
+    await refused.promise;
+    await sleep(20); // the fallback is reading the rest of the recording
+    expect(mic.state.finished).toBe(false);
+    controller.abort();
+
+    const error = await pending;
+    expect(String(error)).toMatch(/abort/i);
+    expect(fetchMock.mock.calls).toHaveLength(1);
+    await sleep(10);
+    expect(mic.state.finished).toBe(true); // the producer was let go of
+  });
+
+  it("should drop the copy and throw past 256 MB, with no fallback request", async () => {
+    mockTooLong(2);
+    // 17 x 16 MB: the copy passes 256 MB on the last chunk.
+    const block = new Uint8Array(16 * 1024 * 1024);
+    let yielded = 0;
+    let finished = false;
+    async function* huge() {
+      try {
+        for (let i = 0; i < 100; i++) {
+          yielded++;
+          yield block;
+        }
+      } finally {
+        finished = true;
+      }
+    }
+    const error = await assembly.dictation
+      .transcribeLive(huge(), pcm)
+      .catch((e) => e);
+
+    expect(error).toBeInstanceOf(DictationError);
+    expect(error.status).toBe(413);
+    expect(error.errorCode).toBe("audio_too_large");
+    expect(error.message).toContain("256 MB");
+    expect(fetchMock.mock.calls).toHaveLength(1);
+    expect(yielded).toBe(17); // stopped reading at the cap
+    await sleep(5);
+    expect(finished).toBe(true);
+  }, 10_000);
+
+  it("should not let the live deadline cut off the rest of the recording", async () => {
+    // ~200 ms of recording against a 50 ms deadline: the 413 comes early,
+    // and draining the rest is recording time, not request time.
+    const mic = microphone(40, 5);
+    mockTooLong(2);
+    mockBuffered();
+    const result = await assembly.dictation.transcribeLive(mic.source, pcm, {
+      timeout: 50,
+    });
+    expect(result.final_text).toBe("take two tablets daily");
+    expect(Array.from(bufferedParts()[1].body)).toEqual(audioOf(40));
+  });
+
+  it("should give the buffered request a fresh deadline", async () => {
+    const mic = microphone(20, 5); // ~100 ms, past the 60 ms deadline
+    mockTooLong(2);
+    let startedAt = 0;
+    let abortedAt = 0;
+    fetchMock.doMockOnceIf(
+      requestMatches({ url: bufferedUrl, method: "POST" }),
+      async (request) => {
+        startedAt = Date.now();
+        await new Promise<void>((resolve) => {
+          request.signal.addEventListener("abort", () => resolve(), {
+            once: true,
+          });
+        });
+        abortedAt = Date.now();
+        throw Object.assign(new Error("The operation was aborted."), {
+          name: "AbortError",
+        });
+      },
+    );
+    const startedCall = Date.now();
+    await expect(
+      assembly.dictation.transcribeLive(mic.source, pcm, { timeout: 60 }),
+    ).rejects.toThrow("aborted");
+    // The buffered request started after the live deadline had passed, and
+    // still had its own deadline to run against.
+    expect(startedAt - startedCall).toBeGreaterThanOrEqual(60);
+    expect(abortedAt - startedAt).toBeGreaterThanOrEqual(50);
+  });
+
+  describe("with openLive()", () => {
+    it("should keep taking writes after the 413 and send them all on result()", async () => {
+      const refused = deferred();
+      mockTooLong(3, refused.resolve);
+      mockBuffered();
+      const session = assembly.dictation.openLive(pcm);
+      session.write(new Uint8Array([0, 0]));
+      session.write(new Uint8Array([1, 1]));
+
+      await refused.promise;
+      await sleep(5);
+      // Still recording: the session is open and takes more audio.
+      expect(session.closed).toBe(false);
+      session.write(new Uint8Array([2, 2]));
+      await sleep(5);
+      session.write(new Uint8Array([3, 3]).buffer);
+
+      const result = await session.result();
+      expect(result.final_text).toBe("take two tablets daily");
+      expect(urls()).toEqual([
+        defaultBaseUrl + liveUrl,
+        defaultBaseUrl + bufferedUrl,
+      ]);
+      const parts = bufferedParts();
+      expect(JSON.parse(decode(parts[0].body))).toEqual(pcm);
+      expect(parts[1].filename).toBe("audio.pcm");
+      expect(parts[1].type).toBe("audio/pcm");
+      expect(Array.from(parts[1].body)).toEqual([0, 0, 1, 1, 2, 2, 3, 3]);
+    });
+
+    it("should fall back after close() when the 413 comes at the end", async () => {
+      mockTooLong();
+      mockBuffered();
+      const session = assembly.dictation.openLive(pcm);
+      session.write(new Uint8Array([0, 0]));
+      session.close();
+      await session.result();
+      expect(Array.from(bufferedParts()[1].body)).toEqual([0, 0]);
+    });
+
+    it("should make no fallback request after abort()", async () => {
+      const refused = deferred();
+      mockTooLong(2, refused.resolve);
+      const session = assembly.dictation.openLive(pcm);
+      session.write(new Uint8Array([0, 0]));
+      await refused.promise;
+      await sleep(5);
+      session.write(new Uint8Array([1, 1]));
+
+      await session.abort();
+      expect(session.closed).toBe(true);
+      await expect(session.result()).rejects.toThrow("aborted");
+      await sleep(10);
+      expect(fetchMock.mock.calls).toHaveLength(1);
+    });
+
+    it("should reject with the live 413 when fallbackToBuffered is false", async () => {
+      mockTooLong(2);
+      const session = assembly.dictation.openLive(pcm, {
+        fallbackToBuffered: false,
+      });
+      session.write(new Uint8Array([0, 0]));
+      const error = await session.result().catch((e) => e);
+      expect(error).toBeInstanceOf(DictationError);
+      expect(error.status).toBe(413);
+      expect(error.errorCode).toBe("audio_too_large");
+      expect(fetchMock.mock.calls).toHaveLength(1);
+    });
+
+    it("should not let the live deadline cut off a session still recording", async () => {
+      const refused = deferred();
+      mockTooLong(2, refused.resolve);
+      mockBuffered();
+      const session = assembly.dictation.openLive(pcm, { timeout: 30 });
+      session.write(new Uint8Array([0, 0]));
+      await refused.promise;
+      await sleep(60); // past the live deadline, still recording
+      session.write(new Uint8Array([1, 1]));
+      const result = await session.result();
+      expect(result.final_text).toBe("take two tablets daily");
+      expect(Array.from(bufferedParts()[1].body)).toEqual([0, 0, 1, 1]);
+    });
   });
 });

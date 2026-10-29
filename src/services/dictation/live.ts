@@ -12,9 +12,11 @@ import { LiveSession } from "../../utils/live";
  * iterables, and audio held whole, go to `client.dictation.transcribeLive()`
  * instead.
  *
- * Everything `transcribeLive()` says about the 120 s audio cap, the
- * server-side silence abort and errors surfacing mid-upload applies here
- * unchanged.
+ * Everything `transcribeLive()` says about the 120 s audio cap and the
+ * buffered fallback past it, the server-side silence abort and errors
+ * surfacing mid-upload applies here unchanged. When the fallback engages,
+ * the session keeps taking writes until `close()` or `result()`, then sends
+ * the whole recording at once; `abort()` drops it with no fallback request.
  *
  * @example
  * ```ts

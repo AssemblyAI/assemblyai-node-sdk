@@ -11,6 +11,7 @@ import { DictationError } from "../../utils/errors/dictation";
 import { getPath } from "../../utils/path";
 import {
   basename,
+  concatChunks,
   dataUrlToBytes,
   deadlineSignal,
   describe,
@@ -27,14 +28,20 @@ import {
   resolveFormat,
 } from "../../utils/live";
 import { DictationLiveSession } from "./live";
+import { AudioRecording } from "./recording";
 
-// The one endpoint this service posts audio to; the dictation API serves it
-// under /v1 only.
+// The endpoint this service posts audio to; the dictation API serves it under
+// /v1 only. It caps a request at 120 s of audio.
 const transcribeLiveEndpoint = "/v1/transcribe/live";
+// The buffered endpoint: the whole recording in one body, up to 20 minutes or
+// 256 MB. Used only by the fallback, once the live endpoint has refused a
+// dictation for running past its cap.
+const transcribeBufferedEndpoint = "/v1/transcribe";
 const warmEndpoint = "/v1/warm";
 // A fetch deadline spans the whole request, so this covers the upload, the
 // transcription and the LLM pass together. It matches the service's own
-// total request budget; the audio itself is capped at 120 s.
+// total request budget; the live audio itself is capped at 120 s. A buffered
+// fallback request gets a fresh deadline of the same length.
 const defaultLiveTimeoutMs = 300_000;
 const warmTimeoutMs = 10_000;
 // Caps mirror the dictation service's `config` part; a field over its cap is
@@ -72,7 +79,10 @@ const contentTypes: Record<string, string> = {
  * `transcribeLive()`, so the upload and every speech segment but the last are
  * done by the time the speaker stops. Audio already held whole — bytes, a
  * Blob, a local path — goes to `transcribeLive()` too and travels the same
- * connection as a single chunk: there is one request shape here.
+ * connection as a single chunk: there is one request shape here. The one
+ * exception is a dictation that runs past the live endpoint's 120 s cap,
+ * which by default is sent again whole to the buffered endpoint (see
+ * `DictationLiveOptions.fallbackToBuffered`).
  *
  * Unlike `client.transcripts`, which submits a job to the async API and polls
  * for completion, there is no job id, no status to poll and no URL ingestion.
@@ -103,16 +113,25 @@ export class DictationTranscriber extends BaseService {
    *
    * A producer must keep producing: an upload that goes silent for long
    * enough is aborted server-side, so stop by ending the stream rather than
-   * pausing it. The service caps a request at 120 s of audio. For sources
-   * that deliver audio through a callback rather than a stream, see
-   * `openLive()`.
+   * pausing it. For sources that deliver audio through a callback rather than
+   * a stream, see `openLive()`.
+   *
+   * The live endpoint caps a request at 120 s of audio. Past it, by default,
+   * the SDK falls back to the buffered endpoint: it keeps reading the source
+   * until it ends, then posts the whole recording once to `/v1/transcribe`
+   * (up to 20 minutes or 256 MB) and resolves with that result. A fallback
+   * result waits for the whole recording to upload and be transcribed, so a
+   * long dictation returns more slowly than a live one. Set
+   * `options.fallbackToBuffered` to `false` to get the 413 instead; see
+   * `DictationLiveOptions.fallbackToBuffered` for the memory the copy costs.
    * @param audio - Audio still being produced (an async iterable, Node
    * streams included; a sync iterable; a web `ReadableStream`) or audio held
    * whole (a local file path, a data URL, raw bytes, a Blob). Raw PCM also
    * requires `sample_rate` and `channels` on the config.
    * @param config - Options for this dictation request.
-   * @param options - Client-side options: the total request deadline and an
-   * optional abort signal.
+   * @param options - Client-side options: the request deadline, an optional
+   * abort signal, and whether to fall back to the buffered endpoint past the
+   * live cap.
    * @returns A promise that resolves to the finished transcript, whose
    * `final_text` carries the LLM rewrite when one was asked for.
    * @throws Error when `audio` is a URL, or when raw PCM is missing
@@ -120,8 +139,10 @@ export class DictationTranscriber extends BaseService {
    * @throws TypeError when `audio` is of an unsupported type, or when a
    * produced chunk is not bytes.
    * @throws DictationError when the request fails. Auth, rate-limit, size and
-   * capacity failures can surface part-way through the upload. Anything the
-   * producer throws propagates unchanged; the connection is dropped.
+   * capacity failures can surface part-way through the upload. After a
+   * fallback, the error is the buffered request's own (a 413 past 20 minutes
+   * or 256 MB, say). Anything the producer throws propagates unchanged; the
+   * connection is dropped.
    * @example
    * ```ts
    * const result = await client.dictation.transcribeLive(mic, {
@@ -145,16 +166,12 @@ export class DictationTranscriber extends BaseService {
       contentTypes,
       configName,
     );
-    const signal = deadlineSignal(
-      options.timeout ?? defaultLiveTimeoutMs,
-      options.signal,
-    );
-    return await this.postLive(
+    return await this.transcribe(
       source.chunks,
       filename,
       contentType,
       config,
-      signal,
+      options,
     );
   }
 
@@ -166,10 +183,19 @@ export class DictationTranscriber extends BaseService {
    * immediately; call `session.write(chunk)` from the callback, then
    * `await session.result()` for the transcript once the speaker stops. See
    * `DictationLiveSession`.
+   *
+   * Past the live endpoint's 120 s cap the session falls back to the
+   * buffered endpoint, as `transcribeLive()` does: it keeps taking writes
+   * until `close()` or `result()`, then posts the whole recording once, and
+   * `result()` resolves with that transcript — more slowly than a live one,
+   * since it waits for the whole recording to upload and be transcribed.
+   * `abort()` still drops everything, with no fallback request.
    * @param config - Options for this dictation request. Raw PCM requires
    * `sample_rate` and `channels`.
-   * @param options - Client-side options: the total request deadline, which
-   * must cover the dictation.
+   * @param options - Client-side options: the request deadline, which must
+   * cover the live part of the dictation, and whether to fall back to the
+   * buffered endpoint past the live cap. The session manages its own abort
+   * signal; use `session.abort()`.
    * @returns The open session.
    * @example
    * ```ts
@@ -193,14 +219,70 @@ export class DictationTranscriber extends BaseService {
         contentTypes,
         configName,
       );
+      return await this.transcribe(chunks, filename, contentType, config, {
+        timeout: options.timeout,
+        fallbackToBuffered: options.fallbackToBuffered,
+        signal: abortSignal,
+      });
+    });
+  }
+
+  /**
+   * Run one dictation: the live request, and the buffered fallback when the
+   * live endpoint refuses the audio for running past its cap.
+   *
+   * With the fallback on, a copy of every audio byte the live upload reads is
+   * kept. When the live request fails with 413 `audio_too_large` — mid-upload
+   * or after the body was sent — the source is read on to its end (that is
+   * still recording time, so the live deadline no longer applies; the abort
+   * signal does), and the whole copy is posted once to the buffered
+   * endpoint under a fresh deadline. Every other outcome is the live
+   * request's own, and with the fallback off no copy is kept at all.
+   */
+  private async transcribe(
+    chunks: AsyncIterable<Uint8Array>,
+    filename: string,
+    contentType: string,
+    config: DictationConfig,
+    options: DictationLiveOptions,
+  ): Promise<DictationResponse> {
+    const configJson = buildConfigJson(config);
+    const timeoutMs = options.timeout ?? defaultLiveTimeoutMs;
+    const format = { configJson, filename, contentType };
+    if (options.fallbackToBuffered === false) {
       return await this.postLive(
         chunks,
-        filename,
-        contentType,
-        config,
-        deadlineSignal(options.timeout ?? defaultLiveTimeoutMs, abortSignal),
+        format,
+        deadlineSignal(timeoutMs, options.signal),
       );
-    });
+    }
+
+    const recording = new AudioRecording(chunks);
+    try {
+      // A 200 arrives once the whole body was sent, so the source has ended.
+      return await this.postLive(
+        recording.chunks,
+        format,
+        deadlineSignal(timeoutMs, options.signal),
+      );
+    } catch (error) {
+      if (!isAudioTooLarge(error)) {
+        // Exactly what the live request does on its own: stop the producer
+        // and report the failure.
+        recording.release();
+        throw error;
+      }
+    }
+
+    // The live endpoint refused the dictation for its length. The live
+    // upload has stopped reading; read the rest of the recording here, up to
+    // key-up, then send all of it at once.
+    await recording.drain(options.signal);
+    return await this.postBuffered(
+      recording.take(),
+      format,
+      deadlineSignal(timeoutMs, options.signal),
+    );
   }
 
   /**
@@ -212,18 +294,16 @@ export class DictationTranscriber extends BaseService {
    */
   private async postLive(
     chunks: AsyncIterable<Uint8Array>,
-    filename: string,
-    contentType: string,
-    config: DictationConfig,
+    format: AudioFormat,
     signal: AbortSignal,
   ): Promise<DictationResponse> {
     const boundary = multipartBoundary();
     const body = liveBody({
       head: multipartHead({
         boundary,
-        config: buildConfigJson(config),
-        filename,
-        contentType,
+        config: format.configJson,
+        filename: format.filename,
+        contentType: format.contentType,
       }),
       chunks,
       closing: multipartClosing(boundary),
@@ -251,18 +331,48 @@ export class DictationTranscriber extends BaseService {
       // The server can reject while the upload is still in flight (auth,
       // rate limit, size, capacity). fetch resolves with the status at once
       // but withholds the response body until the request body ends, so end
-      // it now rather than streaming the rest of a rejected dictation.
+      // it now rather than streaming the rest of a rejected dictation. With
+      // the buffered fallback on, this only stops the upload: the source
+      // stays open, for the fallback to read to its end.
       body.finish();
-      throw await errorFromResponse(
-        response,
-        DictationError,
-        "dictation transcription",
-      );
     }
-    const json = (await response.json()) as DictationResponse;
-    // The LLM rewrite is the text to show when there is one; a pass that was
-    // never asked for, or that failed, leaves `llm_response` null.
-    return { ...json, final_text: json.llm_response ?? json.text };
+    return await dictationResult(response);
+  }
+
+  /**
+   * Post a whole recording to the buffered endpoint in one request: the same
+   * `config` part and audio part as the live request, with the audio already
+   * complete.
+   * @param audio - The recorded chunks, in order. Emptied here once they are
+   * copied into the body, so the recording is held once, not twice, while
+   * the request is in flight.
+   */
+  private async postBuffered(
+    audio: Uint8Array[],
+    format: AudioFormat,
+    signal: AbortSignal,
+  ): Promise<DictationResponse> {
+    const boundary = multipartBoundary();
+    const body = concatChunks([
+      multipartHead({
+        boundary,
+        config: format.configJson,
+        filename: format.filename,
+        contentType: format.contentType,
+      }),
+      ...audio,
+      multipartClosing(boundary),
+    ]);
+    audio.length = 0;
+    const response = await this.fetchResponse(transcribeBufferedEndpoint, {
+      method: "POST",
+      body,
+      headers: {
+        "Content-Type": `multipart/form-data; boundary=${boundary}`,
+      },
+      signal,
+    });
+    return await dictationResult(response);
   }
 
   /**
@@ -291,6 +401,49 @@ export class DictationTranscriber extends BaseService {
       return false;
     }
   }
+}
+
+/** What a request's `config` and `audio` parts carry besides the audio. */
+type AudioFormat = {
+  configJson: Record<string, unknown>;
+  filename: string;
+  contentType: string;
+};
+
+/**
+ * Read a dictation response: the transcript on a 200, a `DictationError`
+ * otherwise. Live and buffered requests answer in the same shape.
+ * @param response - The response; its body is read here.
+ * @returns The transcript, with `final_text` derived.
+ * @throws DictationError when the status is not 200.
+ */
+async function dictationResult(response: Response): Promise<DictationResponse> {
+  if (response.status !== 200) {
+    throw await errorFromResponse(
+      response,
+      DictationError,
+      "dictation transcription",
+    );
+  }
+  const json = (await response.json()) as DictationResponse;
+  // The LLM rewrite is the text to show when there is one; a pass that was
+  // never asked for, or that failed, leaves `llm_response` null.
+  return { ...json, final_text: json.llm_response ?? json.text };
+}
+
+/**
+ * Whether a failed live request is the one the buffered fallback answers:
+ * the live endpoint's 413 for audio past its 120 s cap. Any other 413 (a
+ * body too large in bytes, say) and every other failure is not.
+ * @param error - What the live request threw.
+ * @returns `true` for a 413 with error code `audio_too_large`.
+ */
+function isAudioTooLarge(error: unknown): boolean {
+  return (
+    error instanceof DictationError &&
+    error.status === 413 &&
+    error.errorCode === "audio_too_large"
+  );
 }
 
 type ResolvedSource = {
