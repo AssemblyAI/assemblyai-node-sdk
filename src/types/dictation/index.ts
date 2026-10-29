@@ -99,15 +99,46 @@ export type DictationLiveOptions = {
    * The total request deadline in milliseconds, measured from the start of
    * the request: it spans the upload, the transcription and the LLM pass.
    * Defaults to 300 000, matching the service's total request budget. The
-   * audio itself is capped at 120 seconds.
+   * live audio itself is capped at 120 seconds.
+   *
+   * When the buffered fallback engages, this deadline stops applying to the
+   * live request: the rest of the recording is read for as long as it lasts
+   * (that is recording time, not request time), and the buffered request
+   * then gets a fresh deadline of the same length. `signal` applies
+   * throughout.
    */
   timeout?: number;
   /**
    * An `AbortSignal` that drops the request when aborted. `openLive()`
    * sessions manage their own; pass one here to cancel a `transcribeLive()`
-   * call from outside.
+   * call from outside. Aborting while a fallback is reading the recording or
+   * posting it drops everything; no fallback request is sent after an abort.
    */
   signal?: AbortSignal;
+  /**
+   * Fall back to the buffered endpoint when a dictation runs past the live
+   * endpoint's 120 s cap. Defaults to `true`.
+   *
+   * When the live request fails with 413 `audio_too_large`, the SDK keeps
+   * reading the audio until it ends (the stream or iterable ends, or
+   * `close()` / `result()` on a session), then posts the whole recording
+   * once to `POST /v1/transcribe`, which takes up to 20 minutes or 256 MB,
+   * and returns that result exactly as a live one. If that request fails,
+   * its own error is thrown — a 413 past 20 minutes or 256 MB, say — not the
+   * live 413. Every other live failure is thrown as it is.
+   *
+   * The trade-offs: after a fallback the result waits for the whole
+   * recording to upload and be transcribed, so a long dictation returns more
+   * slowly than a live one. And to have the recording to send, the SDK keeps
+   * an in-memory copy of every audio byte from the first one on, about 32 KB
+   * per second of 16 kHz mono 16-bit PCM (about 38 MB at 20 minutes). A copy
+   * that grows past 256 MB is dropped and the call throws a `DictationError`
+   * (413, `audio_too_large`).
+   *
+   * Set to `false` to keep no copy and get the live 413 instead, exactly as
+   * before the fallback existed.
+   */
+  fallbackToBuffered?: boolean;
 };
 
 /**

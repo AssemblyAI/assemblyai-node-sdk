@@ -557,8 +557,9 @@ console.log(result.final_text, result.session_id);
 
 `result.final_text` is the one to show the user: the LLM rewrite when an
 `llm_instruction` ran, the raw transcript otherwise. `result.text` always holds
-the raw transcript. Audio must be WAV or raw 16-bit PCM, up to 120 seconds per
-request.
+the raw transcript. Audio must be WAV or raw 16-bit PCM. The live upload takes
+up to 120 seconds; a longer dictation, up to 20 minutes, is sent again whole
+(see "Dictations longer than 2 minutes" below).
 
 > This is not the streaming API. `client.streaming` returns words while the
 > speaker is still talking; dictation returns one finished transcript when the
@@ -638,8 +639,8 @@ A URL is rejected with an error pointing at `client.transcripts`, which is where
 URL ingestion lives.
 
 `options.timeout` (default 300 000 ms) is a **total** deadline from the start of
-the request, spanning the upload, the transcription and the LLM pass; the
-service caps the audio itself at 120 seconds. `options.signal` drops the request
+the request, spanning the upload, the transcription and the LLM pass; the live
+upload caps the audio itself at 120 seconds. `options.signal` drops the request
 from outside, the way `abort()` does for a session.
 
 Caveats, for both entry points:
@@ -651,6 +652,50 @@ Caveats, for both entry points:
   its header
 - Auth, rate-limit, size and capacity failures can surface part-way through the
   upload rather than only at the end, as a `DictationError`
+
+</details>
+
+<details>
+<summary>Dictations longer than 2 minutes</summary>
+
+The live upload takes up to 120 seconds of audio. Past that, the dictation API
+refuses it with a 413 (`audio_too_large`), and by default the SDK falls back to
+the buffered endpoint, `POST /v1/transcribe`, which takes up to 20 minutes or
+256 MB:
+
+1. From the first byte, the SDK keeps an in-memory copy of the audio it uploads.
+2. When the live request is refused for its length, the SDK keeps reading your
+   audio until it ends: the stream or iterable ends, or you call `close()` /
+   `result()` on a session.
+3. It posts the whole recording once, with the same config, and resolves with
+   that transcript exactly as it would a live one.
+
+Nothing changes in your code: `transcribeLive()` and `openLive()` work the same
+for a 10 second note and a 15 minute one. Two trade-offs come with it:
+
+- **Latency.** After a fallback, the result waits for the whole recording to
+  upload and be transcribed, so a long dictation returns more slowly than a live
+  one.
+- **Memory.** The copy costs about 32 KB per second of 16 kHz mono 16-bit PCM,
+  about 38 MB at 20 minutes. A copy that grows past 256 MB is dropped, and the
+  call throws a `DictationError` (413, `audio_too_large`).
+
+Only a 413 with `audio_too_large` falls back; every other failure is thrown as
+it is. If the buffered request fails, its own error is thrown (a 413 past 20
+minutes, say). `abort()` or an abort `signal` drops everything with no fallback
+request. `options.timeout` stops applying to the live request once the fallback
+engages (the rest of the recording takes as long as it takes), and the buffered
+request gets a fresh `timeout` of its own.
+
+To keep no copy and get the 413 instead, turn it off:
+
+```typescript
+const result = await client.dictation.transcribeLive(
+  micStream,
+  { sample_rate: 16_000, channels: 1 },
+  { fallbackToBuffered: false },
+);
+```
 
 </details>
 
