@@ -1,7 +1,9 @@
+import { AssemblyAIError } from "./assemblyai";
+
 /**
  * Error thrown when a request to the LLM Gateway fails.
  */
-export class LlmGatewayError extends Error {
+export class LlmGatewayError extends AssemblyAIError {
   override name = "LlmGatewayError";
 
   /**
@@ -13,10 +15,10 @@ export class LlmGatewayError extends Error {
    */
   constructor(
     message: string,
-    public readonly status?: number,
+    status?: number,
     public readonly requestId?: string,
     public readonly errors?: string[],
   ) {
-    super(message);
+    super(message, status);
   }
 }
