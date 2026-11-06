@@ -9,7 +9,11 @@ import type {
   Transcript,
   TranscriptParams,
 } from "../../src/exports";
-import { AssemblyAI, TextToSpeechError } from "../../src/exports";
+import {
+  AssemblyAI,
+  AssemblyAIError,
+  TextToSpeechError,
+} from "../../src/exports";
 
 // #105: every type a public field is declared with must be reachable from the
 // package root. `LiteralUnion` sits behind `language_code` and
@@ -46,6 +50,24 @@ describe("package root exports", () => {
     const carried: TextToSpeechErrorFields = error;
     expect(carried.errorCode).toBe("rate_limited");
     expect(carried.retryAfter).toBe(2);
+  });
+
+  it("exposes AssemblyAIError and inherits across specific errors", () => {
+    const error = new AssemblyAIError("Something went wrong", 400, 5);
+    expect(error).toBeInstanceOf(Error);
+    expect(error).toBeInstanceOf(AssemblyAIError);
+    expect(error.name).toBe("AssemblyAIError");
+    expect(error.message).toBe("Something went wrong");
+    expect(error.status).toBe(400);
+    expect(error.retryAfter).toBe(5);
+
+    const ttsError = new TextToSpeechError("TTS failed", {
+      status: 503,
+      retryAfter: 3,
+    });
+    expect(ttsError).toBeInstanceOf(AssemblyAIError);
+    expect(ttsError.status).toBe(503);
+    expect(ttsError.retryAfter).toBe(3);
   });
 
   it("exposes the HTTP text-to-speech types under the product's prefix", () => {

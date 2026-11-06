@@ -9,6 +9,7 @@ import {
 } from "./tts";
 import { TextToSpeechError } from "../utils/errors/tts";
 import {
+  AssemblyAIError,
   SyncTranscriptError,
   DictationError,
   LlmGatewayError,
@@ -141,6 +142,7 @@ class AssemblyAI {
 
 export {
   AssemblyAI,
+  AssemblyAIError,
   SyncTranscriber,
   SyncLiveSession,
   SyncTranscriptError,
