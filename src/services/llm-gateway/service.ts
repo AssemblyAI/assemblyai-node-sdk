@@ -3,6 +3,8 @@ import {
   BaseServiceParams,
   ChatCompletionRequest,
   ChatCompletionResponse,
+  DecisionRequest,
+  DecisionResponse,
   ListModelsResponse,
   LlmGatewaySpeechUnderstandingRequest,
   LlmGatewaySpeechUnderstandingResponse,
@@ -10,8 +12,8 @@ import {
 import { LlmGatewayError } from "../../utils/errors/llm-gateway";
 
 /**
- * The LLM Gateway service: an OpenAI-compatible chat completions API plus
- * AssemblyAI's Speech Understanding endpoints.
+ * The LLM Gateway service: an OpenAI-compatible chat completions API,
+ * AssemblyAI's Speech Understanding endpoints, and decisions.
  */
 export class LlmGatewayService extends BaseService {
   /**
@@ -83,6 +85,19 @@ export class LlmGatewayService extends BaseService {
       body: JSON.stringify(request),
     });
     if (!response.ok) throw await errorFromResponse(response);
+  }
+
+  /**
+   * Answer predicate, choice, or score questions about an input.
+   * @throws LlmGatewayError when the request fails.
+   */
+  async decisions(request: DecisionRequest): Promise<DecisionResponse> {
+    const response = await this.fetchResponse("/v1/decisions", {
+      method: "POST",
+      body: JSON.stringify(request),
+    });
+    if (!response.ok) throw await errorFromResponse(response);
+    return (await response.json()) as DecisionResponse;
   }
 }
 
