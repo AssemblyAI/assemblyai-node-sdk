@@ -1152,6 +1152,22 @@ export type SummarizationRequest = {
 };
 
 /**
+ * Action items configuration for speech understanding
+ */
+export type ActionItemsRequest = {
+  /**
+   * Also extract key decisions made during the conversation
+   */
+  include_decisions?: boolean;
+  /**
+   * How much effort to spend on this task
+   *
+   * @defaultValue "low"
+   */
+  effort?: SpeechUnderstandingEffort;
+};
+
+/**
  * Speech understanding feature requests grouped together
  */
 export type SpeechUnderstandingFeatureRequests = {
@@ -1171,6 +1187,10 @@ export type SpeechUnderstandingFeatureRequests = {
    * Summarization configuration
    */
   summarization?: SummarizationRequest;
+  /**
+   * Action items configuration
+   */
+  action_items?: ActionItemsRequest;
 };
 
 /**
@@ -1282,6 +1302,42 @@ export type SummarizationResponse = {
 };
 
 /**
+ * An action item or decision extracted from the audio
+ */
+export type ActionItem = {
+  /**
+   * The extracted action item or decision
+   */
+  action_item: string;
+  /**
+   * The source quote from the audio
+   */
+  quote?: string;
+  /**
+   * Timestamp in milliseconds from audio start
+   */
+  timestamp?: number;
+};
+
+/**
+ * Action items response containing status and extracted items
+ */
+export type ActionItemsResponse = {
+  /**
+   * Status of the action items feature
+   */
+  status: string;
+  /**
+   * The effort level that was used
+   */
+  effort?: SpeechUnderstandingEffort;
+  /**
+   * List of extracted action items
+   */
+  items?: ActionItem[];
+};
+
+/**
  * Speech understanding feature responses grouped together
  */
 export type SpeechUnderstandingFeatureResponses = {
@@ -1301,6 +1357,10 @@ export type SpeechUnderstandingFeatureResponses = {
    * Summarization results
    */
   summarization?: SummarizationResponse;
+  /**
+   * Action items results
+   */
+  action_items?: ActionItemsResponse;
 };
 
 /**
@@ -1433,11 +1493,7 @@ export type SummaryModel = "informative" | "conversational" | "catchy";
  * The type of summary
  */
 export type SummaryType =
-  | "bullets"
-  | "bullets_verbose"
-  | "gist"
-  | "headline"
-  | "paragraph";
+  "bullets" | "bullets_verbose" | "gist" | "headline" | "paragraph";
 
 /**
  * Timestamp containing a start and end property in milliseconds
@@ -3186,8 +3242,7 @@ export type TranscriptOptionalParams = {
    * Speech understanding configuration/response for LLM Gateway features
    */
   speech_understanding?:
-    | SpeechUnderstandingRequest
-    | SpeechUnderstandingResponse;
+    SpeechUnderstandingRequest | SpeechUnderstandingResponse;
   /**
    * The domain to use for the transcription (e.g. 'medical-v1').
    */
@@ -3580,8 +3635,7 @@ export type TranscriptUtterance = {
  * The notifications sent to the webhook URL.
  */
 export type TranscriptWebhookNotification =
-  | TranscriptReadyNotification
-  | RedactedAudioNotification;
+  TranscriptReadyNotification | RedactedAudioNotification;
 
 /**
  * @example

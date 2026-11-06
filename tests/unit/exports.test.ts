@@ -1,4 +1,7 @@
 import type {
+  ActionItem,
+  ActionItemsRequest,
+  ActionItemsResponse,
   LiteralUnion,
   TextToSpeechErrorFields,
   TextToSpeechRequest,
@@ -72,5 +75,21 @@ describe("package root exports", () => {
     expect(typeof stream).toBe("function");
     expect(typeof infoOf).toBe("function");
     expect(info.requestId).toBe("req-1");
+  });
+
+  it("exposes the Speech Understanding action items types from the root", () => {
+    const request: ActionItemsRequest = {
+      include_decisions: true,
+      effort: "low",
+    };
+    const item: ActionItem = {
+      action_item: "Review PR",
+    };
+    const response: ActionItemsResponse = {
+      status: "success",
+      items: [item],
+    };
+    expect(request.include_decisions).toBe(true);
+    expect(response.items?.[0].action_item).toBe("Review PR");
   });
 });
