@@ -52,6 +52,7 @@ const client = new AssemblyAI({
 - `client.llmGateway.chatCompletions(request)` — OpenAI-compatible chat completions
 - `client.llmGateway.listModels()` — List models available on the LLM Gateway
 - `client.llmGateway.understanding(request)` / `client.llmGateway.validateUnderstanding(request)` — Run or validate a Speech Understanding request
+- `client.llmGateway.decisions(request)` — Answer predicate, choice, or score questions about an input
 - `client.tts.synthesize({ text, voice_id? })` — Text-to-speech in one request: the complete audio (`TextToSpeechResponse.audio`, a Uint8Array) plus the response header fields
 - `client.tts.stream(request, { signal? })` — Text-to-speech audio as it is generated: a `TextToSpeechStream`, an async iterable of Uint8Array chunks with `info` (header fields), `body`, `bytes()` and `cancel()`
 - `client.tts.session({ voiceId })` — WebSocket `TextToSpeechSession` that speaks text as it is written (voice agents): `connect({ token? })` (text sent before it resolves is held until the socket opens), `speak(text)` (async iterable), `generate()`/`flush()`/`audio(flushId?)`, `cancel()`, `keepAlive()`, `close()`, `on("begin"|"audio"|"flushDone"|"wordBoundaries"|"cancelled"|"termination"|"error"|"close", fn)`
@@ -403,8 +404,8 @@ upload, the transcription and the LLM pass; the service caps audio at 120 s. `si
 ## LLM Gateway
 
 `client.llmGateway` targets the LLM Gateway host (`llm-gateway.assemblyai.com`, override with the
-`llmGatewayBaseUrl` client option). It exposes an OpenAI-compatible chat completions API and
-AssemblyAI's Speech Understanding endpoints.
+`llmGatewayBaseUrl` client option). It exposes an OpenAI-compatible chat completions API,
+AssemblyAI's Speech Understanding endpoints, and decisions.
 
 ```typescript
 const completion = await client.llmGateway.chatCompletions({
@@ -424,6 +425,34 @@ transcript, referenced by `transcript_id`:
 const result = await client.llmGateway.understanding({
   transcript_id: transcript.id,
   speech_understanding: { request: { summarization: { version: "v1" } } },
+});
+```
+
+Decisions answers `predicate`, `choice`, and `score` questions about an input (a string or a list
+of input items) in one request. Each answer carries its question's `name`; `probabilities[].value`
+is the choice value (string) for a choice question and the level index (number) for a score question.
+Only some models serve decisions, and `listModels()` does not show decisions-only models.
+
+```typescript
+const { answers } = await client.llmGateway.decisions({
+  model: "gpt-6-luna",
+  input: "Agent: Anything else? Caller: No, that fixed it, thanks!",
+  questions: [
+    {
+      type: "predicate",
+      name: "resolved",
+      instructions: "Was the issue resolved?",
+    },
+    {
+      type: "choice",
+      name: "sentiment",
+      instructions: "Caller sentiment at the end of the call",
+      choices: [
+        { value: "positive", description: "Satisfied" },
+        { value: "negative", description: "Unhappy" },
+      ],
+    },
+  ],
 });
 ```
 
