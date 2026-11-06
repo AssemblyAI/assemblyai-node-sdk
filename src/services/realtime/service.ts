@@ -420,6 +420,13 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
     waitForSessionTermination = true,
     terminationTimeout = DEFAULT_TERMINATION_TIMEOUT_MS,
   ) {
+    // close() removes the socket listeners below, so nothing else would ever
+    // settle a connect() that is still waiting for `SessionBegins`.
+    const rejectConnect = this.connectReject;
+    this.connectReject = undefined;
+    rejectConnect?.(
+      new RealtimeError("Connection closed before the session started"),
+    );
     if (this.socket) {
       if (this.socket.readyState === this.socket.OPEN) {
         if (waitForSessionTermination) {

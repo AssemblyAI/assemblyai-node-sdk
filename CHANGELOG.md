@@ -1,5 +1,10 @@
 # Changelog
 
+## [4.42.1]
+
+- Fix `StreamingTranscriber.close()` while `connect()` is still pending. Previously the pending attempt was not cancelled, so its retry loop opened a new socket after `close()` returned, and the `connect()` promise could later resolve on a closed transcriber. `close()` now cancels the pending attempt, and `connect()` rejects with a "Connection closed before the session started" error. Calling `connect()` again after `close()` still works
+- Fix `RealtimeTranscriber.close()` while `connect()` is still pending. The `connect()` promise never settled because `close()` removed the socket listeners; it now rejects with the same error
+
 ## [4.42.0]
 
 - Add Text-to-Speech: `client.tts.synthesize(request)` returns one text's complete audio (`TextToSpeechResponse`: `audio` plus the response headers as `requestId`, `region`, `model`, `voiceId`, `encoding`, `sampleRate`, `billedCharacters`, `audioDurationMs`, ...), `client.tts.stream(request)` returns it as the API generates it (`TextToSpeechStream`, an async iterable over a web `ReadableStream`), and `client.tts.session(params)` opens a WebSocket `TextToSpeechSession` for voice agents: `connect()`, `generate()` / `flush()` / `audio()`, `speak()`, `cancel()`, `keepAlive()`, `close()`, with `on("audio" | "flushDone" | "wordBoundaries" | "cancelled" | "termination" | "error" | "close", ...)`. Requests take the API's fields (`text`, `voice_id`, `model_id`, `language`, `sample_rate`, `encoding`, `container`, `bit_rate`); failures throw `TextToSpeechError` (`status`, `errorCode`, `param`, `requestId`, `retryable`, `retryAfter`, `errors`, `closeCode`, `body`). New client option `ttsBaseUrl` (default `https://tts.us.assemblyai.com`); `client.tts.createTemporaryToken()` mints a token for browser sessions. Text sent while `connect()` is pending is held and sent the moment the socket opens, so it need not wait for `Begin`
