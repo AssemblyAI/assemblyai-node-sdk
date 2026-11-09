@@ -399,6 +399,28 @@ describe("streaming", () => {
     await connect(rt, server);
   });
 
+  it.each(["medical-v1", "veterinary-v1"] as const)(
+    "should include domain=%s in connection URL",
+    async (domain) => {
+      await cleanup();
+      WS.clean();
+
+      server = new WS(websocketBaseUrl);
+      rt = new StreamingTranscriber({
+        websocketBaseUrl,
+        token: "123",
+        sampleRate: 16_000,
+        speechModel: "universal-3-5-pro",
+        domain,
+      });
+      onOpen = jest.fn();
+      rt.on("open", onOpen);
+      await connect(rt, server);
+
+      expect(connectUrlParams(rt).get("domain")).toBe(domain);
+    },
+  );
+
   it("should include language_code in connection URL", async () => {
     await cleanup();
     WS.clean();
