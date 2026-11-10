@@ -432,7 +432,7 @@ strings, when present).
 
 ## Text-to-Speech
 
-One text per HTTP request, or a WebSocket session for voice agents. Request fields use the API's names (`voice_id`, `sample_rate`, `encoding`, `container`); session parameters are camelCase (`voiceId`, `sampleRate`, `wordBoundaries`, `inactivityTimeout`, `token`). Host: `ttsBaseUrl` (`https://tts.us.assemblyai.com`; EU: `https://tts.eu.assemblyai.com`).
+One text per HTTP request, or a WebSocket session for voice agents. Request fields use the API's names (`voice_id`, `sample_rate`, `encoding`, `container`); session parameters are camelCase (`voiceId`, `sampleRate`, `wordBoundaries`, `inactivityTimeout`, `token`). From plain JavaScript, a request's camelCase `voiceId`, `modelId`, `sampleRate`, `bitRate` and `extendBiometricConsent` are sent as their snake_case fields with a warning (the snake_case value wins when both differ), and a session warns on the snake_case names it ignores. Host: `ttsBaseUrl` (`https://tts.us.assemblyai.com`; EU: `https://tts.eu.assemblyai.com`).
 
 ```typescript
 const { audio } = await client.tts.synthesize({

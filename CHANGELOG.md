@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.42.2]
+
+- `client.tts.synthesize()` and `client.tts.stream()` send the camelCase names `voiceId`, `modelId`, `sampleRate`, `bitRate` and `extendBiometricConsent`, which plain JavaScript can pass, as their snake_case request fields (`voice_id`, ...) and warn once. The API ignored them before, so such a request got the default voice, model or sample rate. These values now reach the API, so a value it refuses (a `sampleRate` outside the supported set, `bitRate` without the `mp3` encoding, `extendBiometricConsent` on a voice the account does not own) fails with the same `TextToSpeechError` as its snake_case spelling, where before the request used the default. When a request gives both names of a field with different values, the snake_case value is sent, with a warning once. A `TextToSpeechSession` warns once on the snake_case names it ignores (`voice_id`, `model_id`, `sample_rate`, `extend_biometric_consent`, `word_boundaries`, `inactivity_timeout`)
+
 ## [4.42.1]
 
 - Add `"veterinary-v1"` to the streaming `StreamingDomain` type, so `domain: "veterinary-v1"` type checks on `StreamingTranscriber`. The streaming API already accepted it; only the SDK type rejected it

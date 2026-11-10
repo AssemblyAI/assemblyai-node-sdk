@@ -251,8 +251,8 @@ let warnedUnknownParams = false;
 
 /**
  * Warns once per process that the API ignored body fields it does not know,
- * which is how a camelCase `sampleRate` in a request held in a variable (or
- * sent from plain JavaScript) shows up. The names stay on `unknownParams`.
+ * which is how a misspelled field in a request held in a variable (or sent
+ * from plain JavaScript) shows up. The names stay on `unknownParams`.
  */
 function warnUnknownParams(info: TextToSpeechResponseInfo) {
   if (warnedUnknownParams || !info.unknownParams) return;
@@ -261,6 +261,63 @@ function warnUnknownParams(info: TextToSpeechResponseInfo) {
     `TextToSpeechService: the API ignored unknown request fields: ${info.unknownParams.join(", ")}. ` +
       "Request fields are snake_case, such as sample_rate; see unknownParams on the response.",
   );
+}
+
+/**
+ * The camelCase names plain JavaScript may give request fields (the names a
+ * session takes, and `bitRate`), each with the request field it stands for.
+ */
+const REQUEST_FIELD_ALIASES: readonly (readonly [
+  alias: string,
+  field: keyof TextToSpeechRequest,
+])[] = [
+  ["voiceId", "voice_id"],
+  ["modelId", "model_id"],
+  ["sampleRate", "sample_rate"],
+  ["bitRate", "bit_rate"],
+  ["extendBiometricConsent", "extend_biometric_consent"],
+];
+
+let warnedAliases = false;
+let warnedAliasConflicts = false;
+
+/**
+ * The JSON body of `POST /v1/speech`. A camelCase alias from
+ * `REQUEST_FIELD_ALIASES` is sent as its request field when that field is
+ * absent (`undefined` or `null`) or has the same value. When both are given
+ * with different values, the request field's value is sent. The alias itself
+ * is never sent. Each of the two cases warns once per process.
+ */
+function speechBody(request: TextToSpeechRequest, stream: boolean): string {
+  const given = (value: unknown) => value !== undefined && value !== null;
+  const body: Record<string, unknown> = { ...request };
+  const mapped: string[] = [];
+  const conflicts: string[] = [];
+  for (const [alias, field] of REQUEST_FIELD_ALIASES) {
+    const value = body[alias];
+    delete body[alias];
+    if (!given(value)) continue;
+    if (!given(body[field]) || body[field] === value) {
+      body[field] = value;
+      mapped.push(`${alias} as ${field}`);
+    } else {
+      conflicts.push(`${field} and ${alias}`);
+    }
+  }
+  if (mapped.length > 0 && !warnedAliases) {
+    warnedAliases = true;
+    console.warn(
+      `TextToSpeechService: request fields are snake_case; sent ${mapped.join(", ")}.`,
+    );
+  }
+  if (conflicts.length > 0 && !warnedAliasConflicts) {
+    warnedAliasConflicts = true;
+    console.warn(
+      `TextToSpeechService: the request gave ${conflicts.join(", ")} different values; ` +
+        "sent the snake_case value and ignored the camelCase one.",
+    );
+  }
+  return JSON.stringify({ ...body, stream });
 }
 
 /**
@@ -405,7 +462,7 @@ export class TextToSpeechService extends BaseService {
     try {
       const response = await this.fetchResponse(ENDPOINT_SPEECH, {
         method: "POST",
-        body: JSON.stringify({ ...request, stream: false }),
+        body: speechBody(request, false),
         signal: deadline.signal,
       });
       if (!response.ok) throw await speechErrorFromResponse(response);
@@ -462,7 +519,7 @@ export class TextToSpeechService extends BaseService {
     try {
       response = await this.fetchResponse(ENDPOINT_SPEECH, {
         method: "POST",
-        body: JSON.stringify({ ...request, stream: true }),
+        body: speechBody(request, true),
         signal: deadline.signal,
       });
     } catch (error) {

@@ -76,7 +76,13 @@ export type TextToSpeechVoiceOptions = {
   extend_biometric_consent?: boolean;
 };
 
-/** The body of `POST /v1/speech`. */
+/**
+ * The body of `POST /v1/speech`. From plain JavaScript, the client also
+ * takes the camelCase names `voiceId`, `modelId`, `sampleRate`, `bitRate`
+ * and `extendBiometricConsent`: each is sent as its snake_case field, with a
+ * warning once per process, and the API checks it as that field. When both
+ * names are given with different values, the snake_case value is sent.
+ */
 export type TextToSpeechRequest = TextToSpeechVoiceOptions & {
   /** 1 to 5,000 characters. */
   text: string;
@@ -162,7 +168,7 @@ export type TextToSpeechResponseInfo = {
   audioDurationMs?: number;
   /**
    * Body fields the API did not recognize and ignored
-   * (`X-TTS-Unknown-Params`), such as a camelCase `sampleRate` for
+   * (`X-TTS-Unknown-Params`), such as a misspelled `samplerate` for
    * `sample_rate`. The API lists at most 16, sorted, and shows a name it
    * cannot echo as `<invalid>`. Absent when every field was known.
    */
@@ -188,7 +194,11 @@ export type TextToSpeechTokenParams = {
   max_session_duration_seconds?: number;
 };
 
-/** Parameters of a `TextToSpeechSession`. */
+/**
+ * Parameters of a `TextToSpeechSession`, in camelCase. The session ignores
+ * the snake_case names (`voice_id`, `sample_rate`, ...) and warns once per
+ * process when it gets one.
+ */
 export type TextToSpeechSessionParams = {
   /** See `TextToSpeechVoiceOptions.voice_id`. */
   voiceId?: string;

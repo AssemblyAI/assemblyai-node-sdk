@@ -1,7 +1,17 @@
 import { getEventListeners } from "events";
 import fetchMock from "jest-fetch-mock";
-import { AssemblyAI, TextToSpeechError, TextToSpeechStream } from "../../src";
-import { createClient, defaultApiKey, requestMatches } from "./utils";
+import {
+  AssemblyAI,
+  TextToSpeechError,
+  TextToSpeechRequest,
+  TextToSpeechStream,
+} from "../../src";
+import {
+  createClient,
+  defaultApiKey,
+  defaultBaseUrl,
+  requestMatches,
+} from "./utils";
 
 fetchMock.enableMocks();
 
@@ -35,6 +45,28 @@ const mockAudio = (headers: Record<string, string> = okHeaders) =>
 
 const sentBody = (call = 0) =>
   JSON.parse(fetchMock.mock.calls[call][1]!.body as string);
+
+/**
+ * Runs `test` with a client of a fresh copy of the SDK, whose once per
+ * process warnings have not fired yet, and with `console.warn` recorded.
+ */
+async function withFreshClient(
+  test: (fresh: AssemblyAI, warn: jest.SpyInstance) => Promise<void>,
+) {
+  const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+  try {
+    await jest.isolateModulesAsync(async () => {
+      const { AssemblyAI: FreshAssemblyAI } = await import("../../src");
+      const fresh = new FreshAssemblyAI({
+        ttsBaseUrl: defaultBaseUrl,
+        apiKey: defaultApiKey,
+      });
+      await test(fresh, warn);
+    });
+  } finally {
+    warn.mockRestore();
+  }
+}
 
 describe("tts", () => {
   beforeEach(() => {
@@ -104,36 +136,187 @@ describe("tts", () => {
   });
 
   it("reads X-TTS-Unknown-Params and warns once per process", async () => {
-    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
-    try {
-      await jest.isolateModulesAsync(async () => {
-        // A fresh module, so the once-per-process warning has not fired yet.
-        const { AssemblyAI: FreshAssemblyAI } = await import("../../src");
-        const fresh = new FreshAssemblyAI({
-          ttsBaseUrl: "http://localhost:1234",
-          apiKey: defaultApiKey,
+    await withFreshClient(async (fresh, warn) => {
+      mockAudio({ ...okHeaders, "x-tts-unknown-params": "samplerate" });
+      mockAudio({ ...okHeaders, "x-tts-unknown-params": "foo,,samplerate" });
+      mockAudio(okHeaders);
+      // A request held in a variable gets no excess-property check.
+      const request = { text: "Hi.", samplerate: 8000 };
+      const first = await fresh.tts.synthesize(request);
+      expect(first.unknownParams).toEqual(["samplerate"]);
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(warn.mock.calls[0][0]).toContain(
+        "ignored unknown request fields: samplerate",
+      );
+      const speech = await fresh.tts.stream(request);
+      expect(speech.info.unknownParams).toEqual(["foo", "samplerate"]);
+      await speech.cancel();
+      const clean = await fresh.tts.synthesize({ text: "Hi." });
+      expect(clean.unknownParams).toBeUndefined();
+      expect(warn).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it.each([
+    ["voiceId", "voice_id", "aai-alba"],
+    ["modelId", "model_id", "assemblyai-tts-1"],
+    ["sampleRate", "sample_rate", 8000],
+    ["bitRate", "bit_rate", 32000],
+    ["extendBiometricConsent", "extend_biometric_consent", true],
+  ])(
+    "a camelCase %s has the same effect as %s",
+    async (alias, field, value) => {
+      await withFreshClient(async (fresh, warn) => {
+        // Given a request from plain JavaScript that uses the camelCase name
+        const request = { text: "Hi.", [alias]: value } as TextToSpeechRequest;
+        mockAudio();
+        mockAudio();
+        mockAudio();
+
+        // When it is synthesized and streamed, and synthesized again with the snake_case name
+        await fresh.tts.synthesize(request);
+        await (await fresh.tts.stream(request)).cancel();
+        await fresh.tts.synthesize({
+          text: "Hi.",
+          [field]: value,
+        } as TextToSpeechRequest);
+
+        // Then every body carries the snake_case field only, and the SDK warned once
+        expect(sentBody(0)).toEqual({
+          text: "Hi.",
+          [field]: value,
+          stream: false,
         });
-        mockAudio({ ...okHeaders, "x-tts-unknown-params": "sampleRate" });
-        mockAudio({ ...okHeaders, "x-tts-unknown-params": "foo,,sampleRate" });
-        mockAudio(okHeaders);
-        // A request held in a variable gets no excess-property check.
-        const request = { text: "Hi.", sampleRate: 8000 };
-        const first = await fresh.tts.synthesize(request);
-        expect(first.unknownParams).toEqual(["sampleRate"]);
+        expect(sentBody(1)).toEqual({
+          text: "Hi.",
+          [field]: value,
+          stream: true,
+        });
+        expect(sentBody(2)).toEqual(sentBody(0));
         expect(warn).toHaveBeenCalledTimes(1);
-        expect(warn.mock.calls[0][0]).toContain(
-          "ignored unknown request fields: sampleRate",
+        expect(warn.mock.calls[0][0]).toBe(
+          `TextToSpeechService: request fields are snake_case; sent ${alias} as ${field}.`,
         );
-        const speech = await fresh.tts.stream(request);
-        expect(speech.info.unknownParams).toEqual(["foo", "sampleRate"]);
-        await speech.cancel();
-        const clean = await fresh.tts.synthesize({ text: "Hi." });
-        expect(clean.unknownParams).toBeUndefined();
-        expect(warn).toHaveBeenCalledTimes(1);
       });
-    } finally {
-      warn.mockRestore();
-    }
+    },
+  );
+
+  it("keeps the snake_case value when both names are given with different values, and warns", async () => {
+    await withFreshClient(async (fresh, warn) => {
+      // Given a request whose camelCase alias already warned once
+      mockAudio();
+      await fresh.tts.synthesize({
+        text: "Hi.",
+        sampleRate: 8000,
+      } as TextToSpeechRequest);
+      expect(warn).toHaveBeenCalledTimes(1);
+
+      // When requests name the voice twice, with different values
+      const request = {
+        text: "Hi.",
+        voice_id: "aai-jane",
+        voiceId: "aai-alba",
+      } as TextToSpeechRequest;
+      mockAudio();
+      mockAudio();
+      await fresh.tts.synthesize(request);
+      await fresh.tts.synthesize(request);
+
+      // Then the snake_case value is sent without the alias, and the SDK warned once more
+      expect(sentBody(1)).toEqual({
+        text: "Hi.",
+        voice_id: "aai-jane",
+        stream: false,
+      });
+      expect(sentBody(2)).toEqual(sentBody(1));
+      expect(warn).toHaveBeenCalledTimes(2);
+      expect(warn.mock.calls[1][0]).toBe(
+        "TextToSpeechService: the request gave voice_id and voiceId different values; " +
+          "sent the snake_case value and ignored the camelCase one.",
+      );
+    });
+  });
+
+  it("sends a value given under both names once, and an alias without a value not at all", async () => {
+    await withFreshClient(async (fresh, warn) => {
+      // Given requests that repeat a value under its alias, or give an alias no value
+      mockAudio();
+      mockAudio();
+
+      // When they are synthesized
+      await fresh.tts.synthesize({
+        text: "Hi.",
+        voice_id: "aai-alba",
+        voiceId: "aai-alba",
+      } as TextToSpeechRequest);
+      await fresh.tts.synthesize({
+        text: "Hi.",
+        voiceId: undefined,
+        sampleRate: null,
+      } as unknown as TextToSpeechRequest);
+
+      // Then the first sends the value once as the snake_case field, and only it warns
+      expect(sentBody(0)).toEqual({
+        text: "Hi.",
+        voice_id: "aai-alba",
+        stream: false,
+      });
+      expect(sentBody(1)).toEqual({ text: "Hi.", stream: false });
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(warn.mock.calls[0][0]).toContain("sent voiceId as voice_id");
+    });
+  });
+
+  it("sends the alias when its snake_case field is null", async () => {
+    await withFreshClient(async (fresh, warn) => {
+      // Given a request whose snake_case field is null and whose alias has a value
+      mockAudio();
+
+      // When it is synthesized
+      await fresh.tts.synthesize({
+        text: "Hi.",
+        voice_id: null,
+        voiceId: "aai-alba",
+      } as unknown as TextToSpeechRequest);
+
+      // Then the body carries the alias's value as the snake_case field, and the SDK warned once
+      expect(sentBody(0)).toEqual({
+        text: "Hi.",
+        voice_id: "aai-alba",
+        stream: false,
+      });
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(warn.mock.calls[0][0]).toBe(
+        "TextToSpeechService: request fields are snake_case; sent voiceId as voice_id.",
+      );
+    });
+  });
+
+  it("stream keeps the snake_case value when both names are given with different values, and warns", async () => {
+    await withFreshClient(async (fresh, warn) => {
+      // Given a request that gives the sample rate under both names, with different values
+      const request = {
+        text: "Hi.",
+        sample_rate: 16000,
+        sampleRate: 8000,
+      } as TextToSpeechRequest;
+      mockAudio();
+
+      // When it is streamed
+      await (await fresh.tts.stream(request)).cancel();
+
+      // Then the body carries the snake_case value without the alias, and the SDK warned once
+      expect(sentBody(0)).toEqual({
+        text: "Hi.",
+        sample_rate: 16000,
+        stream: true,
+      });
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(warn.mock.calls[0][0]).toBe(
+        "TextToSpeechService: the request gave sample_rate and sampleRate different values; " +
+          "sent the snake_case value and ignored the camelCase one.",
+      );
+    });
   });
 
   it("stream asks for a streamed response and yields the body", async () => {
