@@ -234,7 +234,7 @@ export type StreamingSpeechModel =
   | "universal-3-6-pro"
   | "u3-pro";
 
-export type StreamingDomain = "medical-v1";
+export type StreamingDomain = "medical-v1" | "veterinary-v1";
 
 export type StreamingMode = "max_accuracy" | "min_latency" | "balanced";
 
