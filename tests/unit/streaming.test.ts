@@ -597,6 +597,40 @@ describe("streaming", () => {
     await connect(rt, server);
   });
 
+  it("should include assemblyai-stt-3-7-realtime speech model in connection URL", async () => {
+    await cleanup();
+    WS.clean();
+
+    const wsUrl = `${websocketBaseUrl}?token=123&sample_rate=16000&speech_model=assemblyai-stt-3-7-realtime`;
+    server = new WS(wsUrl);
+    rt = new StreamingTranscriber({
+      websocketBaseUrl,
+      token: "123",
+      sampleRate: 16_000,
+      speechModel: "assemblyai-stt-3-7-realtime" as const,
+    });
+    onOpen = jest.fn();
+    rt.on("open", onOpen);
+    await connect(rt, server);
+  });
+
+  it("should include assemblyai-stt-3-7-realtime-agent speech model in connection URL", async () => {
+    await cleanup();
+    WS.clean();
+
+    const wsUrl = `${websocketBaseUrl}?token=123&sample_rate=16000&speech_model=assemblyai-stt-3-7-realtime-agent`;
+    server = new WS(wsUrl);
+    rt = new StreamingTranscriber({
+      websocketBaseUrl,
+      token: "123",
+      sampleRate: 16_000,
+      speechModel: "assemblyai-stt-3-7-realtime-agent" as const,
+    });
+    onOpen = jest.fn();
+    rt.on("open", onOpen);
+    await connect(rt, server);
+  });
+
   it("should parse speaker_label from turn event", async () => {
     const turnPromise = new Promise<{ speaker_label?: string }>((resolve) => {
       rt.on("turn", (event) => resolve(event));
