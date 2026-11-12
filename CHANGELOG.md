@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.43.0]
+
+- Add `client.llmGateway.decisions(request)` for the LLM Gateway's `/v1/decisions` endpoint: answers `predicate`, `choice`, and `score` questions about an input in one request. New types `DecisionRequest`, `DecisionQuestion`, `DecisionResponse`, `DecisionAnswer`, `DecisionProbability`, and `DecisionUsage`; untyped request fields are still sent by name
+
 ## [4.42.1]
 
 - Add `"veterinary-v1"` to the streaming `StreamingDomain` type, so `domain: "veterinary-v1"` type checks on `StreamingTranscriber`. The streaming API already accepted it; only the SDK type rejected it

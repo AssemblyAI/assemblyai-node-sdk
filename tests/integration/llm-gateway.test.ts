@@ -41,4 +41,35 @@ describe("llmGateway", () => {
     const result = await client.llmGateway.understanding(request);
     expect(result).toBeTruthy();
   });
+
+  it("should answer decisions questions", async () => {
+    const result = await client.llmGateway.decisions({
+      model: "gpt-6-luna",
+      input: "Agent: Anything else? Caller: No, that fixed it, thanks!",
+      questions: [
+        {
+          type: "predicate",
+          name: "resolved",
+          instructions: "Was the caller's issue resolved?",
+        },
+        {
+          type: "choice",
+          name: "sentiment",
+          instructions: "Caller sentiment at the end of the call",
+          choices: [
+            { value: "positive", description: "Satisfied" },
+            { value: "negative", description: "Unhappy" },
+          ],
+        },
+      ],
+    });
+
+    expect(result.request_id).toBeTruthy();
+    expect(result.answers.map((a) => a.name)).toEqual([
+      "resolved",
+      "sentiment",
+    ]);
+    expect(["positive", "negative"]).toContain(result.answers[1].choice);
+    expect(result.usage.total_tokens).toBeGreaterThan(0);
+  });
 });

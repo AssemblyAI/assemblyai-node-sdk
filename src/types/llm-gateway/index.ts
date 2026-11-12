@@ -124,3 +124,78 @@ export type LlmGatewaySpeechUnderstandingRequest = {
  * transcript source, so it is left loosely typed.
  */
 export type LlmGatewaySpeechUnderstandingResponse = Record<string, unknown>;
+
+/**
+ * A question in a `/v1/decisions` request. `choices` is required for
+ * `choice` questions and `levels` for `score` questions.
+ */
+export type DecisionQuestion = {
+  type: "predicate" | "choice" | "score";
+  /** Unique within the request; echoed on the matching answer. */
+  name: string;
+  /** A string, or a list of `input_text` / `input_image` parts. */
+  instructions: string | Record<string, unknown>[];
+  choices?: { value: string; description: string }[];
+  levels?: { label: string; description: string }[];
+};
+
+/**
+ * A request to the LLM Gateway's `/v1/decisions` endpoint. Fields not typed
+ * here can still be passed by name.
+ */
+export type DecisionRequest = {
+  model: string;
+  /** A string, or a list of OpenAI input items. */
+  input: string | Record<string, unknown>[];
+  questions: DecisionQuestion[];
+  prompt_cache_key?: string;
+  prompt_cache_options?: { mode?: string; ttl?: string };
+  provider?: string;
+  fallbacks?: Record<string, unknown>[];
+  fallback_config?: {
+    depth?: number;
+    retry?: boolean;
+    circuit_breaker?: boolean;
+  };
+  model_region?: string;
+  [key: string]: unknown;
+};
+
+export type DecisionProbability = {
+  /** The choice value for a `choice` question, or the level index for a `score` question. */
+  value: string | number;
+  label?: string;
+  probability: number;
+};
+
+/**
+ * The answer to one question, matched to it by `name`. Which fields are set
+ * depends on the question `type`.
+ */
+export type DecisionAnswer = {
+  type?: string;
+  name?: string;
+  probability?: number;
+  choice?: string;
+  score?: number;
+  probabilities?: DecisionProbability[];
+  confidence?: number;
+};
+
+export type DecisionUsage = {
+  input_tokens: number;
+  input_tokens_details: { cached_tokens: number; cache_write_tokens: number };
+  output_tokens: number;
+  output_tokens_details: { reasoning_tokens: number };
+  total_tokens: number;
+};
+
+/**
+ * The response from the LLM Gateway's `/v1/decisions` endpoint.
+ */
+export type DecisionResponse = {
+  request_id: string;
+  model: string;
+  answers: DecisionAnswer[];
+  usage: DecisionUsage;
+};

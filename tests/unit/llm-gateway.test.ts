@@ -120,6 +120,61 @@ describe("llmGateway", () => {
     ).resolves.toBeUndefined();
   });
 
+  it("should run a decisions request", async () => {
+    const response = {
+      request_id: "req_dec",
+      model: "gpt-6-luna",
+      answers: [
+        { type: "predicate", name: "resolved", probability: 0.9 },
+        {
+          type: "score",
+          name: "politeness",
+          score: 0.8,
+          probabilities: [
+            { value: 0, label: "rude", probability: 0.2 },
+            { value: 1, label: "polite", probability: 0.8 },
+          ],
+        },
+      ],
+      usage: {
+        input_tokens: 120,
+        input_tokens_details: { cached_tokens: 0, cache_write_tokens: 0 },
+        output_tokens: 0,
+        output_tokens_details: { reasoning_tokens: 0 },
+        total_tokens: 120,
+      },
+    };
+    fetchMock.doMockOnceIf(
+      requestMatches({ url: "/v1/decisions", method: "POST" }),
+      JSON.stringify(response),
+    );
+    const request = {
+      model: "gpt-6-luna",
+      input: "Caller: thanks, that fixed it!",
+      questions: [
+        {
+          type: "predicate" as const,
+          name: "resolved",
+          instructions: "Was the issue resolved?",
+        },
+        {
+          type: "score" as const,
+          name: "politeness",
+          instructions: "How polite was the agent?",
+          levels: [
+            { label: "rude", description: "Dismissive" },
+            { label: "polite", description: "Courteous" },
+          ],
+        },
+      ],
+      prompt_cache_key: "call-123",
+      brand_new_param: true,
+    };
+    const result = await assembly.llmGateway.decisions(request);
+    expect(result).toEqual(response);
+    expect(requestBody()).toEqual(request);
+  });
+
   it("should map the post-auth error envelope to an LlmGatewayError", async () => {
     fetchMock.mockResponseOnce(
       JSON.stringify({
