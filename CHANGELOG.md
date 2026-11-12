@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.43.1]
+
+- Add `assemblyai-stt-3-7-realtime` (note taking) and `assemblyai-stt-3-7-realtime-agent` (voice agents) to the streaming `speechModel` options (`StreamingSpeechModel`)
+
 ## [4.43.0]
 
 - Add `client.llmGateway.decisions(request)` for the LLM Gateway's `/v1/decisions` endpoint: answers `predicate`, `choice`, and `score` questions about an input in one request. New types `DecisionRequest`, `DecisionQuestion`, `DecisionResponse`, `DecisionAnswer`, `DecisionProbability`, and `DecisionUsage`; untyped request fields are still sent by name
