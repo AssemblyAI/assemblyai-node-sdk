@@ -1,8 +1,12 @@
 # Changelog
 
-## [4.42.2]
+## [4.43.1]
 
 - `client.tts.synthesize()` and `client.tts.stream()` send the camelCase names `voiceId`, `modelId`, `sampleRate`, `bitRate` and `extendBiometricConsent`, which plain JavaScript can pass, as their snake_case request fields (`voice_id`, ...) and warn once. The API ignored them before, so such a request got the default voice, model or sample rate. These values now reach the API, so a value it refuses (a `sampleRate` outside the supported set, `bitRate` without the `mp3` encoding, `extendBiometricConsent` on a voice the account does not own) fails with the same `TextToSpeechError` as its snake_case spelling, where before the request used the default. When a request gives both names of a field with different values, the snake_case value is sent, with a warning once. A `TextToSpeechSession` warns once on the snake_case names it ignores (`voice_id`, `model_id`, `sample_rate`, `extend_biometric_consent`, `word_boundaries`, `inactivity_timeout`)
+
+## [4.43.0]
+
+- Add `client.llmGateway.decisions(request)` for the LLM Gateway's `/v1/decisions` endpoint: answers `predicate`, `choice`, and `score` questions about an input in one request. New types `DecisionRequest`, `DecisionQuestion`, `DecisionResponse`, `DecisionAnswer`, `DecisionProbability`, and `DecisionUsage`; untyped request fields are still sent by name
 
 ## [4.42.1]
 
