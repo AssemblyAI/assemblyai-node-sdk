@@ -6,6 +6,7 @@ import {
   AssemblyAI,
   TextToSpeechError,
   TextToSpeechSession,
+  TextToSpeechSessionParams,
   TtsBeginEvent,
   TtsWordBoundariesEvent,
 } from "../../src";
@@ -305,6 +306,75 @@ describe("tts session", () => {
     expect(session.termination).toEqual(termination);
     expect(api.frames("Terminate")).toHaveLength(1);
     await server.closed;
+  });
+
+  it("warns once on snake_case parameters, which a session does not send", async () => {
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      // Given session parameters from plain JavaScript, in the snake_case of an HTTP request
+      const params = {
+        websocketBaseUrl,
+        voice_id: "aai-alba",
+        sample_rate: 8000,
+      } as TextToSpeechSessionParams;
+
+      // When a fresh copy of the SDK, whose once per process warning has not
+      // fired yet, creates two sessions with them
+      await jest.isolateModulesAsync(async () => {
+        const { AssemblyAI: FreshAssemblyAI } = await import("../../src");
+        const fresh = new FreshAssemblyAI({ apiKey: defaultApiKey });
+        fresh.tts.session(params);
+        fresh.tts.session(params);
+      });
+
+      // Then it warns once, naming the ignored names and the camelCase ones
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(warn.mock.calls[0][0]).toBe(
+        "TextToSpeechSession: ignored voice_id, sample_rate; " +
+          "session parameters are camelCase: voiceId, sampleRate.",
+      );
+
+      // And a session connected with them sends neither
+      const session = client.tts.session(params);
+      await connect(session);
+      const url = new URL(
+        (session as unknown as { socket: { url: string } }).socket.url,
+      );
+      expect(Object.fromEntries(url.searchParams)).toEqual({
+        word_boundaries: "false",
+      });
+      await session.close(false);
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("does not warn on camelCase parameters", async () => {
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      // Given session parameters in camelCase only
+      const params: TextToSpeechSessionParams = {
+        websocketBaseUrl,
+        voiceId: "aai-alba",
+        modelId: "assemblyai-tts-1",
+        sampleRate: 8000,
+        extendBiometricConsent: false,
+        wordBoundaries: true,
+        inactivityTimeout: 60,
+      };
+
+      // When a fresh copy of the SDK, whose once per process warning has not
+      // fired yet, creates a session with them
+      await jest.isolateModulesAsync(async () => {
+        const { AssemblyAI: FreshAssemblyAI } = await import("../../src");
+        new FreshAssemblyAI({ apiKey: defaultApiKey }).tts.session(params);
+      });
+
+      // Then it does not warn
+      expect(warn).not.toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
+    }
   });
 
   it.each([

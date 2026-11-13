@@ -836,7 +836,7 @@ await transcriber.close();
 
 An HTTP request takes the API's own field names. A session takes the same options in camelCase, like the other session clients of this SDK.
 
-| HTTP request               | Session                  | Values                                                                                                                                    | Default                    |
+| HTTP request (snake_case)  | Session (camelCase)      | Values                                                                                                                                    | Default                    |
 | -------------------------- | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
 | `text`                     |                          | 1 to 5,000 characters                                                                                                                     |                            |
 | `voice_id`                 | `voiceId`                | a voice of the AssemblyAI voice library by its slug, such as `aai-jane`, `aai-alba` or `aai-michael`, or a voice cloned in your dashboard | `aai-jane`                 |
@@ -849,6 +849,8 @@ An HTTP request takes the API's own field names. A session takes the same option
 | `extend_biometric_consent` | `extendBiometricConsent` | `true` renews the consent of the cloned voice in `voice_id`                                                                               | `false`                    |
 |                            | `wordBoundaries`         | `true` sends word timings per request                                                                                                     | `false`                    |
 |                            | `inactivityTimeout`      | seconds without a frame before the API closes the session, 5 to 120                                                                       | 120                        |
+
+Plain JavaScript gets no type check of these names, so an HTTP request also takes the camelCase names `voiceId`, `modelId`, `sampleRate`, `bitRate` and `extendBiometricConsent`: the SDK sends each as its snake_case field and warns once. The API checks such a value as it checks the snake_case field, so one it refuses, such as a `bitRate` without the `mp3` encoding, fails with a `TextToSpeechError`. When a request gives both names of a field with different values, the SDK sends the snake_case value and warns once. A session ignores the snake_case names (`voice_id`, `model_id`, `sample_rate`, `extend_biometric_consent`, `word_boundaries`, `inactivity_timeout`) and warns once when it gets one.
 
 ### Synthesize a WAV file
 
@@ -864,7 +866,7 @@ writeFileSync("hello.wav", response.audio);
 console.log(response.model, response.voiceId, response.audioDurationMs, "ms");
 ```
 
-`synthesize()` waits for the whole audio, so an API refusal is always a `TextToSpeechError` and the WAV header carries real sizes. The response headers are on the result: `requestId`, `region`, `model`, `voiceId`, `language`, `encoding`, `sampleRate`, `container`, `bitRate`, `billedCharacters`, `audioDurationMs` and `unknownParams`. The API ignores body fields it does not know, and `unknownParams` names them (the SDK also warns once), so a camelCase `sampleRate` in a request held in a variable shows up instead of silently giving 24 kHz audio. A network failure or a timeout rejects with the runtime's own error instead (a `TypeError`, or a `DOMException` named `TimeoutError` or `AbortError`). On Node, the built-in `fetch` gives up after 300 seconds without response headers, whatever `timeout` says; for longer requests use `stream()`, or raise the limit with `setGlobalDispatcher(new Agent({ headersTimeout: 610_000 }))` from the `undici` package.
+`synthesize()` waits for the whole audio, so an API refusal is always a `TextToSpeechError` and the WAV header carries real sizes. The response headers are on the result: `requestId`, `region`, `model`, `voiceId`, `language`, `encoding`, `sampleRate`, `container`, `bitRate`, `billedCharacters`, `audioDurationMs` and `unknownParams`. The API ignores body fields it does not know, and `unknownParams` names them (the SDK also warns once), so a misspelled field in a request held in a variable, such as `samplerate`, shows up instead of silently giving 24 kHz audio. A network failure or a timeout rejects with the runtime's own error instead (a `TypeError`, or a `DOMException` named `TimeoutError` or `AbortError`). On Node, the built-in `fetch` gives up after 300 seconds without response headers, whatever `timeout` says; for longer requests use `stream()`, or raise the limit with `setGlobalDispatcher(new Agent({ headersTimeout: 610_000 }))` from the `undici` package.
 
 Branch on a refusal's `errorCode`, not its message, and on `retryable` to decide whether to try again (`retryAfter` says how many seconds to wait). The same codes come back from a session, where the error's `closeCode` is the WebSocket close code that ended it.
 

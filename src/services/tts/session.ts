@@ -39,6 +39,42 @@ const PULL_QUEUE_FRAMES = 2000;
 const RETRYABLE_CLOSE_CODES = new Set([1006, 1011, 1012, 3005, 3008, 3009]);
 /** How the `ws` package reports an upgrade answered with an HTTP status. */
 const UPGRADE_STATUS = /Unexpected server response: (\d{3})/;
+/**
+ * The snake_case names plain JavaScript may give session parameters (the
+ * names of an HTTP request and of the session's query), each with the
+ * parameter the session reads instead.
+ */
+const SNAKE_CASE_PARAMS: readonly (readonly [
+  name: string,
+  param: keyof TextToSpeechSessionParams,
+])[] = [
+  ["voice_id", "voiceId"],
+  ["model_id", "modelId"],
+  ["sample_rate", "sampleRate"],
+  ["extend_biometric_consent", "extendBiometricConsent"],
+  ["word_boundaries", "wordBoundaries"],
+  ["inactivity_timeout", "inactivityTimeout"],
+];
+
+let warnedSnakeCaseParams = false;
+
+/**
+ * Warns once per process that a session ignores the snake_case parameters
+ * in `params`: it reads only the camelCase ones.
+ */
+function warnSnakeCaseParams(params: TextToSpeechSessionParams) {
+  if (warnedSnakeCaseParams) return;
+  const values = params as Record<string, unknown>;
+  const ignored = SNAKE_CASE_PARAMS.filter(
+    ([name]) => values[name] !== undefined && values[name] !== null,
+  );
+  if (ignored.length === 0) return;
+  warnedSnakeCaseParams = true;
+  console.warn(
+    `TextToSpeechSession: ignored ${ignored.map(([name]) => name).join(", ")}; ` +
+      `session parameters are camelCase: ${ignored.map(([, param]) => param).join(", ")}.`,
+  );
+}
 
 type PullItem =
   | { kind: "audio"; flushId: number; bytes: Uint8Array }
@@ -346,6 +382,7 @@ export class TextToSpeechSession {
     if (!params.token && !params.apiKey) {
       throw new Error("API key or temporary token is required.");
     }
+    warnSnakeCaseParams(params);
     this.token = params.token;
   }
 
