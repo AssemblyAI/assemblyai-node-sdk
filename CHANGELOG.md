@@ -3,6 +3,7 @@
 ## [4.43.2]
 
 - Add `assemblyai-stt-3-7-realtime` (note taking) and `assemblyai-stt-3-7-realtime-agent` (voice agents) to the streaming `speechModel` options (`StreamingSpeechModel`)
+- Add `"manual"` to the streaming `StreamingMode` type: the client ends each turn with `forceEndpoint()`
 
 ## [4.43.1]
 

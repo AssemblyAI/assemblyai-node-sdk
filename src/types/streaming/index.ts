@@ -238,7 +238,11 @@ export type StreamingSpeechModel =
 
 export type StreamingDomain = "medical-v1" | "veterinary-v1";
 
-export type StreamingMode = "max_accuracy" | "min_latency" | "balanced";
+export type StreamingMode =
+  | "max_accuracy"
+  | "min_latency"
+  | "balanced"
+  | "manual";
 
 export type VoiceFocusModel = "near-field" | "far-field";
 
