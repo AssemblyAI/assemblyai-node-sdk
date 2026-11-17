@@ -1046,4 +1046,102 @@ describe("streaming", () => {
       }),
     );
   });
+
+  describe("updateConfiguration field names", () => {
+    let warn: jest.SpyInstance;
+    beforeEach(() => {
+      warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+    });
+    afterEach(() => warn.mockRestore());
+
+    it("should send mode", async () => {
+      rt.updateConfiguration({ mode: "balanced" });
+      await expect(server).toReceiveMessage(
+        JSON.stringify({ type: "UpdateConfiguration", mode: "balanced" }),
+      );
+      expect(warn).not.toHaveBeenCalled();
+    });
+
+    it("should map camelCase names to their snake_case fields", async () => {
+      rt.updateConfiguration({
+        maxTurnSilence: 1500,
+        endOfTurnConfidenceThreshold: 0.5,
+        keytermsPrompt: ["AssemblyAI"],
+        agentContext: "How can I help?",
+        languageCodes: ["en"],
+        continuousPartials: true,
+        maxTurnDuration: 30000,
+      });
+      await expect(server).toReceiveMessage(
+        JSON.stringify({
+          type: "UpdateConfiguration",
+          max_turn_silence: 1500,
+          end_of_turn_confidence_threshold: 0.5,
+          keyterms_prompt: ["AssemblyAI"],
+          agent_context: "How can I help?",
+          language_codes: ["en"],
+          continuous_partials: true,
+          max_turn_duration: 30000,
+        }),
+      );
+      expect(warn).not.toHaveBeenCalled();
+    });
+
+    it("should map camelCase minTurnSilence and the deprecated minEndOfTurnSilenceWhenConfident", async () => {
+      rt.updateConfiguration({ minTurnSilence: 300 });
+      await expect(server).toReceiveMessage(
+        JSON.stringify({ type: "UpdateConfiguration", min_turn_silence: 300 }),
+      );
+      rt.updateConfiguration({ minEndOfTurnSilenceWhenConfident: 200 });
+      await expect(server).toReceiveMessage(
+        JSON.stringify({ type: "UpdateConfiguration", min_turn_silence: 200 }),
+      );
+    });
+
+    it("should send the snake_case value when both names differ", async () => {
+      rt.updateConfiguration({ maxTurnSilence: 1500, max_turn_silence: 900 });
+      await expect(server).toReceiveMessage(
+        JSON.stringify({ type: "UpdateConfiguration", max_turn_silence: 900 }),
+      );
+      rt.updateConfiguration({ max_turn_silence: 900, maxTurnSilence: 1500 });
+      await expect(server).toReceiveMessage(
+        JSON.stringify({ type: "UpdateConfiguration", max_turn_silence: 900 }),
+      );
+      expect(warn).toHaveBeenCalledTimes(2);
+      expect(warn.mock.calls[0][0]).toContain("`max_turn_silence`");
+    });
+
+    it("should not warn when both names agree", async () => {
+      rt.updateConfiguration({ maxTurnSilence: 900, max_turn_silence: 900 });
+      await expect(server).toReceiveMessage(
+        JSON.stringify({ type: "UpdateConfiguration", max_turn_silence: 900 }),
+      );
+      expect(warn).not.toHaveBeenCalled();
+    });
+
+    it("should send unrecognized keys unchanged and warn", async () => {
+      const config = { max_turn_silence: 900, futureField: 1 };
+      rt.updateConfiguration(config);
+      await expect(server).toReceiveMessage(
+        JSON.stringify({
+          type: "UpdateConfiguration",
+          max_turn_silence: 900,
+          futureField: 1,
+        }),
+      );
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(warn.mock.calls[0][0]).toContain("unrecognized futureField");
+    });
+
+    it("should warn that format_turns cannot change mid-stream", async () => {
+      rt.updateConfiguration({ formatTurns: true });
+      await expect(server).toReceiveMessage(
+        JSON.stringify({ type: "UpdateConfiguration", format_turns: true }),
+      );
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(warn.mock.calls[0][0]).toContain(
+        "format_turns cannot be changed mid-stream",
+      );
+    });
+  });
 });
