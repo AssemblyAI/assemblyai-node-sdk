@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.43.3]
+
+- `StreamingTranscriber` emits a `termination` event with the server's `Termination` message (`TerminationEvent`: `audio_duration_seconds`, `session_duration_seconds`), and `close()` resolves with it, or with `undefined` when it did not wait for the message or the message did not arrive before the timeout or the socket closed. `close()` now calls the `close` listener for a client-initiated close (code `1000`, reason `"Session ended"` or `"Closed by the client"`) before it clears the listeners; it is called once per session. Code that types `close()`'s result as `Promise<void>` must widen it to `Promise<TerminationEvent | undefined>`
+
 ## [4.43.2]
 
 - `StreamingTranscriber.updateConfiguration()` takes `mode`, `max_turn_duration` and `continuous_partials`, which the streaming API accepts mid-stream, and takes each field by its camelCase connection-param name (`maxTurnSilence`, `keytermsPrompt`, ...) as well as its snake_case name, sending it as the snake_case field. The API ignored camelCase names before, so `updateConfiguration({ maxTurnSilence: 1500 })` from plain JavaScript changed nothing. When both names of a field are given with different values, the snake_case value is sent, with a warning. Unrecognized keys are still sent, with a warning. `format_turns` and `filter_profanity` are deprecated on `StreamingUpdateConfiguration` and warn when sent, since the API does not apply them mid-stream. New type `StreamingUpdateConfigurationParams`

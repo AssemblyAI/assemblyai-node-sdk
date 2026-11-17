@@ -86,4 +86,116 @@ describe("streaming close", () => {
 
     await expect(rt.close()).resolves.toBeUndefined();
   });
+
+  describe("termination and close events", () => {
+    const termination = {
+      type: "Termination",
+      audio_duration_seconds: 12,
+      session_duration_seconds: 14,
+    };
+
+    it("emits termination and resolves close() with the frame", async () => {
+      const onTermination = jest.fn();
+      const onClose = jest.fn();
+      rt.on("termination", onTermination);
+      rt.on("close", onClose);
+
+      const closePromise = rt.close();
+      await expect(server).toReceiveMessage(
+        JSON.stringify({ type: "Terminate" }),
+      );
+      server.send(JSON.stringify(termination));
+
+      await expect(closePromise).resolves.toEqual(termination);
+      expect(onTermination).toHaveBeenCalledTimes(1);
+      expect(onTermination).toHaveBeenCalledWith(termination);
+      expect(onClose).toHaveBeenCalledTimes(1);
+      expect(onClose).toHaveBeenCalledWith(1000, "Session ended");
+      // The termination listener runs before close() resolves, and close
+      // after it.
+      expect(onTermination.mock.invocationCallOrder[0]).toBeLessThan(
+        onClose.mock.invocationCallOrder[0],
+      );
+    });
+
+    it("emits termination for a frame the server sends unprompted", async () => {
+      const onTermination = jest.fn();
+      rt.on("termination", onTermination);
+
+      server.send(JSON.stringify(termination));
+      await new Promise((resolve) => setTimeout(resolve, 20));
+
+      expect(onTermination).toHaveBeenCalledWith(termination);
+      await rt.close(false);
+    });
+
+    it("calls close once when close() does not wait", async () => {
+      const onClose = jest.fn();
+      rt.on("close", onClose);
+
+      await expect(rt.close(false)).resolves.toBeUndefined();
+      expect(onClose).toHaveBeenCalledTimes(1);
+      expect(onClose).toHaveBeenCalledWith(1000, "Closed by the client");
+    });
+
+    it("calls close once and resolves undefined on timeout", async () => {
+      const onClose = jest.fn();
+      rt.on("close", onClose);
+
+      await expect(rt.close(true, 50)).resolves.toBeUndefined();
+      expect(onClose).toHaveBeenCalledTimes(1);
+      expect(onClose).toHaveBeenCalledWith(1000, "Closed by the client");
+    });
+
+    it("calls close once with the server's code when the server closes first", async () => {
+      const onClose = jest.fn();
+      rt.on("close", onClose);
+
+      const closePromise = rt.close();
+      server.close({ code: 1000, reason: "bye", wasClean: true });
+
+      await expect(closePromise).resolves.toBeUndefined();
+      expect(onClose).toHaveBeenCalledTimes(1);
+      expect(onClose).toHaveBeenCalledWith(1000, "bye");
+    });
+
+    it("does not call close again after a server-initiated close", async () => {
+      const onClose = jest.fn();
+      rt.on("close", onClose);
+
+      server.close({ code: 4031, reason: "idle", wasClean: false });
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      await rt.close();
+
+      expect(onClose).toHaveBeenCalledTimes(1);
+      expect(onClose).toHaveBeenCalledWith(4031, "idle");
+    });
+
+    it("clears the listeners once closed", async () => {
+      const onClose = jest.fn();
+      rt.on("close", onClose);
+      await rt.close(false);
+
+      expect(
+        (rt as unknown as { listeners: Record<string, unknown> }).listeners,
+      ).toEqual({});
+      // A second close() has no session to report.
+      await rt.close(false);
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not call close for a session that never opened", async () => {
+      const unopened = aai.streaming.transcriber({
+        websocketBaseUrl,
+        apiKey: "123",
+        sampleRate: 16_000,
+      });
+      const onClose = jest.fn();
+      unopened.on("close", onClose);
+
+      await expect(unopened.close()).resolves.toBeUndefined();
+      expect(onClose).not.toHaveBeenCalled();
+      await rt.close(false);
+    });
+  });
 });

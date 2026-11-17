@@ -207,6 +207,7 @@ export type StreamingEvents =
   | "heartbeat"
   | "silence"
   | "vad"
+  | "termination"
   | "error";
 
 export type StreamingListeners = {
@@ -220,6 +221,7 @@ export type StreamingListeners = {
   heartbeat?: (event: HeartbeatEvent) => void;
   silence?: (event: SilenceEvent) => void;
   vad?: (event: VadFrame) => void;
+  termination?: (event: TerminationEvent) => void;
   error?: (error: Error) => void;
 };
 
