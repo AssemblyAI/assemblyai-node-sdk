@@ -22,6 +22,7 @@ import {
   WarningEvent,
   HeartbeatEvent,
   SilenceEvent,
+  TerminationEvent,
 } from "../..";
 import type { VadDetector, VadFrame } from "../../types/streaming/dual-channel";
 import { EnergyVad } from "./energy-vad";
@@ -140,7 +141,9 @@ export class StreamingTranscriber {
 
   private socket?: PolyfillWebSocket;
   private listeners: StreamingListeners = {};
-  private sessionTerminatedResolve?: () => void;
+  private sessionTerminatedResolve?: (event?: TerminationEvent) => void;
+  /** True from `Begin` until the `close` listener has been called. */
+  private closePending = false;
 
   // Dual-channel mode state (allocated only when params.channels is set).
   private isDualChannel = false;
@@ -243,16 +246,24 @@ export class StreamingTranscriber {
   }
 
   /**
-   * Releases a `close()` that is waiting for the session to terminate.
+   * Releases a `close()` that is waiting for the session to terminate, with
+   * the `Termination` frame when there is one.
    *
    * Called from the `Termination` frame and from `onclose`. Without the
    * `onclose` call, a socket that dies without a `Termination` frame leaves
    * `close()` awaiting forever.
    */
-  private resolveSessionTermination(): void {
+  private resolveSessionTermination(event?: TerminationEvent): void {
     const resolve = this.sessionTerminatedResolve;
     this.sessionTerminatedResolve = undefined;
-    resolve?.();
+    resolve?.(event);
+  }
+
+  /** Calls the `close` listener once per opened session. */
+  private emitClose(code: number, reason: string): void {
+    if (!this.closePending) return;
+    this.closePending = false;
+    this.listeners.close?.(code, reason);
   }
 
   private connectionUrl(): URL {
@@ -527,6 +538,7 @@ export class StreamingTranscriber {
   on(event: "heartbeat", listener: (event: HeartbeatEvent) => void): void;
   on(event: "silence", listener: (event: SilenceEvent) => void): void;
   on(event: "vad", listener: (event: VadFrame) => void): void;
+  on(event: "termination", listener: (event: TerminationEvent) => void): void;
   on(event: "error", listener: (error: Error) => void): void;
   on(event: "close", listener: (code: number, reason: string) => void): void;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -606,6 +618,7 @@ export class StreamingTranscriber {
         if (settled) return;
         settled = true;
         if (timer) clearTimeout(timer);
+        this.closePending = true;
         resolve(begin);
       };
 
@@ -665,7 +678,7 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
         // The socket is gone, so no `Termination` frame is coming. Release a
         // `close()` that is waiting for one.
         this.resolveSessionTermination();
-        this.listeners.close?.(code, reason);
+        this.emitClose(code, reason);
       };
 
       this.socket.onerror = (event: ErrorEvent) => {
@@ -757,7 +770,8 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
             break;
           }
           case "Termination": {
-            this.resolveSessionTermination();
+            this.listeners.termination?.(message);
+            this.resolveSessionTermination(message);
             break;
           }
         }
@@ -1077,22 +1091,25 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
     this.send(JSON.stringify(message));
   }
 
-  /** Awaits the session-termination frame, bounded by `timeoutMs`. */
+  /**
+   * Awaits the session-termination frame, bounded by `timeoutMs`. Resolves
+   * with the frame, or `undefined` when the timeout or a socket close comes
+   * first.
+   */
   private async waitForTermination(
-    sessionTerminated: Promise<void>,
+    sessionTerminated: Promise<TerminationEvent | undefined>,
     timeoutMs: number,
-  ): Promise<void> {
+  ): Promise<TerminationEvent | undefined> {
     if (timeoutMs <= 0) {
-      await sessionTerminated;
-      return;
+      return sessionTerminated;
     }
 
     let timer: ReturnType<typeof setTimeout> | undefined;
     try {
-      await Promise.race([
+      return await Promise.race([
         sessionTerminated,
-        new Promise<void>((resolve) => {
-          timer = setTimeout(resolve, timeoutMs);
+        new Promise<undefined>((resolve) => {
+          timer = setTimeout(() => resolve(undefined), timeoutMs);
         }),
       ]);
     } finally {
@@ -1115,11 +1132,17 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
    * transcript and the session information.
    * @param terminationTimeout - How long to wait for that frame, in
    * milliseconds. `0` waits indefinitely. The socket closes either way.
+   * @returns The `Termination` frame (`audio_duration_seconds`,
+   * `session_duration_seconds`), or `undefined` when `close()` did not wait
+   * for it or it did not arrive before the timeout or the socket closed.
+   * The `close` listener is called before this resolves, unless the session
+   * never opened or the socket had already closed and reported it.
    */
   async close(
     waitForSessionTermination = true,
     terminationTimeout = DEFAULT_TERMINATION_TIMEOUT_MS,
-  ) {
+  ): Promise<TerminationEvent | undefined> {
+    let termination: TerminationEvent | undefined;
     if (this.flushTimer) {
       clearInterval(this.flushTimer);
       this.flushTimer = undefined;
@@ -1132,11 +1155,13 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
     if (this.socket) {
       if (this.socket.readyState === this.socket.OPEN) {
         if (waitForSessionTermination) {
-          const sessionTerminatedPromise = new Promise<void>((resolve) => {
+          const sessionTerminatedPromise = new Promise<
+            TerminationEvent | undefined
+          >((resolve) => {
             this.sessionTerminatedResolve = resolve;
           });
           this.socket.send(terminateSessionMessage);
-          await this.waitForTermination(
+          termination = await this.waitForTermination(
             sessionTerminatedPromise,
             terminationTimeout,
           );
@@ -1152,9 +1177,16 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
         this.socket.onerror = () => {};
       }
       this.socket.close();
+      // The socket's own close event is detached above, so report the
+      // client-initiated close here, before the listeners are cleared.
+      this.emitClose(
+        1000,
+        termination ? "Session ended" : "Closed by the client",
+      );
     }
 
     this.listeners = {};
     this.socket = undefined;
+    return termination;
   }
 }
