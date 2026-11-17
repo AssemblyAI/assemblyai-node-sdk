@@ -17,6 +17,7 @@ import {
   LLMGatewayResponseEvent,
   SpeakerRevisionEvent,
   StreamingUpdateConfiguration,
+  StreamingUpdateConfigurationParams,
   StreamingForceEndpoint,
   StreamingKeepAlive,
   WarningEvent,
@@ -66,6 +67,118 @@ const defaultStreamingUrl = "wss://streaming.assemblyai.com/v3/ws";
 const terminateSessionMessage = `{"type":"Terminate"}`;
 
 const DEFAULT_CONNECT_TIMEOUT_MS = 1000;
+
+type UpdateConfigurationField = Exclude<
+  keyof StreamingUpdateConfiguration,
+  "type"
+>;
+
+/**
+ * The snake_case fields of an `UpdateConfiguration` message. Typed as a
+ * record over `StreamingUpdateConfiguration` so adding a field to the type
+ * without listing it here fails to compile.
+ */
+const UPDATE_CONFIGURATION_FIELDS: Record<UpdateConfigurationField, true> = {
+  mode: true,
+  end_of_turn_confidence_threshold: true,
+  min_end_of_turn_silence_when_confident: true,
+  min_turn_silence: true,
+  max_turn_silence: true,
+  vad_threshold: true,
+  max_turn_duration: true,
+  format_turns: true,
+  session_heartbeat: true,
+  acknowledge_silence: true,
+  keyterms_prompt: true,
+  prompt: true,
+  agent_context: true,
+  filter_profanity: true,
+  interruption_delay: true,
+  turn_left_pad_ms: true,
+  continuous_partials: true,
+  language_codes: true,
+};
+
+/** Fields the server accepts on `UpdateConfiguration` but does not apply. */
+const NOT_UPDATABLE_FIELDS: ReadonlySet<string> = new Set([
+  "format_turns",
+  "filter_profanity",
+]);
+
+function isUpdateConfigurationField(
+  key: string,
+): key is UpdateConfigurationField {
+  return Object.prototype.hasOwnProperty.call(UPDATE_CONFIGURATION_FIELDS, key);
+}
+
+function camelToSnakeCase(key: string): string {
+  return key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
+}
+
+/**
+ * Resolves `updateConfiguration()` input to snake_case wire fields: camelCase
+ * names map to their snake_case field, the snake_case value wins when both
+ * names of a field are given, and unrecognized keys are sent unchanged with a
+ * warning.
+ */
+function toUpdateConfigurationFields(
+  config: StreamingUpdateConfigurationParams,
+): Record<string, unknown> {
+  const fields: Record<string, unknown> = {};
+  const fromCamelCase = new Map<string, string>();
+  const unrecognized: string[] = [];
+
+  for (const [key, value] of Object.entries(config)) {
+    if (value === undefined || key === "type") continue;
+    if (isUpdateConfigurationField(key)) {
+      if (fromCamelCase.has(key)) {
+        warnCasingConflict(key, fromCamelCase.get(key)!, fields[key], value);
+        fromCamelCase.delete(key);
+      }
+      fields[key] = value;
+      continue;
+    }
+    const snake = camelToSnakeCase(key);
+    if (snake !== key && isUpdateConfigurationField(snake)) {
+      if (snake in fields) {
+        warnCasingConflict(snake, key, value, fields[snake]);
+      } else {
+        fields[snake] = value;
+        fromCamelCase.set(snake, key);
+      }
+      continue;
+    }
+    unrecognized.push(key);
+    fields[key] = value;
+  }
+
+  if (unrecognized.length > 0) {
+    console.warn(
+      `updateConfiguration: unrecognized ${unrecognized.join(", ")}; sent unchanged, and the server ignores fields it does not accept.`,
+    );
+  }
+  const notUpdatable = Object.keys(fields).filter((key) =>
+    NOT_UPDATABLE_FIELDS.has(key),
+  );
+  if (notUpdatable.length > 0) {
+    console.warn(
+      `updateConfiguration: ${notUpdatable.join(", ")} cannot be changed mid-stream; set it when creating the transcriber.`,
+    );
+  }
+  return fields;
+}
+
+function warnCasingConflict(
+  snake: string,
+  camel: string,
+  camelValue: unknown,
+  snakeValue: unknown,
+) {
+  if (JSON.stringify(camelValue) === JSON.stringify(snakeValue)) return;
+  console.warn(
+    `updateConfiguration: both \`${snake}\` and \`${camel}\` are set with different values; sending \`${snake}\`.`,
+  );
+}
 
 /**
  * How long `close()` waits for the server's `Termination` frame before giving
@@ -1027,14 +1140,19 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
 
   /**
    * Update the streaming configuration mid-stream.
-   * @param config - The configuration parameters to update
+   * @param config - The fields to update, by their snake_case wire names or
+   * the camelCase names of the connection params. Unrecognized keys are sent
+   * unchanged, with a warning.
    */
-  updateConfiguration(config: Omit<StreamingUpdateConfiguration, "type">) {
+  updateConfiguration(config: StreamingUpdateConfigurationParams) {
     const {
       min_end_of_turn_silence_when_confident,
       min_turn_silence,
       ...rest
-    } = config;
+    } = toUpdateConfigurationFields(config) as Omit<
+      StreamingUpdateConfiguration,
+      "type"
+    >;
     if (min_end_of_turn_silence_when_confident !== undefined) {
       if (min_turn_silence !== undefined) {
         console.warn(

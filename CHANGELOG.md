@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.43.2]
+
+- `StreamingTranscriber.updateConfiguration()` takes `mode`, `max_turn_duration` and `continuous_partials`, which the streaming API accepts mid-stream, and takes each field by its camelCase connection-param name (`maxTurnSilence`, `keytermsPrompt`, ...) as well as its snake_case name, sending it as the snake_case field. The API ignored camelCase names before, so `updateConfiguration({ maxTurnSilence: 1500 })` from plain JavaScript changed nothing. When both names of a field are given with different values, the snake_case value is sent, with a warning. Unrecognized keys are still sent, with a warning. `format_turns` and `filter_profanity` are deprecated on `StreamingUpdateConfiguration` and warn when sent, since the API does not apply them mid-stream. New type `StreamingUpdateConfigurationParams`
+
 ## [4.43.1]
 
 - `client.tts.synthesize()` and `client.tts.stream()` send the camelCase names `voiceId`, `modelId`, `sampleRate`, `bitRate` and `extendBiometricConsent`, which plain JavaScript can pass, as their snake_case request fields (`voice_id`, ...) and warn once. The API ignored them before, so such a request got the default voice, model or sample rate. These values now reach the API, so a value it refuses (a `sampleRate` outside the supported set, `bitRate` without the `mp3` encoding, `extendBiometricConsent` on a voice the account does not own) fails with the same `TextToSpeechError` as its snake_case spelling, where before the request used the default. When a request gives both names of a field with different values, the snake_case value is sent, with a warning once. A `TextToSpeechSession` warns once on the snake_case names it ignores (`voice_id`, `model_id`, `sample_rate`, `extend_biometric_consent`, `word_boundaries`, `inactivity_timeout`)

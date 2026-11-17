@@ -387,6 +387,8 @@ export type StreamingTerminateSession = {
 
 export type StreamingUpdateConfiguration = {
   type: "UpdateConfiguration";
+  /** Switch the latency/accuracy preset mid-stream. U3Pro only. */
+  mode?: StreamingMode;
   end_of_turn_confidence_threshold?: number;
   /**
    * @deprecated Use `min_turn_silence` instead. This parameter will be removed in a future release.
@@ -395,21 +397,57 @@ export type StreamingUpdateConfiguration = {
   min_turn_silence?: number;
   max_turn_silence?: number;
   vad_threshold?: number;
+  /**
+   * Maximum turn length in milliseconds (16 000–128 000) before the server
+   * ends the turn.
+   */
+  max_turn_duration?: number;
+  /**
+   * @deprecated The server does not apply `format_turns` mid-stream; set
+   * `formatTurns` when creating the transcriber.
+   */
   format_turns?: boolean;
   session_heartbeat?: boolean;
   acknowledge_silence?: boolean;
   keyterms_prompt?: string[];
   prompt?: string;
   agent_context?: string;
+  /**
+   * @deprecated The server does not apply `filter_profanity` mid-stream; set
+   * `filterProfanity` when creating the transcriber.
+   */
   filter_profanity?: boolean;
   interruption_delay?: number;
   turn_left_pad_ms?: number;
+  continuous_partials?: boolean;
   /**
    * Steer transcription toward a set of languages mid-stream. Pass an empty
    * array (`[]`) to clear steering and restore the model's default
    * multilingual code-switching. Universal-3.5 Pro Streaming only.
    */
   language_codes?: string[];
+};
+
+type SnakeToCamelCase<S extends string> =
+  S extends `${infer Head}_${infer Tail}`
+    ? `${Head}${Capitalize<SnakeToCamelCase<Tail>>}`
+    : S;
+
+/**
+ * The fields `StreamingTranscriber.updateConfiguration()` takes. Each field
+ * can be given by its snake_case wire name (`max_turn_silence`) or by the
+ * camelCase name the transcriber's connection params use (`maxTurnSilence`);
+ * both are sent as the snake_case field. When both names of a field are given
+ * with different values, the snake_case value is sent.
+ */
+export type StreamingUpdateConfigurationParams = Omit<
+  StreamingUpdateConfiguration,
+  "type"
+> & {
+  [K in Exclude<
+    keyof StreamingUpdateConfiguration,
+    "type"
+  > as SnakeToCamelCase<K>]?: StreamingUpdateConfiguration[K];
 };
 
 export type StreamingForceEndpoint = {
