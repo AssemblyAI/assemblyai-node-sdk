@@ -99,14 +99,21 @@ export class SyncTranscriber extends BaseService {
     options: SyncTranscribeOptions = {},
   ): Promise<SyncTranscriptResponse> {
     const { bytes, filename, contentType } = await resolveAudio(audio, config);
-    const signal = deadlineSignal(
+    const deadline = deadlineSignal(
       options.timeout ?? defaultLiveTimeoutMs,
       options.signal,
     );
-    return await this.postLive(singleChunk(bytes), audio, config, signal, {
-      filename,
-      contentType,
-    });
+    try {
+      return await this.postLive(
+        singleChunk(bytes),
+        audio,
+        config,
+        deadline.signal,
+        { filename, contentType },
+      );
+    } finally {
+      deadline.release();
+    }
   }
 
   /**
@@ -150,11 +157,20 @@ export class SyncTranscriber extends BaseService {
     options: SyncLiveOptions = {},
   ): Promise<SyncTranscriptResponse> {
     checkLiveInput(audio);
-    const signal = deadlineSignal(
+    const deadline = deadlineSignal(
       options.timeout ?? defaultLiveTimeoutMs,
       options.signal,
     );
-    return await this.postLive(liveChunks(audio), audio, config, signal);
+    try {
+      return await this.postLive(
+        liveChunks(audio),
+        audio,
+        config,
+        deadline.signal,
+      );
+    } finally {
+      deadline.release();
+    }
   }
 
   /**
@@ -182,14 +198,17 @@ export class SyncTranscriber extends BaseService {
     config: SyncTranscriptionConfig = {},
     options: SyncLiveOptions = {},
   ): SyncLiveSession {
-    return new SyncLiveSession((chunks, abortSignal) =>
-      this.postLive(
-        chunks,
-        undefined,
-        config,
-        deadlineSignal(options.timeout ?? defaultLiveTimeoutMs, abortSignal),
-      ),
-    );
+    return new SyncLiveSession(async (chunks, abortSignal) => {
+      const deadline = deadlineSignal(
+        options.timeout ?? defaultLiveTimeoutMs,
+        abortSignal,
+      );
+      try {
+        return await this.postLive(chunks, undefined, config, deadline.signal);
+      } finally {
+        deadline.release();
+      }
+    });
   }
 
   /**

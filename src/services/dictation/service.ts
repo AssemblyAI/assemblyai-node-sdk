@@ -145,17 +145,21 @@ export class DictationTranscriber extends BaseService {
       contentTypes,
       configName,
     );
-    const signal = deadlineSignal(
+    const deadline = deadlineSignal(
       options.timeout ?? defaultLiveTimeoutMs,
       options.signal,
     );
-    return await this.postLive(
-      source.chunks,
-      filename,
-      contentType,
-      config,
-      signal,
-    );
+    try {
+      return await this.postLive(
+        source.chunks,
+        filename,
+        contentType,
+        config,
+        deadline.signal,
+      );
+    } finally {
+      deadline.release();
+    }
   }
 
   /**
@@ -193,13 +197,21 @@ export class DictationTranscriber extends BaseService {
         contentTypes,
         configName,
       );
-      return await this.postLive(
-        chunks,
-        filename,
-        contentType,
-        config,
-        deadlineSignal(options.timeout ?? defaultLiveTimeoutMs, abortSignal),
+      const deadline = deadlineSignal(
+        options.timeout ?? defaultLiveTimeoutMs,
+        abortSignal,
       );
+      try {
+        return await this.postLive(
+          chunks,
+          filename,
+          contentType,
+          config,
+          deadline.signal,
+        );
+      } finally {
+        deadline.release();
+      }
     });
   }
 

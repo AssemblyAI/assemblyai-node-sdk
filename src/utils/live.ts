@@ -560,23 +560,32 @@ export function resolveFormat(
 /**
  * A signal that aborts when `timeoutMs` elapses or when `external` aborts,
  * whichever comes first. `AbortSignal.any` would do this but needs Node 20.
+ * `release()` detaches from `external` and the timeout; call it once the
+ * request is over, so a signal shared by many requests does not collect a
+ * listener (and the request it holds) per request.
  * @param timeoutMs - The deadline in milliseconds.
  * @param external - An optional caller-supplied signal.
- * @returns The combined signal.
+ * @returns The combined signal and its release.
  */
 export function deadlineSignal(
   timeoutMs: number,
   external?: AbortSignal,
-): AbortSignal {
+): { signal: AbortSignal; release: () => void } {
   const timeout = AbortSignal.timeout(timeoutMs);
-  if (!external) return timeout;
+  if (!external) return { signal: timeout, release: () => undefined };
   const controller = new AbortController();
-  const forward = (signal: AbortSignal) => () =>
-    controller.abort(signal.reason);
+  const onExternal = () => controller.abort(external.reason);
+  const onTimeout = () => controller.abort(timeout.reason);
   if (external.aborted) controller.abort(external.reason);
-  external.addEventListener("abort", forward(external), { once: true });
-  timeout.addEventListener("abort", forward(timeout), { once: true });
-  return controller.signal;
+  external.addEventListener("abort", onExternal, { once: true });
+  timeout.addEventListener("abort", onTimeout, { once: true });
+  return {
+    signal: controller.signal,
+    release: () => {
+      external.removeEventListener("abort", onExternal);
+      timeout.removeEventListener("abort", onTimeout);
+    },
+  };
 }
 
 /**
