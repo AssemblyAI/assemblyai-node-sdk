@@ -1,5 +1,10 @@
 # Changelog
 
+## [4.43.5]
+
+- Add `language_codes` to the pre-recorded transcript params (`TranscriptOptionalParams`, so also `TranscriptParams` and `TranscribeParams`), so `client.transcripts.submit()` and `transcribe()` accept the list of languages from the AssemblyAI-STT-3.7 migration guide. The API already accepted it; only the SDK type rejected it, and TypeScript suggested `language_code`, which sends a single-language request instead
+- Correct the `disfluencies` doc comment: it defaults to `true` when `speech_models` includes `assemblyai-stt-3-7`, and to `false` otherwise
+
 ## [4.43.4]
 
 - Add `assemblyai-stt-3-7-realtime` (note taking) and `assemblyai-stt-3-7-realtime-agent` (voice agents) to the streaming `speechModel` options (`StreamingSpeechModel`)
