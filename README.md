@@ -757,6 +757,57 @@ can be correlated with the request.
 
 </details>
 
+### Diarize speakers
+
+`client.diarization` labels who spoke when. Post the audio together with a
+transcript that has word timings, such as a sync transcript requested with
+`timestamps: true`, and every word comes back with a speaker (`A`, `B`, ...),
+grouped into utterances. Requests go to `diarizationBaseUrl`,
+`https://diarization.assemblyai.com` by default; pass
+`https://diarization.us.assemblyai.com` or
+`https://diarization.eu.assemblyai.com` to keep them in the US or EU data zone.
+
+```typescript
+const transcript = await client.sync.transcribe("./call.wav", {
+  timestamps: true,
+});
+const { utterances } = await client.diarization.diarize({
+  audio: "./call.wav",
+  transcript, // only `words` is sent
+});
+for (const u of utterances) console.log(`${u.speaker}: ${u.text}`);
+```
+
+Leave out `transcript` to diarize the audio alone, for example in parallel with
+transcription: `words` and `utterances` come back empty, and `segments` (speaker
+turns with `start`/`end` in ms) and `speakers` are filled.
+
+<details>
+<summary>Audio formats, config and errors</summary>
+
+`audio` takes a local file path, a data URL, raw bytes, a Blob/File or a
+readable stream (read whole before sending), but not a URL. Its content type
+picks the decoder and is inferred from the file extension: `audio/wav` (also
+the default), `audio/mpeg`, `audio/flac`, `audio/ogg`, `audio/mp4`,
+`audio/webm`, or raw `audio/pcm`, which needs `sample_rate` and `channels` in
+`config`. Pass `contentType` to override it.
+
+```typescript
+const result = await client.diarization.diarize(
+  {
+    audio: pcmBytes,
+    config: { sample_rate: 16_000, channels: 1, language_code: "en" },
+  },
+  { timeout: 120_000 },
+);
+```
+
+Failures throw `DiarizationError` with `.status` (401 for a missing or invalid
+key, 400 for a validation failure), `.errorCode` (the snake_cased
+problem-details title, e.g. `unauthorized`) and `.retryAfter`.
+
+</details>
+
 ### Transcribe streaming audio
 
 Refer to [AssemblyAI's streaming documentation](https://www.assemblyai.com/docs/streaming/getting-started/transcribe-streaming-audio) for full code examples.

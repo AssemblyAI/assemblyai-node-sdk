@@ -6,6 +6,8 @@ type BaseServiceParams = {
   streamingBaseUrl?: string;
   syncBaseUrl?: string;
   dictationBaseUrl?: string;
+  /** The Diarization API base URL. Defaults to `https://diarization.assemblyai.com`; `https://diarization.us.assemblyai.com` and `https://diarization.eu.assemblyai.com` keep requests in the US or EU. */
+  diarizationBaseUrl?: string;
   llmGatewayBaseUrl?: string;
   /** The Text-to-Speech API base URL. Defaults to `https://tts.us.assemblyai.com`; `https://tts.eu.assemblyai.com` keeps requests in the EU. */
   ttsBaseUrl?: string;

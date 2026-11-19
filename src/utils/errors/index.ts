@@ -1,5 +1,6 @@
 export { SyncTranscriptError } from "./sync";
 export { DictationError } from "./dictation";
+export { DiarizationError } from "./diarization";
 export { LlmGatewayError } from "./llm-gateway";
 export { TextToSpeechError } from "./tts";
 export type { TextToSpeechErrorFields } from "./tts";
