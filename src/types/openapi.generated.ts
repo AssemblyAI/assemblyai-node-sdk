@@ -2992,8 +2992,9 @@ export type TranscriptOptionalParams = {
    */
   custom_topics?: boolean;
   /**
-   * Transcribe Filler Words, like "umm", in your media file; can be true or false
-   * @defaultValue false
+   * Transcribe Filler Words, like "umm", in your media file; can be true or false.
+   * Defaults to true when `speech_models` includes `assemblyai-stt-3-7`, and to false otherwise.
+   * On `assemblyai-stt-3-7`, true also keeps repetitions, stutters and false starts.
    */
   disfluencies?: boolean;
   /**
@@ -3037,6 +3038,13 @@ export type TranscriptOptionalParams = {
    * @defaultValue en_us
    */
   language_code?: LiteralUnion<TranscriptLanguageCode, string> | null;
+  /**
+   * The languages your audio file contains, to constrain the model to that set, for example `["en", "es", "pt"]`.
+   * Can't be combined with `language_code` or `language_detection`.
+   * With `assemblyai-stt-3-7`, any number of supported languages is accepted. With `universal-2`, at most two, and one of them must be `"en"`.
+   * See {@link https://www.assemblyai.com/docs/pre-recorded-audio/assemblyai-stt-3-7-migration-guide | the AssemblyAI-STT-3.7 migration guide }.
+   */
+  language_codes?: LiteralUnion<TranscriptLanguageCode, string>[];
   /**
    * The confidence threshold for the automatically detected language.
    * An error will be returned if the language confidence is below this threshold.
