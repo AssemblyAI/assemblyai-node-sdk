@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.43.5]
+
+- Fix concurrent `StreamingTranscriber.close()` calls. A call made while an earlier one was waiting for the `Termination` frame replaced the earlier call's wait and sent a second `Terminate` frame, so the earlier call never settled (with `terminationTimeout` `0`, or when the later call passed `waitForSessionTermination: false`) or rejected with `TypeError: Cannot read properties of undefined (reading 'close')`. A call made while another is running now returns the same promise, and the earlier call's `waitForSessionTermination` and `terminationTimeout` apply
+
 ## [4.43.4]
 
 - Add `assemblyai-stt-3-7-realtime` (note taking) and `assemblyai-stt-3-7-realtime-agent` (voice agents) to the streaming `speechModel` options (`StreamingSpeechModel`)
