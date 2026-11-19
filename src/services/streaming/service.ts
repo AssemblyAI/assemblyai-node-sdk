@@ -936,6 +936,8 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
    * fed into that channel's VAD, accumulated into a per-channel ring buffer, and
    * a scheduled flush (`channelAttribution.flushIntervalMs`, default 50ms) mixes
    * the buffers into mono before sending to the WebSocket.
+   *
+   * In both modes, sending while the socket is not open throws.
    */
   sendAudio(audio: AudioData, options?: SendAudioOptions) {
     if (!this.isDualChannel) {
@@ -951,6 +953,11 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
       throw new Error(
         `Unknown channel "${options.channel}"; declared channels: ${this.channelNames!.join(", ")}.`,
       );
+    }
+    // Buffered audio would start the flush interval, which nothing clears
+    // once the session is gone.
+    if (!this.socket || this.socket.readyState !== this.socket.OPEN) {
+      throw new Error("Socket is not open for communication");
     }
     this.ingestChannelAudio(options.channel, audio);
   }
@@ -1283,6 +1290,11 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
             sessionTerminatedPromise,
             terminationTimeout,
           );
+          // Audio sent while waiting restarts the flush interval.
+          if (this.flushTimer) {
+            clearInterval(this.flushTimer);
+            this.flushTimer = undefined;
+          }
         } else {
           this.socket.send(terminateSessionMessage);
         }
