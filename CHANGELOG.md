@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.43.6]
+
+- Sync and dictation transcription remove their abort listeners when each request ends, so a shared `options.signal` does not retain completed requests
+
 ## [4.43.4]
 
 - Add `assemblyai-stt-3-7-realtime` (note taking) and `assemblyai-stt-3-7-realtime-agent` (voice agents) to the streaming `speechModel` options (`StreamingSpeechModel`)
