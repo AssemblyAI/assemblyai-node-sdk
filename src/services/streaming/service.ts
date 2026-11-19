@@ -255,6 +255,8 @@ export class StreamingTranscriber {
   private socket?: PolyfillWebSocket;
   private listeners: StreamingListeners = {};
   private sessionTerminatedResolve?: (event?: TerminationEvent) => void;
+  /** The `close()` in progress, shared by calls made while it runs. */
+  private closing?: Promise<TerminationEvent | undefined>;
   /** True from `Begin` until the `close` listener has been called. */
   private closePending = false;
 
@@ -1255,10 +1257,30 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
    * for it or it did not arrive before the timeout or the socket closed.
    * The `close` listener is called before this resolves, unless the session
    * never opened or the socket had already closed and reported it.
+   *
+   * A call made while an earlier `close()` is still running does not start a
+   * second one: it returns the earlier call's promise, so it settles with the
+   * same result, and the earlier call's `waitForSessionTermination` and
+   * `terminationTimeout` apply.
    */
-  async close(
+  close(
     waitForSessionTermination = true,
     terminationTimeout = DEFAULT_TERMINATION_TIMEOUT_MS,
+  ): Promise<TerminationEvent | undefined> {
+    if (!this.closing) {
+      this.closing = this.closeSession(
+        waitForSessionTermination,
+        terminationTimeout,
+      ).finally(() => {
+        this.closing = undefined;
+      });
+    }
+    return this.closing;
+  }
+
+  private async closeSession(
+    waitForSessionTermination: boolean,
+    terminationTimeout: number,
   ): Promise<TerminationEvent | undefined> {
     let termination: TerminationEvent | undefined;
     if (this.flushTimer) {
