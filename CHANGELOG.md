@@ -1,5 +1,10 @@
 # Changelog
 
+## [4.43.4]
+
+- Add `assemblyai-stt-3-7-realtime` (note taking) and `assemblyai-stt-3-7-realtime-agent` (voice agents) to the streaming `speechModel` options (`StreamingSpeechModel`)
+- Add `"manual"` to the streaming `StreamingMode` type: the client ends each turn with `forceEndpoint()`. Only `assemblyai-stt-3-7-realtime-agent` supports it
+
 ## [4.43.3]
 
 - `StreamingTranscriber` emits a `termination` event with the server's `Termination` message (`TerminationEvent`: `audio_duration_seconds`, `session_duration_seconds`), and `close()` resolves with it, or with `undefined` when it did not wait for the message or the message did not arrive before the timeout or the socket closed. `close()` now calls the `close` listener for a client-initiated close (code `1000`, reason `"Session ended"` or `"Closed by the client"`) before it clears the listeners; it is called once per session. Code that types `close()`'s result as `Promise<void>` must widen it to `Promise<TerminationEvent | undefined>`

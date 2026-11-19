@@ -399,6 +399,24 @@ describe("streaming", () => {
     await connect(rt, server);
   });
 
+  it("should include mode=manual in connection URL", async () => {
+    await cleanup();
+    WS.clean();
+
+    const wsUrl = `${websocketBaseUrl}?token=123&sample_rate=16000&speech_model=assemblyai-stt-3-7-realtime-agent&mode=manual`;
+    server = new WS(wsUrl);
+    rt = new StreamingTranscriber({
+      websocketBaseUrl,
+      token: "123",
+      sampleRate: 16_000,
+      speechModel: "assemblyai-stt-3-7-realtime-agent",
+      mode: "manual",
+    });
+    onOpen = jest.fn();
+    rt.on("open", onOpen);
+    await connect(rt, server);
+  });
+
   it.each(["medical-v1", "veterinary-v1"] as const)(
     "should include domain=%s in connection URL",
     async (domain) => {
@@ -591,6 +609,40 @@ describe("streaming", () => {
       token: "123",
       sampleRate: 16_000,
       speechModel: "universal-3-6" as const,
+    });
+    onOpen = jest.fn();
+    rt.on("open", onOpen);
+    await connect(rt, server);
+  });
+
+  it("should include assemblyai-stt-3-7-realtime speech model in connection URL", async () => {
+    await cleanup();
+    WS.clean();
+
+    const wsUrl = `${websocketBaseUrl}?token=123&sample_rate=16000&speech_model=assemblyai-stt-3-7-realtime`;
+    server = new WS(wsUrl);
+    rt = new StreamingTranscriber({
+      websocketBaseUrl,
+      token: "123",
+      sampleRate: 16_000,
+      speechModel: "assemblyai-stt-3-7-realtime" as const,
+    });
+    onOpen = jest.fn();
+    rt.on("open", onOpen);
+    await connect(rt, server);
+  });
+
+  it("should include assemblyai-stt-3-7-realtime-agent speech model in connection URL", async () => {
+    await cleanup();
+    WS.clean();
+
+    const wsUrl = `${websocketBaseUrl}?token=123&sample_rate=16000&speech_model=assemblyai-stt-3-7-realtime-agent`;
+    server = new WS(wsUrl);
+    rt = new StreamingTranscriber({
+      websocketBaseUrl,
+      token: "123",
+      sampleRate: 16_000,
+      speechModel: "assemblyai-stt-3-7-realtime-agent" as const,
     });
     onOpen = jest.fn();
     rt.on("open", onOpen);

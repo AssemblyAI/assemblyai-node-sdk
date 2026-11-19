@@ -234,11 +234,17 @@ export type StreamingSpeechModel =
   | "universal-3-5-pro"
   | "universal-3-6"
   | "universal-3-6-pro"
+  | "assemblyai-stt-3-7-realtime"
+  | "assemblyai-stt-3-7-realtime-agent"
   | "u3-pro";
 
 export type StreamingDomain = "medical-v1" | "veterinary-v1";
 
-export type StreamingMode = "max_accuracy" | "min_latency" | "balanced";
+export type StreamingMode =
+  | "max_accuracy"
+  | "min_latency"
+  | "balanced"
+  | "manual";
 
 export type VoiceFocusModel = "near-field" | "far-field";
 
