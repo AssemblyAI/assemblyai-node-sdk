@@ -17,11 +17,13 @@ import {
   LLMGatewayResponseEvent,
   SpeakerRevisionEvent,
   StreamingUpdateConfiguration,
+  StreamingUpdateConfigurationParams,
   StreamingForceEndpoint,
   StreamingKeepAlive,
   WarningEvent,
   HeartbeatEvent,
   SilenceEvent,
+  TerminationEvent,
 } from "../..";
 import type { VadDetector, VadFrame } from "../../types/streaming/dual-channel";
 import { EnergyVad } from "./energy-vad";
@@ -66,6 +68,118 @@ const defaultStreamingUrl = "wss://streaming.assemblyai.com/v3/ws";
 const terminateSessionMessage = `{"type":"Terminate"}`;
 
 const DEFAULT_CONNECT_TIMEOUT_MS = 1000;
+
+type UpdateConfigurationField = Exclude<
+  keyof StreamingUpdateConfiguration,
+  "type"
+>;
+
+/**
+ * The snake_case fields of an `UpdateConfiguration` message. Typed as a
+ * record over `StreamingUpdateConfiguration` so adding a field to the type
+ * without listing it here fails to compile.
+ */
+const UPDATE_CONFIGURATION_FIELDS: Record<UpdateConfigurationField, true> = {
+  mode: true,
+  end_of_turn_confidence_threshold: true,
+  min_end_of_turn_silence_when_confident: true,
+  min_turn_silence: true,
+  max_turn_silence: true,
+  vad_threshold: true,
+  max_turn_duration: true,
+  format_turns: true,
+  session_heartbeat: true,
+  acknowledge_silence: true,
+  keyterms_prompt: true,
+  prompt: true,
+  agent_context: true,
+  filter_profanity: true,
+  interruption_delay: true,
+  turn_left_pad_ms: true,
+  continuous_partials: true,
+  language_codes: true,
+};
+
+/** Fields the server accepts on `UpdateConfiguration` but does not apply. */
+const NOT_UPDATABLE_FIELDS: ReadonlySet<string> = new Set([
+  "format_turns",
+  "filter_profanity",
+]);
+
+function isUpdateConfigurationField(
+  key: string,
+): key is UpdateConfigurationField {
+  return Object.prototype.hasOwnProperty.call(UPDATE_CONFIGURATION_FIELDS, key);
+}
+
+function camelToSnakeCase(key: string): string {
+  return key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
+}
+
+/**
+ * Resolves `updateConfiguration()` input to snake_case wire fields: camelCase
+ * names map to their snake_case field, the snake_case value wins when both
+ * names of a field are given, and unrecognized keys are sent unchanged with a
+ * warning.
+ */
+function toUpdateConfigurationFields(
+  config: StreamingUpdateConfigurationParams,
+): Record<string, unknown> {
+  const fields: Record<string, unknown> = {};
+  const fromCamelCase = new Map<string, string>();
+  const unrecognized: string[] = [];
+
+  for (const [key, value] of Object.entries(config)) {
+    if (value === undefined || key === "type") continue;
+    if (isUpdateConfigurationField(key)) {
+      if (fromCamelCase.has(key)) {
+        warnCasingConflict(key, fromCamelCase.get(key)!, fields[key], value);
+        fromCamelCase.delete(key);
+      }
+      fields[key] = value;
+      continue;
+    }
+    const snake = camelToSnakeCase(key);
+    if (snake !== key && isUpdateConfigurationField(snake)) {
+      if (snake in fields) {
+        warnCasingConflict(snake, key, value, fields[snake]);
+      } else {
+        fields[snake] = value;
+        fromCamelCase.set(snake, key);
+      }
+      continue;
+    }
+    unrecognized.push(key);
+    fields[key] = value;
+  }
+
+  if (unrecognized.length > 0) {
+    console.warn(
+      `updateConfiguration: unrecognized ${unrecognized.join(", ")}; sent unchanged, and the server ignores fields it does not accept.`,
+    );
+  }
+  const notUpdatable = Object.keys(fields).filter((key) =>
+    NOT_UPDATABLE_FIELDS.has(key),
+  );
+  if (notUpdatable.length > 0) {
+    console.warn(
+      `updateConfiguration: ${notUpdatable.join(", ")} cannot be changed mid-stream; set it when creating the transcriber.`,
+    );
+  }
+  return fields;
+}
+
+function warnCasingConflict(
+  snake: string,
+  camel: string,
+  camelValue: unknown,
+  snakeValue: unknown,
+) {
+  if (JSON.stringify(camelValue) === JSON.stringify(snakeValue)) return;
+  console.warn(
+    `updateConfiguration: both \`${snake}\` and \`${camel}\` are set with different values; sending \`${snake}\`.`,
+  );
+}
 
 /**
  * How long `close()` waits for the server's `Termination` frame before giving
@@ -140,7 +254,9 @@ export class StreamingTranscriber {
 
   private socket?: PolyfillWebSocket;
   private listeners: StreamingListeners = {};
-  private sessionTerminatedResolve?: () => void;
+  private sessionTerminatedResolve?: (event?: TerminationEvent) => void;
+  /** True from `Begin` until the `close` listener has been called. */
+  private closePending = false;
 
   // Dual-channel mode state (allocated only when params.channels is set).
   private isDualChannel = false;
@@ -243,16 +359,24 @@ export class StreamingTranscriber {
   }
 
   /**
-   * Releases a `close()` that is waiting for the session to terminate.
+   * Releases a `close()` that is waiting for the session to terminate, with
+   * the `Termination` frame when there is one.
    *
    * Called from the `Termination` frame and from `onclose`. Without the
    * `onclose` call, a socket that dies without a `Termination` frame leaves
    * `close()` awaiting forever.
    */
-  private resolveSessionTermination(): void {
+  private resolveSessionTermination(event?: TerminationEvent): void {
     const resolve = this.sessionTerminatedResolve;
     this.sessionTerminatedResolve = undefined;
-    resolve?.();
+    resolve?.(event);
+  }
+
+  /** Calls the `close` listener once per opened session. */
+  private emitClose(code: number, reason: string): void {
+    if (!this.closePending) return;
+    this.closePending = false;
+    this.listeners.close?.(code, reason);
   }
 
   private connectionUrl(): URL {
@@ -527,6 +651,7 @@ export class StreamingTranscriber {
   on(event: "heartbeat", listener: (event: HeartbeatEvent) => void): void;
   on(event: "silence", listener: (event: SilenceEvent) => void): void;
   on(event: "vad", listener: (event: VadFrame) => void): void;
+  on(event: "termination", listener: (event: TerminationEvent) => void): void;
   on(event: "error", listener: (error: Error) => void): void;
   on(event: "close", listener: (code: number, reason: string) => void): void;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -606,6 +731,7 @@ export class StreamingTranscriber {
         if (settled) return;
         settled = true;
         if (timer) clearTimeout(timer);
+        this.closePending = true;
         resolve(begin);
       };
 
@@ -665,7 +791,7 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
         // The socket is gone, so no `Termination` frame is coming. Release a
         // `close()` that is waiting for one.
         this.resolveSessionTermination();
-        this.listeners.close?.(code, reason);
+        this.emitClose(code, reason);
       };
 
       this.socket.onerror = (event: ErrorEvent) => {
@@ -757,7 +883,8 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
             break;
           }
           case "Termination": {
-            this.resolveSessionTermination();
+            this.listeners.termination?.(message);
+            this.resolveSessionTermination(message);
             break;
           }
         }
@@ -1027,14 +1154,19 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
 
   /**
    * Update the streaming configuration mid-stream.
-   * @param config - The configuration parameters to update
+   * @param config - The fields to update, by their snake_case wire names or
+   * the camelCase names of the connection params. Unrecognized keys are sent
+   * unchanged, with a warning.
    */
-  updateConfiguration(config: Omit<StreamingUpdateConfiguration, "type">) {
+  updateConfiguration(config: StreamingUpdateConfigurationParams) {
     const {
       min_end_of_turn_silence_when_confident,
       min_turn_silence,
       ...rest
-    } = config;
+    } = toUpdateConfigurationFields(config) as Omit<
+      StreamingUpdateConfiguration,
+      "type"
+    >;
     if (min_end_of_turn_silence_when_confident !== undefined) {
       if (min_turn_silence !== undefined) {
         console.warn(
@@ -1077,22 +1209,25 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
     this.send(JSON.stringify(message));
   }
 
-  /** Awaits the session-termination frame, bounded by `timeoutMs`. */
+  /**
+   * Awaits the session-termination frame, bounded by `timeoutMs`. Resolves
+   * with the frame, or `undefined` when the timeout or a socket close comes
+   * first.
+   */
   private async waitForTermination(
-    sessionTerminated: Promise<void>,
+    sessionTerminated: Promise<TerminationEvent | undefined>,
     timeoutMs: number,
-  ): Promise<void> {
+  ): Promise<TerminationEvent | undefined> {
     if (timeoutMs <= 0) {
-      await sessionTerminated;
-      return;
+      return sessionTerminated;
     }
 
     let timer: ReturnType<typeof setTimeout> | undefined;
     try {
-      await Promise.race([
+      return await Promise.race([
         sessionTerminated,
-        new Promise<void>((resolve) => {
-          timer = setTimeout(resolve, timeoutMs);
+        new Promise<undefined>((resolve) => {
+          timer = setTimeout(() => resolve(undefined), timeoutMs);
         }),
       ]);
     } finally {
@@ -1115,11 +1250,17 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
    * transcript and the session information.
    * @param terminationTimeout - How long to wait for that frame, in
    * milliseconds. `0` waits indefinitely. The socket closes either way.
+   * @returns The `Termination` frame (`audio_duration_seconds`,
+   * `session_duration_seconds`), or `undefined` when `close()` did not wait
+   * for it or it did not arrive before the timeout or the socket closed.
+   * The `close` listener is called before this resolves, unless the session
+   * never opened or the socket had already closed and reported it.
    */
   async close(
     waitForSessionTermination = true,
     terminationTimeout = DEFAULT_TERMINATION_TIMEOUT_MS,
-  ) {
+  ): Promise<TerminationEvent | undefined> {
+    let termination: TerminationEvent | undefined;
     if (this.flushTimer) {
       clearInterval(this.flushTimer);
       this.flushTimer = undefined;
@@ -1132,11 +1273,13 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
     if (this.socket) {
       if (this.socket.readyState === this.socket.OPEN) {
         if (waitForSessionTermination) {
-          const sessionTerminatedPromise = new Promise<void>((resolve) => {
+          const sessionTerminatedPromise = new Promise<
+            TerminationEvent | undefined
+          >((resolve) => {
             this.sessionTerminatedResolve = resolve;
           });
           this.socket.send(terminateSessionMessage);
-          await this.waitForTermination(
+          termination = await this.waitForTermination(
             sessionTerminatedPromise,
             terminationTimeout,
           );
@@ -1152,9 +1295,16 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
         this.socket.onerror = () => {};
       }
       this.socket.close();
+      // The socket's own close event is detached above, so report the
+      // client-initiated close here, before the listeners are cleared.
+      this.emitClose(
+        1000,
+        termination ? "Session ended" : "Closed by the client",
+      );
     }
 
     this.listeners = {};
     this.socket = undefined;
+    return termination;
   }
 }
