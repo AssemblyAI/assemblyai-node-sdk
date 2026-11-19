@@ -48,6 +48,7 @@ const client = new AssemblyAI({
 - `client.dictation.transcribeLive(audio, config?, options?)` — Dictation: upload a short spoken note as it is spoken and get one finished transcript back, optionally rewritten by an LLM
 - `client.dictation.openLive(config?, options?)` — Open a dictation upload that audio is pushed into (`write()` / `close()` / `result()`), for callback-driven sources
 - `client.dictation.warm()` — Pre-open the connection to the dictation API so the next request skips the handshake
+- `client.diarization.diarize({ audio, transcript?, config?, contentType? }, { timeout?, signal? })` — Speaker labels for audio: with a transcript (e.g. a sync response requested with `timestamps: true`) every word gets a speaker and `utterances` are filled; without one only `segments` and `speakers` come back. Throws `DiarizationError`. Host: `diarizationBaseUrl` (`https://diarization.assemblyai.com`; data zones `https://diarization.us.assemblyai.com`, `https://diarization.eu.assemblyai.com`)
 - `client.streaming.transcriber(params)` — Create a real-time streaming session
 - `client.llmGateway.chatCompletions(request)` — OpenAI-compatible chat completions
 - `client.llmGateway.listModels()` — List models available on the LLM Gateway

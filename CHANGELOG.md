@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.44.0]
+
+- Add the Diarization API: `client.diarization.diarize({ audio, transcript?, config?, contentType? }, { timeout?, signal? })` posts audio, and optionally a transcript with word timings in ms, to `/v1/diarize` and returns `DiarizationResponse` (`words` and `utterances` with speaker labels, `segments`, `speakers`, `audio_duration_ms`, `session_id`, `request_time_ms`). A `SyncTranscriptResponse` can be passed as the transcript; without one only `segments` and `speakers` are filled. The audio content type is inferred from the file extension (`audio/wav`, `audio/mpeg`, `audio/flac`, `audio/ogg`, `audio/mp4`, `audio/webm`, raw `audio/pcm` with `config.sample_rate` and `channels`). Failures throw `DiarizationError` (`status`, `errorCode`, `retryAfter`). New client option `diarizationBaseUrl` (default `https://diarization.assemblyai.com`; `https://diarization.us.assemblyai.com` and `https://diarization.eu.assemblyai.com` for the data zones)
+
 ## [4.43.4]
 
 - Add `assemblyai-stt-3-7-realtime` (note taking) and `assemblyai-stt-3-7-realtime-agent` (voice agents) to the streaming `speechModel` options (`StreamingSpeechModel`)
