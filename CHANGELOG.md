@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.43.5]
+
+- Fix dual-channel `StreamingTranscriber.sendAudio()` when the socket is not open (before `connect()`, after `close()`, or after the server closed the connection). It buffered the audio and started the mixer's flush interval, which nothing cleared, so a Node process could not exit; it now throws `Socket is not open for communication`, as single-channel `sendAudio()` does. Audio sent while `close()` waits for the `Termination` frame is still accepted, and `close()` now clears the flush interval that audio restarts
+
 ## [4.43.4]
 
 - Add `assemblyai-stt-3-7-realtime` (note taking) and `assemblyai-stt-3-7-realtime-agent` (voice agents) to the streaming `speechModel` options (`StreamingSpeechModel`)
