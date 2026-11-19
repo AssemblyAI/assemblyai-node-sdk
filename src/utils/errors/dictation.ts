@@ -1,7 +1,9 @@
+import { AssemblyAIError } from "./assemblyai";
+
 /**
  * Error thrown when a dictation request fails.
  */
-export class DictationError extends Error {
+export class DictationError extends AssemblyAIError {
   override name = "DictationError";
 
   /**
@@ -16,10 +18,10 @@ export class DictationError extends Error {
    */
   constructor(
     message: string,
-    public readonly status?: number,
+    status?: number,
     public readonly errorCode?: string,
-    public readonly retryAfter?: number,
+    retryAfter?: number,
   ) {
-    super(message);
+    super(message, status, retryAfter);
   }
 }

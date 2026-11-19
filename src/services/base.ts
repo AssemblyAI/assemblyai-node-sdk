@@ -2,6 +2,7 @@ import { conditions } from "#conditions";
 import { DEFAULT_FETCH_INIT } from "#fetch";
 import { BaseServiceParams, Error as JsonError } from "..";
 import { buildUserAgent } from "../utils/userAgent";
+import { AssemblyAIError } from "../utils/errors";
 
 /**
  * Base class for services that communicate with the API.
@@ -60,18 +61,28 @@ export abstract class BaseService {
     const response = await this.fetchResponse(input, init);
 
     if (response.status >= 400) {
-      let json: JsonError | undefined;
+      let message: string | undefined;
       const text = await response.text();
       if (text) {
         try {
-          json = JSON.parse(text);
+          const json: JsonError = JSON.parse(text);
+          if (json?.error) message = json.error;
         } catch {
           /* empty */
         }
-        if (json?.error) throw new Error(json.error);
-        throw new Error(text);
+        if (!message) message = text;
       }
-      throw new Error(`HTTP Error: ${response.status} ${response.statusText}`);
+      if (!message) {
+        message = `HTTP Error: ${response.status} ${response.statusText}`;
+      }
+
+      const retryHeader = response.headers.get("retry-after");
+      const retryAfter =
+        retryHeader && /^\d+$/.test(retryHeader)
+          ? parseInt(retryHeader, 10)
+          : undefined;
+
+      throw new AssemblyAIError(message, response.status, retryAfter);
     }
 
     return response;

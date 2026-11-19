@@ -1,3 +1,5 @@
+import { AssemblyAIError } from "./assemblyai";
+
 /** The fields a Text-to-Speech failure carries besides its message. */
 export type TextToSpeechErrorFields = {
   /**
@@ -59,22 +61,20 @@ export const RETRYABLE_STATUSES: ReadonlySet<number> = new Set([
  * Branch on `errorCode`, not on the message, which may be reworded.
  */
 export class TextToSpeechError
-  extends Error
+  extends AssemblyAIError
   implements TextToSpeechErrorFields
 {
   override name = "TextToSpeechError";
-  status?: number;
   errorCode?: string;
   param?: string;
   requestId?: string;
   retryable?: boolean;
-  retryAfter?: number;
   errors?: { message: string; param: string | null }[];
   closeCode?: number;
   body?: Record<string, unknown>;
 
   constructor(message: string, fields: TextToSpeechErrorFields = {}) {
-    super(message);
+    super(message, fields.status, fields.retryAfter);
     Object.assign(this, fields);
   }
 }

@@ -1,7 +1,9 @@
+import { AssemblyAIError } from "./assemblyai";
+
 /**
  * Error thrown when a synchronous transcription request fails.
  */
-export class SyncTranscriptError extends Error {
+export class SyncTranscriptError extends AssemblyAIError {
   override name = "SyncTranscriptError";
 
   /**
@@ -16,10 +18,10 @@ export class SyncTranscriptError extends Error {
    */
   constructor(
     message: string,
-    public readonly status?: number,
+    status?: number,
     public readonly errorCode?: string,
-    public readonly retryAfter?: number,
+    retryAfter?: number,
   ) {
-    super(message);
+    super(message, status, retryAfter);
   }
 }

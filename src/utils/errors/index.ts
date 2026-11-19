@@ -1,3 +1,4 @@
+export { AssemblyAIError } from "./assemblyai";
 export { SyncTranscriptError } from "./sync";
 export { DictationError } from "./dictation";
 export { LlmGatewayError } from "./llm-gateway";
