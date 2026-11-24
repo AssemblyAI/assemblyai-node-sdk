@@ -507,6 +507,10 @@ export type LLMGatewayResponseEvent = {
   turn_order: number;
   transcript: string;
   data: unknown;
+  /**
+   * Set when the LLM Gateway call failed; `data` then holds the gateway's error body, or `null`.
+   */
+  error?: string | null;
 };
 
 /**
