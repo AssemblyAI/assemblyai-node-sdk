@@ -808,7 +808,8 @@ Learn more at https://github.com/AssemblyAI/assemblyai-node-sdk/blob/main/docs/c
       this.socket.onmessage = ({ data }: MessageEvent) => {
         const message = JSON.parse(data.toString()) as StreamingEventMessage;
 
-        if ("error" in message) {
+        // LLMGatewayResponse carries its own `error` field; it is not an error frame.
+        if ("error" in message && message.type !== "LLMGatewayResponse") {
           const err = new StreamingError(message.error) as StreamingError & {
             code?: number;
           };

@@ -2,7 +2,11 @@ jest.mock("ws", () => require("./mocks/ws"));
 
 import WS from "jest-websocket-mock";
 import fetchMock from "jest-fetch-mock";
-import { AssemblyAI, StreamingTranscriber } from "../../src";
+import {
+  AssemblyAI,
+  LLMGatewayResponseEvent,
+  StreamingTranscriber,
+} from "../../src";
 import { createClient } from "./utils";
 
 fetchMock.enableMocks();
@@ -723,6 +727,61 @@ describe("streaming", () => {
       response: "This is an LLM response",
       model: "claude-3-5-sonnet",
     });
+  });
+
+  it("should dispatch LLMGatewayResponse with error null as a response", async () => {
+    const onError = jest.fn();
+    rt.on("error", onError);
+    const llmResponsePromise = new Promise<LLMGatewayResponseEvent>(
+      (resolve) => {
+        rt.on("llmGatewayResponse", (event) => resolve(event));
+      },
+    );
+
+    server.send(
+      JSON.stringify({
+        type: "LLMGatewayResponse",
+        turn_order: 1,
+        transcript: "hello world",
+        data: { choices: [] },
+        error: null,
+      }),
+    );
+    const response = await llmResponsePromise;
+    expect(response.error).toBeNull();
+    expect(response.data).toEqual({ choices: [] });
+    expect(onError).not.toHaveBeenCalled();
+  });
+
+  it("should parse LLMGatewayResponse event with an error", async () => {
+    const llmResponsePromise = new Promise<LLMGatewayResponseEvent>(
+      (resolve) => {
+        rt.on("llmGatewayResponse", (event) => resolve(event));
+      },
+    );
+
+    const errorBody = {
+      metadata: { errors: ["model qwen3.5-4b-32k-fast is not supported"] },
+      request_id: "d5e3c268-257c-41f1-97b5-0de75037e723",
+      message: "invalid request body",
+      code: 400,
+    };
+    server.send(
+      JSON.stringify({
+        type: "LLMGatewayResponse",
+        turn_order: 1,
+        transcript: "I'm calling about my Best Buy order.",
+        data: errorBody,
+        error:
+          "LLM Gateway returned 400: model qwen3.5-4b-32k-fast is not supported",
+      }),
+    );
+    const response = await llmResponsePromise;
+    expect(response.turn_order).toBe(1);
+    expect(response.error).toBe(
+      "LLM Gateway returned 400: model qwen3.5-4b-32k-fast is not supported",
+    );
+    expect(response.data).toEqual(errorBody);
   });
 
   it("should parse and dispatch SpeakerRevision event", async () => {

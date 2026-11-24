@@ -1,5 +1,9 @@
 # Changelog
 
+## [4.43.5]
+
+- Add optional `error` to the streaming `LLMGatewayResponseEvent`. The streaming API now sends an `LLMGatewayResponse` for every turn sent to the LLM Gateway; when the gateway call fails, `error` describes the failure and `data` holds the gateway's error body, or `null`. An `LLMGatewayResponse` that carries an `error` field (`null` on success) is dispatched to the `llmGatewayResponse` listener, not treated as a server error frame
+
 ## [4.43.4]
 
 - Add `assemblyai-stt-3-7-realtime` (note taking) and `assemblyai-stt-3-7-realtime-agent` (voice agents) to the streaming `speechModel` options (`StreamingSpeechModel`)
